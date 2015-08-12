@@ -36,10 +36,16 @@ def test_attrs():
     assert variant.REF == "CCCTAA"
     assert variant.ALT == ["C"]
 
-def test_vartype():
+def test_var_type():
     v = VCF(VCF_PATH)
     variant = next(v)
     assert variant.var_type == "indel", variant.var_type
+    # 1 10172   .       CCCTAA  C       92.0    PASS
+    for variant in v:
+        if variant.POS == 10478: break
+    else:
+        raise Exception
+    assert variant.var_type == "snp", variant.var_type
 
 def test_iterate():
 

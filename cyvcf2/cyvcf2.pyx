@@ -1,4 +1,5 @@
 #cython: profile=True
+import os.path
 from libc cimport stdlib
 import numpy as np
 cimport numpy as np
@@ -13,6 +14,8 @@ cdef class VCF(object):
     cdef int PASS
 
     def __init__(self, fname, mode="r"):
+        if not os.path.exists(fname):
+            raise Exception("bad path: %s" % fname)
         self.hts = hts_open(fname, mode)
         cdef bcf_hdr_t *hdr
         hdr = self.hdr = bcf_hdr_read(self.hts)
@@ -433,7 +436,6 @@ cdef bcf_array_to_object(void *data, int type, int n, int scalar=0):
             value = tuple(value)
 
     return value
-
 
 
 cdef Variant newVariant(bcf1_t *b, VCF vcf):

@@ -10,5 +10,8 @@ def test_init():
     assert v
 
 def test_bad_init():
-
     assert_raises(Exception, VCF, "XXXXX")
+
+def test_samples():
+    v = VCF(VCF_PATH)
+    assert len(v.samples) == 189

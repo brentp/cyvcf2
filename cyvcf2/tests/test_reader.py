@@ -20,3 +20,15 @@ def test_next():
     v = VCF(VCF_PATH)
     variant = next(v)
     assert isinstance(variant, Variant)
+
+def test_attrs():
+    # 1 10172   .       CCCTAA  C       92.0    PASS
+    v = VCF(VCF_PATH)
+    variant = next(v)
+    assert variant.POS == 10172
+    assert variant.CHROM == '1'
+    assert variant.ID is None, variant.ID
+    assert variant.start == 10171
+    assert variant.end == 10177, variant.end
+    assert variant.FILTER is None
+    assert variant.QUAL == 92.0

@@ -65,7 +65,7 @@ cdef class Variant(object):
     cdef int *_gt_pls
     cdef float *_gt_gls
 
-    cdef int POS
+    cdef readonly int POS
 
     def __cinit__(self):
         self.b = NULL
@@ -302,11 +302,11 @@ cdef class Variant(object):
 
     property start:
         def __get__(self):
-            return self.POS - 1
+            return self.b.pos
 
     property end:
         def __get__(self):
-            return self.POS - 1 + self.b.rlen
+            return self.b.pos + self.b.rlen
 
     property ID:
         def __get__(self):

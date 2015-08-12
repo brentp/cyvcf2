@@ -14,8 +14,8 @@ Example
 ```Python
 from cyvcf2 import VCF
 
-for i in range(1000):
-    b = VCF('some.vcf.gz')
+for variant in VCF('some.vcf.gz'):
+
 	variant.gt_types # numpy array
 	variant.gt_ref_depths, variant.gt_alt_depths # numpy arrays
 	variant.gt_phases, variant.gt_quals # numpy arrays

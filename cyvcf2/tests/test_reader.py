@@ -36,6 +36,7 @@ def test_attrs():
     assert variant.REF == "CCCTAA"
     assert variant.ALT == ["C"]
 
+
 def test_var_type():
     v = VCF(VCF_PATH)
     variant = next(v)
@@ -46,6 +47,44 @@ def test_var_type():
     else:
         raise Exception
     assert variant.var_type == "snp", variant.var_type
+
+def _get_samples(v):
+    import gzip
+    import numpy as np
+    import sys
+
+    def _get_gt(s):
+        if not ":" in s:
+            return 2
+        s = s.split(":", 1)[0]
+        if s in ("0/0", "0|0"):
+            return 0
+        if s in ("0/1", "0|1", "0/.", "1/.", "./1", "1/."):
+            return 1
+        if s in ("1/1", "1|1"):
+            return 3
+        return 2
+
+    for i, line in enumerate(gzip.open(VCF_PATH), start=1):
+        if line[0] == "#": continue
+        toks = line.strip().split("\t")
+        if not (toks[0] == v.CHROM and int(toks[1]) == v.POS): continue
+        if toks[3] != v.REF: continue
+        if toks[4] not in v.ALT: continue
+
+        samples = toks[9:]
+        return  np.array([_get_gt(s) for s in samples], np.int)
+    else:
+        raise Exception("not found")
+
+
+def test_gt_types():
+    v = VCF(VCF_PATH)
+    for variant in v:
+
+        gt_types = variant.gt_types
+        o = _get_samples(variant)
+        assert (gt_types == o).all(), (variant, variant.CHROM, variant.POS, zip(gt_types, o))
 
 def test_iterate():
 

@@ -277,7 +277,6 @@ cdef class Variant(object):
             shape[0] = <np.npy_intp> self.vcf.n_samples
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_BOOL, self._gt_phased)
 
-
     property REF:
         def __get__(self):
             return self.b.d.allele[0]
@@ -287,18 +286,81 @@ cdef class Variant(object):
             cdef int i
             return [self.b.d.allele[i] for i in range(1, self.b.n_allele)]
 
+    property is_snp:
+        def __get__(self):
+            cdef int i
+            if len(self.b.d.allele[0]) > 1: return False
+            for i in range(1, self.b.n_allele):
+                if not self.b.d.allele[i] in "ACGT":
+                    return False
+            return True
+
+    property is_indel:
+        def __get__(self):
+            cdef int i
+            is_sv = self.is_sv
+            if len(self.b.d.allele[0]) > 1 and not is_sv: return True
+
+            if len(self.REF) > 1 and not is_sv: return True
+
+            for i in range(1, self.b.n_allele):
+                alt = self.b.d.allele[i]
+                if not alt in "ACGT":
+                    return True
+                if len(alt) != len(self.REF):
+                    if not is_sv:
+                        return True
+            return False
+
+    property is_transition:
+        def __get__(self):
+            if len(self.ALT) > 1: return False
+
+            if not self.is_snp: return False
+            ref = self.REF
+                # just one alt allele
+            alt_allele = self.ALT[0]
+            if ((ref == b'A' and alt_allele == b'G') or
+                (ref == b'G' and alt_allele == b'A') or
+                (ref == b'C' and alt_allele == b'T') or
+                (ref == b'T' and alt_allele == b'C')):
+                    return True
+            return False
+
+    property is_deletion:
+        def __get__(self):
+            if len(self.ALT) > 1: return False
+
+            if not self.is_indel: return False
+            alt = self.ALT[0]
+            if not alt in "ACGT":
+                return True
+            if len(self.REF) > alt:
+                return True
+            return False
+
+    property is_sv:
+        def __get__(self):
+            return self.INFO_get('SVTYPE') is not None
+
     property CHROM:
         def __get__(self):
             return bcf_hdr_id2name(self.vcf.hdr, self.b.rid)
 
     property var_type:
         def __get__(self):
-            return "snp"
+           if self.is_snp:
+               return "snp"
+           elif self.is_indel:
+               return "indel"
+           elif self.is_sv:
+               return "sv"
+           else:
+               return "unknown"
 
     property var_subtype:
         def __get__(self):
-            return "snp"
-
+            return "notimplemented"
 
     property start:
         def __get__(self):

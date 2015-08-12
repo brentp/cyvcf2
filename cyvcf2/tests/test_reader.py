@@ -32,3 +32,18 @@ def test_attrs():
     assert variant.end == 10177, variant.end
     assert variant.FILTER is None
     assert variant.QUAL == 92.0
+
+    assert variant.REF == "CCCTAA"
+    assert variant.ALT == ["C"]
+
+def test_vartype():
+    v = VCF(VCF_PATH)
+    variant = next(v)
+    assert variant.var_type == "indel", variant.var_type
+
+def test_iterate():
+
+    for i, v in enumerate(VCF(VCF_PATH), start=1):
+        pass
+    assert i == 115, i
+

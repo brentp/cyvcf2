@@ -1,2 +1,2 @@
 #
-from .cyvcf2 import VCF
+from .cyvcf2 import VCF, Variant

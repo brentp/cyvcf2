@@ -1,4 +1,4 @@
-from cyvcf2 import VCF
+from cyvcf2 import VCF, Variant
 import os.path
 from nose.tools import assert_raises
 
@@ -15,3 +15,8 @@ def test_bad_init():
 def test_samples():
     v = VCF(VCF_PATH)
     assert len(v.samples) == 189
+
+def test_next():
+    v = VCF(VCF_PATH)
+    variant = next(v)
+    assert isinstance(variant, Variant)

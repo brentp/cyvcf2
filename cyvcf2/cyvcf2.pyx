@@ -64,6 +64,7 @@ cdef class Variant(object):
     cdef int _gt_nper
     cdef int *_gt_pls
     cdef float *_gt_gls
+    cdef readonly INFO INFO
 
     cdef readonly int POS
 
@@ -341,7 +342,7 @@ cdef class Variant(object):
 
     property is_sv:
         def __get__(self):
-            return self.INFO_get('SVTYPE') is not None
+            return self.INFO.get('SVTYPE') is not None
 
     property CHROM:
         def __get__(self):
@@ -400,8 +401,15 @@ cdef class Variant(object):
                 return None
             return q
 
-    def INFO_get(self, char *key, default=None):
-        cdef bcf_info_t *info = bcf_get_info(self.vcf.hdr, self.b, key)
+cdef class INFO(object):
+    cdef bcf_hdr_t *hdr
+    cdef bcf1_t *b
+
+    def __cinit__(self):
+        pass
+
+    def get(self, char *key, default=None):
+        cdef bcf_info_t *info = bcf_get_info(self.hdr, self.b, key)
         if info == NULL:
             return default
             raise KeyError
@@ -434,15 +442,6 @@ cdef class Variant(object):
             return v
 
         return bcf_array_to_object(info.vptr, info.type, info.len)
-
-
-#    property INFO:
-#        def __get__(self):
-#            if self._INFO is NULL:
-#                self._INFO = {}
-#            if
-
-    # var_type and var_sub_type
 
 
 # this function is copied verbatim from pysam/cbcf.pyx
@@ -498,7 +497,6 @@ cdef bcf_array_to_object(void *data, int type, int n, int scalar=0):
 
     return value
 
-
 cdef inline Variant newVariant(bcf1_t *b, VCF vcf):
     cdef Variant v = Variant.__new__(Variant)
     v.b = b
@@ -506,4 +504,7 @@ cdef inline Variant newVariant(bcf1_t *b, VCF vcf):
         bcf_unpack(v.b, 15)
     v.vcf = vcf
     v.POS = v.b.pos + 1
+    cdef INFO i = INFO.__new__(INFO)
+    i.b, i.hdr = b, vcf.hdr
+    v.INFO = i
     return v

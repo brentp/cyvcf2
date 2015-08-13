@@ -391,7 +391,6 @@ cdef class Variant(object):
                         self.vcf.PASS = self.b.d.flt[0]
                         return None
                     return v
-            # TODO: convert "PASS" to None?
             return ';'.join(bcf_hdr_int2id(h, BCF_DT_ID, self.b.d.flt[i]) for i in range(n))
 
     property QUAL:
@@ -500,7 +499,7 @@ cdef bcf_array_to_object(void *data, int type, int n, int scalar=0):
     return value
 
 
-cdef Variant newVariant(bcf1_t *b, VCF vcf):
+cdef inline Variant newVariant(bcf1_t *b, VCF vcf):
     cdef Variant v = Variant.__new__(Variant)
     v.b = b
     with nogil:

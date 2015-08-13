@@ -86,6 +86,15 @@ def test_gt_types():
         o = _get_samples(variant)
         assert (gt_types == o).all(), (variant, variant.CHROM, variant.POS, zip(gt_types, o))
 
+def test_raw_header():
+    v = VCF(VCF_PATH)
+    h = v.raw_header.strip().split("\n")
+    s = h[0]
+    assert s == "##fileformat=VCFv4.1", s
+    assert len(h) == 185, len(h)
+
+
+
 def test_iterate():
 
     for i, v in enumerate(VCF(VCF_PATH), start=1):

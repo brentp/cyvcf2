@@ -48,8 +48,15 @@ cdef class VCF(object):
 
     property samples:
         def __get__(self):
-            cdef int t
+            cdef int i
             return [self.hdr.samples[i] for i in range(self.n_samples)]
+
+    property raw_header:
+        def __get__(self):
+            cdef int hlen
+            s = bcf_hdr_fmt_text(self.hdr, 0, &hlen)
+            return s
+
 
 cdef class Variant(object):
     cdef bcf1_t *b

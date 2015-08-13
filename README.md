@@ -1,7 +1,7 @@
 cyvcf2
 ======
 
-cyvcf2 is a cython wrapper around [htslib](https://github.com/samtools/htslib) built for fast parsing of VCF files.
+cyvcf2 is a cython wrapper around [htslib](https://github.com/samtools/htslib) built for fast parsing of [Variant Call Format](https://en.m.wikipedia.org/wiki/Variant_Call_Format) (VCF) files.
 It is targetted toward our use-case in [gemini](http://gemini.rtfd.org) but should also be of general utility.
 
 On a file with 189 samples that takes [cyvcf](https://github.com/arq5x/cyvcf) **21 seconds** to parse and extract all sample information, it takes `cyvcf2` **1.4 seconds**.

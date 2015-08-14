@@ -206,6 +206,8 @@ cdef class Variant(object):
     property gt_types:
         def __get__(self):
             cdef int ndst, ngts, n, i, nper, j = 0
+            if self.vcf.n_samples == 0:
+                return []
             if self._gt_types == NULL:
                 self._gt_phased = <bint *>stdlib.malloc(sizeof(bint) * self.vcf.n_samples)
                 ndst = 0
@@ -226,6 +228,8 @@ cdef class Variant(object):
 
     property gt_phred_ll_homref:
         def __get__(self):
+            if self.vcf.n_samples == 0:
+                return []
             cdef int ndst = 0, nret=0, n, i, j, nper
             if self._gt_pls == NULL and self._gt_gls == NULL:
                 nret = bcf_get_format_int32(self.vcf.hdr, self.b, "PL", &self._gt_pls, &ndst)
@@ -245,6 +249,8 @@ cdef class Variant(object):
 
     property gt_phred_ll_het:
         def __get__(self):
+            if self.vcf.n_samples == 0:
+                return []
             if self._gt_pls == NULL and self._gt_gls == NULL:
                 self.gt_phred_ll_homref
             cdef np.npy_intp shape[1]
@@ -258,6 +264,8 @@ cdef class Variant(object):
 
     property gt_phred_ll_homalt:
         def __get__(self):
+            if self.vcf.n_samples == 0:
+                return []
             if self._gt_pls == NULL and self._gt_gls == NULL:
                 self.gt_phred_ll_homref
             cdef np.npy_intp shape[1]
@@ -532,6 +540,10 @@ cdef class INFO(object):
             return self.__getitem__(key)
         except KeyError:
             return None
+
+    def update(self, dict other):
+        pass
+        # TODO
 
 # this function is copied verbatim from pysam/cbcf.pyx
 cdef bcf_array_to_object(void *data, int type, int n, int scalar=0):

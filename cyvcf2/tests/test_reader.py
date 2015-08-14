@@ -85,6 +85,14 @@ def test_header_info():
 
     assert_raises(KeyError, v.__getitem__, 'XXXXX')
 
+def test_info_update():
+    vcf = VCF(VCF_PATH)
+    v = next(vcf)
+    ret = v.INFO.update({'k': 22})
+    print ret
+    assert v.INFO['k'] == 22
+    assert ret == 0, ret
+
 
 def test_gt_types():
     v = VCF(VCF_PATH)

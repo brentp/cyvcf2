@@ -542,8 +542,37 @@ cdef class INFO(object):
             return None
 
     def update(self, dict other):
-        pass
-        # TODO
+        cdef int32_t cv
+        cdef int i, n
+
+
+        for k, v in other.items():
+
+            if isinstance(v, (long, int)) or (isinstance(v, (list)) and isinstance(v[0], (long, int))):
+                n = 1 if isinstance(v, (long, int)) else len(v)
+                #cv = <int *>stdlib.malloc(n * sizeof(int))
+                bcf_hdr_append(self.hdr, "##FORMAT=<ID=%s,Number=%d,Type=Integer,Description=\"%s\">" % (k, n, k));
+                bcf_hdr_sync(self.hdr)
+                print bcf_hdr_id2int(self.hdr, BCF_DT_ID, k);
+
+                if isinstance(v, (long, int)):
+                    cv = v
+                #else:
+                #    for i in range(n):
+                #        cv[i] = v[i]
+
+                print k, cv, n
+                return bcf_update_info_int32(self.hdr, self.b, <char *>k, &cv, n)
+
+            #elif isinstance(v, (float, double)) or (isinstance(v, (list)) and isinstance(v[0], (float, double))):
+            #    bcf_update_info_float(self.hdr, self.b, k, v, 1 if isinstance(v, (float, double)) else len(v))
+
+            #elif isinstance(v, bool) or (isinstance(v, list) and isinstance(v[0], bool)):
+            #    bcf_update_info_flag(self.hdr, self.b, k, v, 1 if isinstance(v, bool) else len(v))
+
+            #else: # string
+            #    bcf_update_info_string(self.hdr, self.b, k, v)
+
 
 # this function is copied verbatim from pysam/cbcf.pyx
 cdef bcf_array_to_object(void *data, int type, int n, int scalar=0):

@@ -146,6 +146,7 @@ cdef extern from "htslib/vcf.h":
 
     const char *bcf_hdr_id2name(const bcf_hdr_t *hdr, int rid);
     const char *bcf_hdr_int2id(const bcf_hdr_t *hdr, int type, int int_id)
+    int bcf_hdr_id2int(const bcf_hdr_t *hdr, int type, const char *id);
 
     int bcf_unpack(bcf1_t *b, int which) nogil;
 
@@ -159,4 +160,23 @@ cdef extern from "htslib/vcf.h":
     int bcf_gt_allele(int);
     bint bcf_float_is_missing(float);
     bcf_info_t *bcf_get_info(const bcf_hdr_t *hdr, bcf1_t *line, const char *key);
+
+    int bcf_update_info(const bcf_hdr_t *hdr, bcf1_t *line, const char *key, const void *values, int n, int type);
+
+
+    int bcf_add_id(const bcf_hdr_t *hdr, bcf1_t *line, const char *id);
+    int bcf_update_id(const bcf_hdr_t *hdr, bcf1_t *line, const char *id);
+    int bcf_hdr_append(bcf_hdr_t * hdr, char *);
+    int bcf_hdr_sync(bcf_hdr_t *h);
+
+    int bcf_update_info_int32(const bcf_hdr_t *hdr, bcf1_t * line, const char *key, const int32_t *values, int n)
+    int bcf_update_info_float(const bcf_hdr_t *hdr, bcf1_t * line, const char *key, const float *values, int n)
+    int bcf_update_info_flag(const bcf_hdr_t *hdr, bcf1_t * line, const char *key, const int *values, int n)
+    int bcf_update_info_string(const bcf_hdr_t *hdr, bcf1_t * line, const char *key, const char *values)
+    #define bcf_update_info_flag(hdr,line,key,string,n)    bcf_update_info((hdr),(line),(key),(string),(n),BCF_HT_FLAG)
+    #define bcf_update_info_float(hdr,line,key,values,n)   bcf_update_info((hdr),(line),(key),(values),(n),BCF_HT_REAL)
+    #define bcf_update_info_flag(hdr,line,key,string,n)    bcf_update_info((hdr),(line),(key),(string),(n),BCF_HT_FLAG)
+    #define bcf_update_info_string(hdr,line,key,string)    bcf_update_info((hdr),(line),(key),(string),1,BCF_HT_STR)
+
+
 

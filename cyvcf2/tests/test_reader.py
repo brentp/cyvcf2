@@ -77,6 +77,14 @@ def _get_samples(v):
     else:
         raise Exception("not found")
 
+def test_header_info():
+    v = VCF(VCF_PATH)
+    csq = v['CSQ']
+    assert csq['ID'] == "CSQ"
+    assert "Description" in csq
+
+    assert_raises(KeyError, v.__getitem__, 'XXXXX')
+
 
 def test_gt_types():
     v = VCF(VCF_PATH)

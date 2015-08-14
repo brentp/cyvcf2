@@ -89,8 +89,20 @@ cdef extern from "htslib/vcf.h":
 
     ctypedef struct bcf_idpair_t:
         pass
+
+    const int BCF_HL_FLT  = 0 # header line
+    const int BCF_HL_INFO = 1
+    const int BCF_HL_FMT  = 2
+    const int BCF_HL_CTG  = 3
+    const int BCF_HL_STR  = 4 # structured header line TAG=<A=..,B=..>
+    const int BCF_HL_GEN  = 5 # generic header line
+
     ctypedef struct bcf_hrec_t:
-        pass
+        int type;       # One of the BCF_HL_* type
+        char *key;      # The part before '=', i.e. FILTER/INFO/FORMAT/contig/fileformat etc.
+        char *value;    # Set only for generic lines, NULL for FILTER/INFO, etc.
+        int nkeys;              # Number of structured fields
+        char **keys, **vals;    # The key=value pairs
 
     ctypedef struct kstring_t:
         pass
@@ -120,6 +132,13 @@ cdef extern from "htslib/vcf.h":
     int bcf_hdr_nsamples(const bcf_hdr_t *hdr);
     void bcf_hdr_destroy(const bcf_hdr_t *hdr)
     char *bcf_hdr_fmt_text(const bcf_hdr_t *hdr, int is_bcf, int *len);
+
+    int bcf_write(htsFile *fp, const bcf_hdr_t *h, bcf1_t *v);
+    int bcf_hdr_write(htsFile *fp, bcf_hdr_t *h);
+
+
+    bcf_hrec_t *bcf_hdr_get_hrec(const bcf_hdr_t *hdr, int type, const char *key, const char *value, const char *str_class);
+    void bcf_hrec_destroy(bcf_hrec_t *)
 
     int hts_close(htsFile *fp);
 

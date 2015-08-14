@@ -4,6 +4,7 @@ from libc cimport stdlib
 import numpy as np
 cimport numpy as np
 np.import_array()
+import atexit
 
 
 cdef class VCF(object):
@@ -12,6 +13,16 @@ cdef class VCF(object):
     cdef const bcf_hdr_t *hdr
     cdef int n_samples
     cdef int PASS
+
+    # pull something out of the HEADER, e.g. CSQ
+    def __getitem__(self, key):
+        cdef bcf_hrec_t *b = bcf_hdr_get_hrec(self.hdr, BCF_HL_INFO, "ID", key, NULL);
+        cdef int i
+        if b == NULL:
+            raise KeyError
+        d =  {b.keys[i]: b.vals[i] for i in range(b.nkeys)}
+        #bcf_hrec_destroy(b)
+        return d
 
     def __init__(self, fname, mode="r"):
         if not os.path.exists(fname):
@@ -125,6 +136,73 @@ cdef class Variant(object):
             #shape[0] = <np.npy_intp> self.vcf.n_samples * 2
             #return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_idxs)
 
+    property num_called:
+        def __get__(self):
+            if self._gt_types == NULL:
+                self.gt_types
+            cdef int n = 0, i = 0
+            for i in range(self.vcf.n_samples):
+                if self._gt_types[i] != 2:
+                    n+=1
+            return n
+
+    property call_rate:
+        def __get__(self):
+            return float(self.num_called) / self.vcf.n_samples
+
+    property aaf:
+        def __get__(self):
+            num_chroms = 2 * self.num_called
+            if num_chroms == 0.0:
+                return 0.0
+            return float(self.num_het + 2 * self.num_hom_alt) / num_chroms
+
+    property nucl_diversity:
+        def __get__(self):
+            num_chroms = 2.0 * self.num_called
+            p = self.aaf
+            return (num_chroms / (num_chroms - 1.0)) * 2 * p * (1 - p)
+
+    property num_hom_ref:
+        def __get__(self):
+            if self._gt_types == NULL:
+                self.gt_types
+            cdef int n = 0, i = 0
+            for i in range(self.vcf.n_samples):
+                if self._gt_types[i] == 0:
+                    n+=1
+            return n
+
+    property num_het:
+        def __get__(self):
+            if self._gt_types == NULL:
+                self.gt_types
+            cdef int n = 0, i = 0
+            for i in range(self.vcf.n_samples):
+                if self._gt_types[i] == 1:
+                    n+=1
+            return n
+
+    property num_hom_alt:
+        def __get__(self):
+            if self._gt_types == NULL:
+                self.gt_types
+            cdef int n = 0, i = 0
+            for i in range(self.vcf.n_samples):
+                if self._gt_types[i] == 3:
+                    n+=1
+            return n
+
+    property num_unknown:
+        def __get__(self):
+            if self._gt_types == NULL:
+                self.gt_types
+            cdef int n = 0, i = 0
+            for i in range(self.vcf.n_samples):
+                if self._gt_types[i] == 2:
+                    n+=1
+            return n
+
     property gt_types:
         def __get__(self):
             cdef int ndst, ngts, n, i, nper, j = 0
@@ -157,9 +235,9 @@ cdef class Variant(object):
                         return []
                 self._gt_nper = nret / self.vcf.n_samples
             cdef np.npy_intp shape[1]
-            shape[0] = <np.npy_intp> self.vcf.n_samples
+            shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples
             if self._gt_pls != NULL:
-                return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)[::3]
+                ret = np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)[::3]
             else:
                 gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32, self._gt_gls)[::3]
                 gls = (-10 * gls).round().astype(np.int32)
@@ -170,7 +248,7 @@ cdef class Variant(object):
             if self._gt_pls == NULL and self._gt_gls == NULL:
                 self.gt_phred_ll_homref
             cdef np.npy_intp shape[1]
-            shape[0] = <np.npy_intp> self.vcf.n_samples
+            shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples
             if self._gt_pls != NULL:
                 return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)[1::3]
             else:
@@ -183,7 +261,7 @@ cdef class Variant(object):
             if self._gt_pls == NULL and self._gt_gls == NULL:
                 self.gt_phred_ll_homref
             cdef np.npy_intp shape[1]
-            shape[0] = <np.npy_intp> self.vcf.n_samples
+            shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples
             if self._gt_pls != NULL:
                 return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)[2::3]
             else:
@@ -415,41 +493,45 @@ cdef class INFO(object):
     def __cinit__(self):
         pass
 
-    def get(self, char *key, default=None):
+    def __getitem__(self, char *key):
         cdef bcf_info_t *info = bcf_get_info(self.hdr, self.b, key)
         if info == NULL:
-            return default
             raise KeyError
 
         if info.len == 1:
             if info.type == BCF_BT_INT8:
                 if info.v1.i == INT8_MIN:
-                    return default
+                    raise KeyError
                 return <int>(info.v1.i)
 
             if info.type == BCF_BT_INT16:
                 if info.v1.i == INT16_MIN:
-                    return default
+                    raise KeyError
                 return <int>(info.v1.i)
 
             if info.type == BCF_BT_INT32:
                 if info.v1.i == INT32_MIN:
-                    return default
+                    raise KeyError
                 return <int>(info.v1.i)
 
             if info.type == BCF_BT_FLOAT:
                 if bcf_float_is_missing(info.v1.f):
-                    return default
+                    raise KeyError
                 return info.v1.f
 
         if info.type == BCF_BT_CHAR:
             v = info.vptr[:info.vptr_len]
             if v[0] == 0x7:
-                return default
+                raise KeyError
             return v
 
         return bcf_array_to_object(info.vptr, info.type, info.len)
 
+    def get(self, char *key, default=None):
+        try:
+            return self.__getitem__(key)
+        except KeyError:
+            return None
 
 # this function is copied verbatim from pysam/cbcf.pyx
 cdef bcf_array_to_object(void *data, int type, int n, int scalar=0):
@@ -515,3 +597,22 @@ cdef inline Variant newVariant(bcf1_t *b, VCF vcf):
     i.b, i.hdr = b, vcf.hdr
     v.INFO = i
     return v
+
+cdef class Writer(object):
+    cdef htsFile *hts
+    cdef bcf_hdr_t *hdr
+    cdef public str name
+
+    def __init__(self, fname, VCF tmpl):
+        self.name = fname
+        self.hts = hts_open(fname, "w")
+        cdef bcf_hdr_t *h = tmpl.hdr
+        self.hdr = h
+        bcf_hdr_write(self.hts, h)
+
+    def write_record(self, Variant var):
+        return bcf_write(self.hts, self.hdr, var.b)
+
+    def close(self):
+        if self.hts != NULL:
+            hts_close(self.hts)

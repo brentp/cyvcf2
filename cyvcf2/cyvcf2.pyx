@@ -505,7 +505,9 @@ cdef class INFO(object):
     def __cinit__(self):
         pass
 
-    def __getitem__(self, char *key):
+    def __getitem__(self, okey):
+        okey = str(okey)
+        cdef char *key = okey
         cdef bcf_info_t *info = bcf_get_info(self.hdr, self.b, key)
         if info == NULL:
             raise KeyError

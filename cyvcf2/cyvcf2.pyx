@@ -19,8 +19,12 @@ cdef class VCF(object):
         cdef bcf_hrec_t *b = bcf_hdr_get_hrec(self.hdr, BCF_HL_INFO, "ID", key, NULL);
         cdef int i
         if b == NULL:
-            raise KeyError
-        d =  {b.keys[i]: b.vals[i] for i in range(b.nkeys)}
+            b = bcf_hdr_get_hrec(self.hdr, BCF_HL_GEN, key, NULL, NULL);
+            if b == NULL:
+                raise KeyError
+            d = {b.key: b.value}
+        else:
+            d =  {b.keys[i]: b.vals[i] for i in range(b.nkeys)}
         #bcf_hrec_destroy(b)
         return d
 

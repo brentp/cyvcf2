@@ -12,6 +12,8 @@ cdef extern from "htslib/hts.h":
 
     htsFile *hts_open(char *fn, char *mode);
 
+    cdef int hts_verbose = 1
+
 cdef extern from "htslib/vcf.h":
     const int BCF_DT_ID = 0;
     const int BCF_DT_SAMPLE = 2;

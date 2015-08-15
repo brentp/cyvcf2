@@ -304,10 +304,10 @@ cdef class Variant(object):
                     # RO has to be 1:1
                     nret = bcf_get_format_int32(self.vcf.hdr, self.b, "RO", &self._gt_ref_depths, &ndst)
                     if nret < 0:
-                        return np.zeros(self.vcf.n_samples, np.int32)
+                        return -1 * np.zeros(self.vcf.n_samples, np.int32)
                 # TODO: add new vcf standard.
                 else:
-                    return np.zeros(self.vcf.n_samples, np.int32)
+                    return -1 * np.zeros(self.vcf.n_samples, np.int32)
 
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
@@ -345,12 +345,12 @@ cdef class Variant(object):
                             self._gt_alt_depths[j] = self._gt_alt_depths[i+k]
                         j += 1
                 else:
-                    return np.zeros(self.vcf.n_samples, np.int32)
+                    return -1 * np.zeros(self.vcf.n_samples, np.int32)
 
                 # TODO: add new vcf standard.
             for i in range(self.vcf.n_samples):
-                if self._gt_ref_depths[i] == -2147483648:
-                    self._gt_ref_depths[i] = -1
+                if self._gt_alt_depths[i] == -2147483648:
+                    self._gt_alt_depths[i] = -1
 
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
@@ -369,7 +369,7 @@ cdef class Variant(object):
                 #    print("OK")
                 if nret < 0 and nret != -2:
                     # TODO: how to fill quals? nan?
-                    return np.zeros(self.vcf.n_samples, np.float32)
+                    return -1.0 * np.zeros(self.vcf.n_samples, np.float32)
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
             if self._int_gt_quals != NULL:
@@ -382,7 +382,9 @@ cdef class Variant(object):
 
     property gt_depths:
         def __get__(self):
-            return self.gt_ref_depths + self.gt_alt_depths
+            depth = self.gt_ref_depths + self.gt_alt_depths
+            depth[depth < 0] = -1
+            return depth
 
     property gt_phases:
         def __get__(self):
@@ -597,6 +599,9 @@ cdef class INFO(object):
 
             #else: # string
             #    bcf_update_info_string(self.hdr, self.b, k, v)
+
+    def items(self):
+        # TODO for gemini
 
 
 # this function is copied verbatim from pysam/cbcf.pyx

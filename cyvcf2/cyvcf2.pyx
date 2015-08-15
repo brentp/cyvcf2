@@ -30,6 +30,8 @@ cdef class VCF(object):
         return d
 
     def __init__(self, fname, mode="r"):
+        if fname == "-":
+            fname = "/dev/stdin"
         if not os.path.exists(fname):
             raise Exception("bad path: %s" % fname)
         self.hts = hts_open(fname, mode)

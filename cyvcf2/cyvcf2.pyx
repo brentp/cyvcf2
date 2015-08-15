@@ -13,6 +13,7 @@ cdef class VCF(object):
     cdef const bcf_hdr_t *hdr
     cdef int n_samples
     cdef int PASS
+    cdef char *fname
 
     # pull something out of the HEADER, e.g. CSQ
     def __getitem__(self, key):
@@ -37,6 +38,7 @@ cdef class VCF(object):
         assert bcf_hdr_set_samples(self.hdr, "-", 0) == 0, ("error setting samples")
         self.n_samples = bcf_hdr_nsamples(self.hdr)
         self.PASS = -1
+        self.fname = fname
 
     def __dealloc__(self):
         if self.hdr != NULL:
@@ -152,7 +154,8 @@ cdef class Variant(object):
 
     property call_rate:
         def __get__(self):
-            return float(self.num_called) / self.vcf.n_samples
+            if self.vcf.n_samples > 0:
+                return float(self.num_called) / self.vcf.n_samples
 
     property aaf:
         def __get__(self):
@@ -294,15 +297,22 @@ cdef class Variant(object):
                     for i in range(0, nret, nper):
                         self._gt_ref_depths[j] = self._gt_ref_depths[i]
                         j += 1
-                else:
+                elif nret == -1:
                     # Freebayes
                     # RO has to be 1:1
                     nret = bcf_get_format_int32(self.vcf.hdr, self.b, "RO", &self._gt_ref_depths, &ndst)
-                    assert nret > 0
+                    if nret < 0:
+                        return np.zeros(self.vcf.n_samples, np.int32)
                 # TODO: add new vcf standard.
+                else:
+                    return np.zeros(self.vcf.n_samples, np.int32)
 
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
+            for i in range(self.vcf.n_samples):
+                if self._gt_ref_depths[i] == -2147483648:
+                    self._gt_ref_depths[i] = -1
+
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_ref_depths)
 
     property gt_alt_depths:    
@@ -321,17 +331,24 @@ cdef class Variant(object):
                         for k in range(2, nper):
                             self._gt_alt_depths[j] += self._gt_alt_depths[i+k]
                         j += 1
-                else:
+                elif nret == -1:
                     # Freebayes
                     nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AO", &self._gt_alt_depths, &ndst)
-                    assert nret > 0
+                    if nret < 0:
+                        return np.zeros(self.vcf.n_samples, np.int32)
                     nper = nret / self.vcf.n_samples
                     for i in range(0, nret, nper):
                         self._gt_alt_depths[j] = 0
                         for k in range(nper):
                             self._gt_alt_depths[j] = self._gt_alt_depths[i+k]
                         j += 1
+                else:
+                    return np.zeros(self.vcf.n_samples, np.int32)
+
                 # TODO: add new vcf standard.
+            for i in range(self.vcf.n_samples):
+                if self._gt_ref_depths[i] == -2147483648:
+                    self._gt_ref_depths[i] = -1
 
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples

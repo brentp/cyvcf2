@@ -226,13 +226,14 @@ cdef class Variant(object):
                 nper = ndst / self.vcf.n_samples
                 self._gt_idxs = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples * nper)
                 for i in range(0, ndst, nper):
-                    self._gt_phased[j] = bcf_gt_is_phased(self._gt_types[i])
                     self._gt_idxs[i] = bcf_gt_allele(self._gt_types[i])
+                    self._gt_phased[j] = bcf_gt_is_phased(self._gt_types[i + nper - 1])
                     for k in range(i + 1, i + nper):
                         self._gt_idxs[k] = bcf_gt_allele(self._gt_types[k])
                     j += 1
 
                 n = as_gts(self._gt_types, self.vcf.n_samples)
+            #print self.vcf.fname, self.POS, [self._gt_phased[i] for i in range(self.vcf.n_samples)]
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_types)
@@ -248,11 +249,20 @@ cdef class Variant(object):
                     nret = bcf_get_format_float(self.vcf.hdr, self.b, "GL", &self._gt_gls, &ndst)
                     if nret < 0:
                         return []
+                    else:
+                        for i in range(nret):
+                            if self._gt_gls[i] < 0:
+                                self._gt_gls[i] = -1.0
+                else:
+                    for i in range(nret):
+                        if self._gt_pls[i] < 0:
+                            self._gt_pls[i] = -1
+
                 self._gt_nper = nret / self.vcf.n_samples
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples
             if self._gt_pls != NULL:
-                ret = np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)[::3]
+                return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)[::3]
             else:
                 gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32, self._gt_gls)[::3]
                 gls = (-10 * gls).round().astype(np.int32)
@@ -383,7 +393,6 @@ cdef class Variant(object):
                 if nret == -2: # defined as int
                     ndst = 0
                     nret = bcf_get_format_float(self.vcf.hdr, self.b, "GQ", &self._gt_quals, &ndst)
-                #    print("OK")
                 if nret < 0 and nret != -2:
                     return -1.0 + np.zeros(self.vcf.n_samples, np.float32)
             cdef np.npy_intp shape[1]
@@ -498,7 +507,29 @@ cdef class Variant(object):
 
     property var_subtype:
         def __get__(self):
-            return "notimplemented"
+            if self.is_snp:
+                if self.is_transition:
+                    return "ts"
+                if len(self.ALT) == 1:
+                    return "tv"
+                return "unknown"
+
+            elif self.is_indel:
+                if self.is_deletion:
+                    return "del"
+                if len(self.ALT) == 1:
+                    return "ins"
+                else:
+                    return "unknown"
+
+            svt = self.INFO.get("SVTYPE")
+            if svt is None:
+                return "unknown"
+            if svt == "BND":
+                return "complex"
+            if self.INFO.get('IMPRECISE') is None:
+                return svt
+            return self.ALT[0].strip('<>')
 
     property start:
         def __get__(self):

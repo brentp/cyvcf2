@@ -22,6 +22,19 @@ def test_next():
     variant = next(v)
     assert isinstance(variant, Variant)
 
+def test_info_dict():
+    v = VCF(VCF_PATH)
+    variant = next(v)
+    d = dict(variant.INFO)
+    assert d != {}, d
+    toks = _get_line_for(variant)
+
+    info = toks[7].split(";")
+    keys = [x.split('=')[0] for x in info]
+    for k in keys:
+        assert k in d, (k, info)
+
+
 def test_attrs():
     # 1 10172   .       CCCTAA  C       92.0    PASS
     v = VCF(VCF_PATH)
@@ -49,10 +62,22 @@ def test_var_type():
         raise Exception
     assert variant.var_type == "snp", variant.var_type
 
-def _get_samples(v):
+def _get_line_for(v):
     import gzip
+
+    for i, line in enumerate(gzip.open(VCF_PATH), start=1):
+        if line[0] == "#": continue
+        toks = line.strip().split("\t")
+        if not (toks[0] == v.CHROM and int(toks[1]) == v.POS): continue
+        if toks[3] != v.REF: continue
+        if toks[4] not in v.ALT: continue
+        return toks
+    else:
+        raise Exception("not found")
+
+
+def _get_samples(v):
     import numpy as np
-    import sys
 
     def _get_gt(s):
         if not ":" in s:
@@ -65,25 +90,15 @@ def _get_samples(v):
         if s in ("1/1", "1|1"):
             return 3
         return 2
-
-    for i, line in enumerate(gzip.open(VCF_PATH), start=1):
-        if line[0] == "#": continue
-        toks = line.strip().split("\t")
-        if not (toks[0] == v.CHROM and int(toks[1]) == v.POS): continue
-        if toks[3] != v.REF: continue
-        if toks[4] not in v.ALT: continue
-
-        samples = toks[9:]
-        return  np.array([_get_gt(s) for s in samples], np.int)
-    else:
-        raise Exception("not found")
+    toks = _get_line_for(v)
+    samples = toks[9:]
+    return np.array([_get_gt(s) for s in samples], np.int)
 
 def test_header_info():
     v = VCF(VCF_PATH)
     csq = v['CSQ']
     assert csq['ID'] == "CSQ"
     assert "Description" in csq
-
 
 
     assert_raises(KeyError, v.__getitem__, 'XXXXX')
@@ -95,6 +110,7 @@ def test_snpeff_header():
     assert f != {}, f
     assert 'SnpEffVersion' in f
 
+"""
 def test_info_update():
     vcf = VCF(VCF_PATH)
     v = next(vcf)
@@ -102,7 +118,7 @@ def test_info_update():
     #print ret
     #assert v.INFO['k'] == 22
     #assert ret == 0, ret
-
+"""
 
 def test_gt_types():
     v = VCF(VCF_PATH)

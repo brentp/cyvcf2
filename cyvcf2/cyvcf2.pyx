@@ -522,16 +522,12 @@ cdef class Variant(object):
 cdef class INFO(object):
     cdef bcf_hdr_t *hdr
     cdef bcf1_t *b
+    cdef int _i
 
     def __cinit__(self):
-        pass
+        self._i = 0
 
-    def __getitem__(self, okey):
-        okey = str(okey)
-        cdef char *key = okey
-        cdef bcf_info_t *info = bcf_get_info(self.hdr, self.b, key)
-        if info == NULL:
-            raise KeyError
+    cdef _getval(INFO self, bcf_info_t * info):
 
         if info.len == 1:
             if info.type == BCF_BT_INT8:
@@ -562,47 +558,37 @@ cdef class INFO(object):
 
         return bcf_array_to_object(info.vptr, info.type, info.len)
 
+    def __getitem__(self, okey):
+        okey = str(okey)
+        cdef char *key = okey
+        cdef bcf_info_t *info = bcf_get_info(self.hdr, self.b, key)
+        if info == NULL:
+            raise KeyError
+        return self._getval(info)
+
+
+
     def get(self, char *key, default=None):
         try:
             return self.__getitem__(key)
         except KeyError:
             return None
 
-    def update(self, dict other):
-        cdef int32_t cv
-        cdef int i, n
+    def __iter__(self):
+        self._i = 0
+        return self
 
-
-        for k, v in other.items():
-
-            if isinstance(v, (long, int)) or (isinstance(v, (list)) and isinstance(v[0], (long, int))):
-                n = 1 if isinstance(v, (long, int)) else len(v)
-                #cv = <int *>stdlib.malloc(n * sizeof(int))
-                bcf_hdr_append(self.hdr, "##FORMAT=<ID=%s,Number=%d,Type=Integer,Description=\"%s\">" % (k, n, k));
-                bcf_hdr_sync(self.hdr)
-                print bcf_hdr_id2int(self.hdr, BCF_DT_ID, k);
-
-                if isinstance(v, (long, int)):
-                    cv = v
-                #else:
-                #    for i in range(n):
-                #        cv[i] = v[i]
-
-                print k, cv, n
-                return bcf_update_info_int32(self.hdr, self.b, <char *>k, &cv, n)
-
-            #elif isinstance(v, (float, double)) or (isinstance(v, (list)) and isinstance(v[0], (float, double))):
-            #    bcf_update_info_float(self.hdr, self.b, k, v, 1 if isinstance(v, (float, double)) else len(v))
-
-            #elif isinstance(v, bool) or (isinstance(v, list) and isinstance(v[0], bool)):
-            #    bcf_update_info_flag(self.hdr, self.b, k, v, 1 if isinstance(v, bool) else len(v))
-
-            #else: # string
-            #    bcf_update_info_string(self.hdr, self.b, k, v)
-
-    def items(self):
-        # TODO for gemini
-
+    def __next__(self):
+        cdef bcf_info_t *info = NULL
+        cdef char *name
+        import sys
+        while info == NULL:
+            if self._i >= self.b.n_info:
+                raise StopIteration
+            info = &(self.b.d.info[self._i])
+            self._i += 1
+        name = bcf_hdr_int2id(self.hdr, BCF_DT_ID, info.key)
+        return name, self._getval(info)
 
 # this function is copied verbatim from pysam/cbcf.pyx
 cdef bcf_array_to_object(void *data, int type, int n, int scalar=0):

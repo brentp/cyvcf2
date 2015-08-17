@@ -4,6 +4,8 @@ from libc cimport stdlib
 import numpy as np
 cimport numpy as np
 np.import_array()
+np.seterr(invalid='ignore')
+
 import atexit
 
 
@@ -288,13 +290,18 @@ cdef class Variant(object):
 
     property gt_ref_depths:    
         def __get__(self):
-            cdef int ndst, nret = 0, n, i, j = 0
+            cdef int ndst, nret = 0, n, i, j = 0, nper = 0
+            if self.vcf.n_samples == 0:
+                return []
             if self._gt_ref_depths == NULL:
                 ndst = 0
                 # GATK
                 nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AD", &self._gt_ref_depths, &ndst)
                 if nret > 0:
                     nper = nret / self.vcf.n_samples
+                    if nper == 1:
+                        stdlib.free(self._gt_ref_depths); self._gt_ref_depths = NULL
+                        return -1 + np.zeros(self.vcf.n_samples, np.int32)
 
                     for i in range(0, nret, nper):
                         self._gt_ref_depths[j] = self._gt_ref_depths[i]
@@ -303,29 +310,35 @@ cdef class Variant(object):
                     # Freebayes
                     # RO has to be 1:1
                     nret = bcf_get_format_int32(self.vcf.hdr, self.b, "RO", &self._gt_ref_depths, &ndst)
-                    if nret < 0:
-                        return -1 * np.zeros(self.vcf.n_samples, np.int32)
+                    if nret < 0 or nret == self.vcf.n_samples:
+                        stdlib.free(self._gt_ref_depths); self._gt_ref_depths = NULL
+                        return -1 + np.zeros(self.vcf.n_samples, np.int32)
                 # TODO: add new vcf standard.
                 else:
-                    return -1 * np.zeros(self.vcf.n_samples, np.int32)
+                    stdlib.free(self._gt_ref_depths); self._gt_ref_depths = NULL
+                    return -1 + np.zeros(self.vcf.n_samples, np.int32)
 
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
             for i in range(self.vcf.n_samples):
-                if self._gt_ref_depths[i] == -2147483648:
+                if self._gt_ref_depths[i] < 0:
                     self._gt_ref_depths[i] = -1
-
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_ref_depths)
 
     property gt_alt_depths:    
         def __get__(self):
-            cdef int ndst, nret = 0, n, i, j = 0, k = 0
+            cdef int ndst, nret = 0, n, i, j = 0, k = 0, nper = 0
+            if self.vcf.n_samples == 0:
+                return []
             if self._gt_alt_depths == NULL:
                 ndst = 0
                 # GATK
                 nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AD", &self._gt_alt_depths, &ndst)
                 if nret > 0:
                     nper = nret / self.vcf.n_samples
+                    if nper == 1:
+                        stdlib.free(self._gt_alt_depths); self._gt_alt_depths = NULL
+                        return (-1 + np.zeros(self.vcf.n_samples, np.int32))
 
                     for i in range(0, nret, nper):
                         self._gt_alt_depths[j] = self._gt_alt_depths[i+1]
@@ -336,20 +349,22 @@ cdef class Variant(object):
                 elif nret == -1:
                     # Freebayes
                     nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AO", &self._gt_alt_depths, &ndst)
-                    if nret < 0:
-                        return np.zeros(self.vcf.n_samples, np.int32)
                     nper = nret / self.vcf.n_samples
+                    if nret < 0 or nper == 1:
+                        stdlib.free(self._gt_alt_depths); self._gt_alt_depths = NULL
+                        return -1 + np.zeros(self.vcf.n_samples, np.int32)
                     for i in range(0, nret, nper):
                         self._gt_alt_depths[j] = 0
                         for k in range(nper):
                             self._gt_alt_depths[j] = self._gt_alt_depths[i+k]
                         j += 1
                 else:
-                    return -1 * np.zeros(self.vcf.n_samples, np.int32)
+                    stdlib.free(self._gt_alt_depths); self._gt_alt_depths = NULL
+                    return -1 + np.zeros(self.vcf.n_samples, np.int32)
 
                 # TODO: add new vcf standard.
             for i in range(self.vcf.n_samples):
-                if self._gt_alt_depths[i] == -2147483648:
+                if self._gt_alt_depths[i] < 0:
                     self._gt_alt_depths[i] = -1
 
             cdef np.npy_intp shape[1]
@@ -358,6 +373,8 @@ cdef class Variant(object):
 
     property gt_quals:
         def __get__(self):
+            if self.vcf.n_samples == 0:
+                return []
             cdef int ndst = 0, nret, n, i
             cdef int *gq
             cdef np.ndarray[np.float32_t, ndim=1] a
@@ -368,20 +385,22 @@ cdef class Variant(object):
                     nret = bcf_get_format_float(self.vcf.hdr, self.b, "GQ", &self._gt_quals, &ndst)
                 #    print("OK")
                 if nret < 0 and nret != -2:
-                    # TODO: how to fill quals? nan?
-                    return -1.0 * np.zeros(self.vcf.n_samples, np.float32)
+                    return -1.0 + np.zeros(self.vcf.n_samples, np.float32)
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
             if self._int_gt_quals != NULL:
                 a = np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._int_gt_quals).astype(np.float32)
+                a[a < 0] = -1
             else:
                 a = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32, self._gt_quals)
-            # this take up 10% of the total vcf parsing time. fix!!
-            #a[a == -2147483648] = np.nan
+                # this take up 10% of the total vcf parsing time. fix!!
+                a[np.isnan(a)] = -1
             return a
 
     property gt_depths:
         def __get__(self):
+            if self.vcf.n_samples == 0:
+                return []
             depth = self.gt_ref_depths + self.gt_alt_depths
             depth[depth < 0] = -1
             return depth
@@ -524,7 +543,7 @@ cdef class INFO(object):
     cdef bcf1_t *b
     cdef int _i
 
-    def __cinit__(self):
+    def __cinit__(INFO self):
         self._i = 0
 
     cdef _getval(INFO self, bcf_info_t * info):

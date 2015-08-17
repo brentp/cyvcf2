@@ -262,9 +262,11 @@ cdef class Variant(object):
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples
             if self._gt_pls != NULL:
-                return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)[::3]
+                return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32,
+                        self._gt_pls)[::self._gt_nper]
             else:
-                gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32, self._gt_gls)[::3]
+                gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32,
+                        self._gt_gls)[::self._gt_nper]
                 gls = (-10 * gls).round().astype(np.int32)
                 return gls
 
@@ -277,9 +279,15 @@ cdef class Variant(object):
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples
             if self._gt_pls != NULL:
-                return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)[1::3]
+                if self._gt_nper > 1:
+                    return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)[1::self._gt_nper]
+                return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)
             else:
-                gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32, self._gt_gls)[1::3]
+                if self._gt_nper > 1:
+                    gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32,
+                            self._gt_gls)[1::self._gt_nper]
+                else:
+                    gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32, self._gt_gls)
                 gls = (-10 * gls).round().astype(np.int32)
                 return gls
 
@@ -292,9 +300,17 @@ cdef class Variant(object):
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples
             if self._gt_pls != NULL:
-                return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)[2::3]
+                if self._gt_nper > 1:
+                    return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32,
+                            self._gt_pls)[2::self._gt_nper]
+                return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)
             else:
-                gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32, self._gt_gls)[2::3]
+                if self._gt_nper > 1:
+                    gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32,
+                            self._gt_gls)[2::self._gt_nper]
+                else:
+                    gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32,
+                            self._gt_gls)
                 gls = (-10 * gls).round().astype(np.int32)
                 return gls
 
@@ -320,7 +336,7 @@ cdef class Variant(object):
                     # Freebayes
                     # RO has to be 1:1
                     nret = bcf_get_format_int32(self.vcf.hdr, self.b, "RO", &self._gt_ref_depths, &ndst)
-                    if nret < 0 or nret == self.vcf.n_samples:
+                    if nret < 0:
                         stdlib.free(self._gt_ref_depths); self._gt_ref_depths = NULL
                         return -1 + np.zeros(self.vcf.n_samples, np.int32)
                 # TODO: add new vcf standard.
@@ -356,17 +372,18 @@ cdef class Variant(object):
                         for k in range(2, nper):
                             self._gt_alt_depths[j] += self._gt_alt_depths[i+k]
                         j += 1
+
                 elif nret == -1:
                     # Freebayes
                     nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AO", &self._gt_alt_depths, &ndst)
                     nper = nret / self.vcf.n_samples
-                    if nret < 0 or nper == 1:
+                    if nret < 0:
                         stdlib.free(self._gt_alt_depths); self._gt_alt_depths = NULL
                         return -1 + np.zeros(self.vcf.n_samples, np.int32)
                     for i in range(0, nret, nper):
-                        self._gt_alt_depths[j] = 0
-                        for k in range(nper):
-                            self._gt_alt_depths[j] = self._gt_alt_depths[i+k]
+                        self._gt_alt_depths[j] = self._gt_alt_depths[i]
+                        for k in range(1, nper):
+                            self._gt_alt_depths[j] += self._gt_alt_depths[i+k]
                         j += 1
                 else:
                     stdlib.free(self._gt_alt_depths); self._gt_alt_depths = NULL
@@ -452,7 +469,7 @@ cdef class Variant(object):
 
             for i in range(1, self.b.n_allele):
                 alt = self.b.d.allele[i]
-                if not alt in "ACGT":
+                if alt == b".":
                     return True
                 if len(alt) != len(self.REF):
                     if not is_sv:
@@ -480,9 +497,10 @@ cdef class Variant(object):
 
             if not self.is_indel: return False
             alt = self.ALT[0]
-            if not alt in "ACGT":
+            if alt is None or alt == ".":
                 return True
-            if len(self.REF) > alt:
+            
+            if len(self.REF) > len(alt):
                 return True
             return False
 

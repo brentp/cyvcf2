@@ -1,6 +1,7 @@
 from setuptools import setup
 from distutils.extension import Extension
 from Cython.Build import cythonize
+import numpy as np
 import os
 import glob
 
@@ -31,7 +32,7 @@ setup(
     version=get_version(),
     ext_modules=cythonize([
         Extension("cyvcf2.cyvcf2", ["cyvcf2/cyvcf2.pyx"], libraries=["hts"],
-            include_dirs=["cyvcf2"], extra_objects=["cyvcf2/helpers.c",
+            include_dirs=["cyvcf2", np.get_include()], extra_objects=["cyvcf2/helpers.c",
                 "cyvcf2/helpers.h"] + glob.glob("cyvcf2/blosc*") +
             glob.glob("cyvcf2/shuff*"))
      ], include_path=["cyvcf2"]),

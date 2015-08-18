@@ -30,6 +30,15 @@ for variant in VCF('some.vcf.gz'):
     c = variant.gt_phred_ll_homalt # numpy array
 ```
 
+Testing
+=======
+
+Tests can be run with:
+
+```
+python setup.py test
+```
+
 See Also
 ========
 

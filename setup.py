@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 from distutils.extension import Extension
 from Cython.Build import cythonize
 import os
@@ -22,6 +22,12 @@ def get_version():
 
 setup(
     name="cyvcf2",
+    description="fast vcf parsing with cython + htslib",
+    url="https://github.com/brentp/cyvcf2/",
+    long_description=open("README.md").read(),
+    license="MIT",
+    author="Brent Pedersen",
+    author_email="bpederse@gmail.com",
     version=get_version(),
     ext_modules=cythonize([
         Extension("cyvcf2.cyvcf2", ["cyvcf2/cyvcf2.pyx"], libraries=["hts"],
@@ -30,7 +36,8 @@ setup(
             glob.glob("cyvcf2/shuff*"))
      ], include_path=["cyvcf2"]),
     packages=['cyvcf2', 'cyvcf2.tests'],
-    #test_suite='nose.collector',
-    #tests_require='nose',
+    test_suite='nose.collector',
+    tests_require='nose',
+    install_requires=['cython>=0.22.1'],
     include_package_data=True,
 )

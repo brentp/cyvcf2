@@ -1,1 +1,3 @@
-cyvcf2/tests/*
+include cyvcf2/tests/*
+include LICENSE
+include *.md

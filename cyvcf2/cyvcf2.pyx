@@ -432,9 +432,11 @@ cdef class Variant(object):
         def __get__(self):
             if self.vcf.n_samples == 0:
                 return []
-            depth = self.gt_ref_depths + self.gt_alt_depths
-            depth[depth < 0] = -1
-            return depth
+            r = self.gt_ref_depths
+            a = self.gt_alt_depths
+            r[r < 0] = 0
+            a[a < 0] = 0
+            return r + a
 
     property gt_phases:
         def __get__(self):
@@ -574,6 +576,8 @@ cdef class Variant(object):
             cdef int i
             cdef bcf_hdr_t *h = self.vcf.hdr
             cdef int n = self.b.d.n_flt
+            if n == 0:
+                return None
             if n == 1:
                 if self.vcf.PASS != -1:
                     if self.b.d.flt[0] == self.vcf.PASS:

@@ -31,8 +31,10 @@ setup(
     author_email="bpederse@gmail.com",
     version=get_version(),
     ext_modules=cythonize([
-        Extension("cyvcf2.cyvcf2", ["cyvcf2/cyvcf2.pyx"], libraries=["hts"],
-                  include_dirs=["cyvcf2", np.get_include()],
+        Extension("cyvcf2.cyvcf2", ["cyvcf2/cyvcf2.pyx"],
+                  libraries=["hts"],
+                  library_dirs= os.environ.get("LD_LIBRARY_PATH", "").split(":"),
+                  include_dirs=os.environ.get('C_INCLUDE_PATH', '').split(":") + ["cyvcf2", np.get_include()] ,
                   extra_objects=["cyvcf2/helpers.c"])
         ], include_path=["cyvcf2"]),
     packages=['cyvcf2', 'cyvcf2.tests'],

@@ -32,10 +32,9 @@ setup(
     version=get_version(),
     ext_modules=cythonize([
         Extension("cyvcf2.cyvcf2", ["cyvcf2/cyvcf2.pyx"], libraries=["hts"],
-            include_dirs=["cyvcf2", np.get_include()], extra_objects=["cyvcf2/helpers.c",
-                "cyvcf2/helpers.h"] + glob.glob("cyvcf2/blosc*") +
-            glob.glob("cyvcf2/shuff*"))
-     ], include_path=["cyvcf2"]),
+                  include_dirs=["cyvcf2", np.get_include()],
+                  extra_objects=["cyvcf2/helpers.c"])
+        ], include_path=["cyvcf2"]),
     packages=['cyvcf2', 'cyvcf2.tests'],
     test_suite='nose.collector',
     tests_require='nose',

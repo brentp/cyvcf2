@@ -158,7 +158,7 @@ cdef extern from "htslib/vcf.h":
     int bcf_get_format_float(const bcf_hdr_t *hdr, bcf1_t *line, char * tag, float **dst, int *ndst)
 
     int bcf_get_format_values(const bcf_hdr_t *hdr, bcf1_t *line, const char *tag, void **dst, int *ndst, int type);
-    bint bcf_gt_is_phased(int);
+    int bcf_gt_is_phased(int);
     int bcf_gt_allele(int);
     bint bcf_float_is_missing(float);
     bcf_info_t *bcf_get_info(const bcf_hdr_t *hdr, bcf1_t *line, const char *key);

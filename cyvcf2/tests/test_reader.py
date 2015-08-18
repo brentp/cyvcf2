@@ -5,10 +5,31 @@ from nose.tools import assert_raises
 HERE = os.path.dirname(__file__)
 VCF_PATH = os.path.join(HERE, "test.vcf.gz")
 VCF_PATH2 = os.path.join(HERE, "test.snpeff.vcf")
+VCF_PHASE_PATH = os.path.join(HERE, "test.comp_het.3.vcf")
 
 def test_init():
     v = VCF(VCF_PATH)
     assert v
+
+def test_phases():
+    vcf = VCF(VCF_PHASE_PATH)
+
+    v = next(vcf)
+    assert all(v.gt_phases), v.gt_phases
+
+    v = next(vcf)
+    assert all(v.gt_phases)
+
+    v = next(vcf)
+    assert all(v.gt_phases[1::2])
+    assert not any(v.gt_phases[0::2])
+
+    v = next(vcf)
+    assert not any(v.gt_phases[:-1])
+    assert v.gt_phases[-1]
+
+    v = next(vcf)
+    assert not any(v.gt_phases)
 
 def test_bad_init():
     assert_raises(Exception, VCF, "XXXXX")

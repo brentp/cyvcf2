@@ -8,7 +8,6 @@ np.seterr(invalid='ignore')
 
 import atexit
 
-
 cdef class VCF(object):
 
     cdef htsFile *hts
@@ -85,7 +84,7 @@ cdef class Variant(object):
     cdef int *_gt_types
     cdef int *_gt_ref_depths
     cdef int *_gt_alt_depths
-    cdef bint *_gt_phased
+    cdef int *_gt_phased
     cdef float *_gt_quals
     cdef int *_int_gt_quals
     cdef int *_gt_idxs
@@ -216,20 +215,21 @@ cdef class Variant(object):
 
     property gt_types:
         def __get__(self):
-            cdef int ndst, ngts, n, i, nper, j = 0
+            cdef int ndst, ngts, n, i, nper, j = 0, k = 0
             if self.vcf.n_samples == 0:
                 return []
             if self._gt_types == NULL:
-                self._gt_phased = <bint *>stdlib.malloc(sizeof(bint) * self.vcf.n_samples)
+                self._gt_phased = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples)
                 ndst = 0
                 ngts = bcf_get_genotypes(self.vcf.hdr, self.b, &self._gt_types, &ndst)
                 nper = ndst / self.vcf.n_samples
                 self._gt_idxs = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples * nper)
+                import sys
                 for i in range(0, ndst, nper):
                     self._gt_idxs[i] = bcf_gt_allele(self._gt_types[i])
-                    self._gt_phased[j] = bcf_gt_is_phased(self._gt_types[i + nper - 1])
                     for k in range(i + 1, i + nper):
                         self._gt_idxs[k] = bcf_gt_allele(self._gt_types[k])
+                    self._gt_phased[j] = <int>bcf_gt_is_phased(self._gt_types[i+1])
                     j += 1
 
                 n = as_gts(self._gt_types, self.vcf.n_samples)
@@ -251,8 +251,10 @@ cdef class Variant(object):
                         return []
                     else:
                         for i in range(nret):
-                            if self._gt_gls[i] < 0:
-                                self._gt_gls[i] = -1.0
+                            if self._gt_gls[i] < -2147483646:
+                                # this gets translated to -1 when converted to
+                                # pls
+                                self._gt_gls[i] = 0.1
                 else:
                     for i in range(nret):
                         if self._gt_pls[i] < 0:
@@ -262,8 +264,9 @@ cdef class Variant(object):
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples
             if self._gt_pls != NULL:
-                return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32,
+                pls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32,
                         self._gt_pls)[::self._gt_nper]
+                return pls
             else:
                 gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32,
                         self._gt_gls)[::self._gt_nper]
@@ -280,7 +283,9 @@ cdef class Variant(object):
             shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples
             if self._gt_pls != NULL:
                 if self._gt_nper > 1:
-                    return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)[1::self._gt_nper]
+                    ret = np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)[1::self._gt_nper]
+                    return ret
+
                 return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_pls)
             else:
                 if self._gt_nper > 1:
@@ -436,10 +441,11 @@ cdef class Variant(object):
             # run for side-effect 
             if self._gt_phased == NULL:
                 self.gt_types
-
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
-            return np.PyArray_SimpleNewFromData(1, shape, np.NPY_BOOL, self._gt_phased)
+
+            return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_phased).astype(bool)
+
 
     property REF:
         def __get__(self):

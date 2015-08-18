@@ -132,13 +132,14 @@ cdef class Variant(object):
             cdef int i, n = self.b.n_allele, j=0
             cdef char **alleles = self.b.d.allele
             cdef dict d = {i:alleles[i] for i in range(n)}
-            d[-1] = "."
             cdef list a = []
             cdef np.ndarray phased = self.gt_phases
             cdef char **lookup = ["/", "|"]
             for i in range(0, n * self.vcf.n_samples, n):
-                a.append(d[self._gt_idxs[i]] + lookup[phased[j]] +
-                        d[self._gt_idxs[i+1]])
+                a.append(d.get(self._gt_idxs[i], ".")
+                        + lookup[phased[j]] +
+                        d.get(self._gt_idxs[i+1], "."))
+                j += 1
             return np.array(a, np.str)
 
             #cdef np.npy_intp shape[1]

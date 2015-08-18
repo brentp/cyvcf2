@@ -1,3 +1,7 @@
 include cyvcf2/tests/*
 include LICENSE
+include cyvcf2/*.pyx
+include cyvcf2/*.pxd
+include cyvcf2/*.c
+include cyvcf2/*.h
 include *.md

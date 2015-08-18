@@ -30,6 +30,13 @@ for variant in VCF('some.vcf.gz'):
     c = variant.gt_phred_ll_homalt # numpy array
 ```
 
+Installation
+============
+
+```
+pip install cyvcf2
+```
+
 Testing
 =======
 

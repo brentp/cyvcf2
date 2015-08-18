@@ -349,12 +349,16 @@ cdef class Variant(object):
                     stdlib.free(self._gt_ref_depths); self._gt_ref_depths = NULL
                     return -1 + np.zeros(self.vcf.n_samples, np.int32)
 
+                for i in range(self.vcf.n_samples):
+                    if self._gt_ref_depths[i] < 0:
+                        self._gt_ref_depths[i] = -1
+            else:
+                pass
+
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
-            for i in range(self.vcf.n_samples):
-                if self._gt_ref_depths[i] < 0:
-                    self._gt_ref_depths[i] = -1
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_ref_depths)
+
 
     property gt_alt_depths:    
         def __get__(self):
@@ -432,11 +436,17 @@ cdef class Variant(object):
         def __get__(self):
             if self.vcf.n_samples == 0:
                 return []
-            r = self.gt_ref_depths
-            a = self.gt_alt_depths
-            r[r < 0] = 0
-            a[a < 0] = 0
-            return r + a
+            # unfortunately need to create a new array here since we're modifying.
+            r = np.array(self.gt_ref_depths, np.int32)
+            a = np.array(self.gt_alt_depths, np.int32)
+            # keep the -1 for empty.
+            rl0 = r < 0
+            al0 = a < 0
+            r[rl0] = 0
+            a[al0] = 0
+            depth = r + a
+            depth[rl0 & al0] = -1
+            return depth
 
     property gt_phases:
         def __get__(self):

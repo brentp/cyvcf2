@@ -18,6 +18,8 @@ cdef extern from "htslib/vcf.h":
     const int BCF_DT_ID = 0;
     const int BCF_DT_SAMPLE = 2;
 
+    uint32_t bcf_float_missing = 0x7F800001;
+
 
     const int BCF_BT_NULL   = 0
     const int BCF_BT_INT8   = 1

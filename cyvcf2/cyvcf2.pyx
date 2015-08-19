@@ -145,46 +145,44 @@ cdef class Variant(object):
             #cdef np.npy_intp shape[1]
             #shape[0] = <np.npy_intp> self.vcf.n_samples * 2
             #return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_idxs)
-    def relatedness(self, a=None):
-        ret = False
-        if a is None:
-            ret = True
-            a = np.zeros((self.vcf.n_samples, self.vcf.n_samples), np.double)
-        self._relatedness(a)
-        if ret:
-            return a
+    def relatedness(self, asum, n, vmax=3):
+        self._relatedness(asum, n, vmax)
 
-    cdef inline void _relatedness(self, double[:, ::1] asum):
-        cdef int j, k, m
-        cdef float denom, numer
+    cdef inline void _relatedness(self, double[:, ::1] asum, int[:, ::1] N, double vmax):
+        """
+        N track the number of snps that were used for each sample. The original
+        used a fixed N for all samples due to GWAS, but for sequencing, we must
+        allow for missing N.
+        """
+        cdef int j, k
+        cdef float denom, numer, val
         cdef np.ndarray[dtype=np.float_t, ndim=1] x = np.array(self.gt_types, dtype=np.float64)
         # flip the alleles as they did in the paper. so homalt is 0
         # also flip the aaf or it doesn't work out.
-        cdef float pi = 1.0 - self.aaf
-        #cdef int njk = 0, njj = 0
-        x[x == 2] = -99
+        cdef float pi = self.aaf
+        if pi == 0 or pi == 1: return
+        x[x == 2] = -1
         x[x == 3] = 2
-        x[x == -99] = 3
-        x = 2.0 - x
-        # N is the number of snps
 
         denom = 2.0 * pi * (1.0 - pi)
-        if denom == 0: return
         for j in range(self.vcf.n_samples):
             if x[j] < 0:
                 continue
             for k in range(j, self.vcf.n_samples):
                 if x[k] < 0:
                     continue
+                N[j, k] += 1
                 if j != k:
-                    #njk += 1
                     numer = (x[j] - 2.0 * pi) * (x[k] - 2.0 * pi)
-                    #numer = (x[j] * x[k]) - (2 * pi * x[j]) - (2 * pi * x[k]) + (4 * pi**2)
-                    asum[j, k] += numer / denom
+                    val = numer / denom
                 else:
-                    #njj += 1
                     numer = (x[j]**2.0 - (1.0 + 2.0 * pi) * x[j] + 2.0 * pi**2.0)
-                    asum[j, k] += numer / denom
+                    val = numer / denom
+
+                if val < vmax:
+                    asum[j, k] += val
+                else:
+                    asum[j, k] += vmax
 
     property num_called:
         def __get__(self):
@@ -203,7 +201,7 @@ cdef class Variant(object):
 
     property aaf:
         def __get__(self):
-            num_chroms = 2 * self.num_called
+            num_chroms = 2.0 * self.num_called
             if num_chroms == 0.0:
                 return 0.0
             return float(self.num_het + 2 * self.num_hom_alt) / num_chroms

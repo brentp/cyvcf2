@@ -1,5 +1,10 @@
 *.pyc
 build
-*.so
 dist
+*.so
 *.swp
+htslib/test
+*.5
+htslib/.gitignore
+*.o
+*.pico

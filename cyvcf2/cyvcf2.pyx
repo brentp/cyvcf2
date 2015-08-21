@@ -6,8 +6,6 @@ cimport numpy as np
 np.import_array()
 np.seterr(invalid='ignore')
 
-import atexit
-
 cdef class VCF(object):
 
     cdef htsFile *hts

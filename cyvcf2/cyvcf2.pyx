@@ -512,7 +512,7 @@ cdef class Variant(object):
             cdef int i
             if len(self.b.d.allele[0]) > 1: return False
             for i in range(1, self.b.n_allele):
-                if not self.b.d.allele[i] in "ACGT":
+                if not self.b.d.allele[i] in ("A", "C", "G", "T"):
                     return False
             return True
 

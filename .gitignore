@@ -2,9 +2,11 @@
 build
 dist
 *.so
+*.so.1
 *.swp
 htslib/test
 *.5
 htslib/.gitignore
 *.o
 *.pico
+libhts.a

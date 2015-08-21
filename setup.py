@@ -1,5 +1,6 @@
 from setuptools import setup
 from setuptools import Extension
+import numpy as np
 from Cython.Distutils import build_ext
 import os
 import glob
@@ -38,7 +39,7 @@ setup(
     ext_modules=[
         Extension("cyvcf2.cyvcf2", ["cyvcf2/cyvcf2.pyx"] + sources,
                   libraries=['z'],
-                  include_dirs=['htslib', 'cyvcf2'])
+                  include_dirs=['htslib', 'cyvcf2', np.get_include()])
         ],
     packages=['cyvcf2', 'cyvcf2.tests'],
     test_suite='nose.collector',

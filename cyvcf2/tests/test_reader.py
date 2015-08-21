@@ -11,6 +11,16 @@ def test_init():
     v = VCF(VCF_PATH)
     assert v
 
+def test_type():
+    vcf = VCF(VCF_PATH)
+    for v in vcf:
+        if len(v.REF) == 1 and len(v.ALT[0]) == 1:
+            assert v.var_type == 'snp'
+        elif v.ALT[0][0] != "<":
+            assert v.var_type == 'indel'
+        else:
+            print v.var_type, v.REF, v.ALT
+
 def test_phases():
     vcf = VCF(VCF_PHASE_PATH)
 

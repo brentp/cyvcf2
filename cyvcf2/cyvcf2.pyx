@@ -6,6 +6,8 @@ cimport numpy as np
 np.import_array()
 np.seterr(invalid='ignore')
 
+from cython cimport view
+
 cdef class VCF(object):
 
     cdef htsFile *hts
@@ -13,6 +15,7 @@ cdef class VCF(object):
     cdef int n_samples
     cdef int PASS
     cdef char *fname
+    cdef bint gts012
 
     # pull something out of the HEADER, e.g. CSQ
     def __getitem__(self, key):
@@ -28,7 +31,7 @@ cdef class VCF(object):
         #bcf_hrec_destroy(b)
         return d
 
-    def __init__(self, fname, mode="r"):
+    def __init__(self, fname, mode="r", gts012=False):
         if fname == "-":
             fname = "/dev/stdin"
         if not os.path.exists(fname):
@@ -40,6 +43,7 @@ cdef class VCF(object):
         self.n_samples = bcf_hdr_nsamples(self.hdr)
         self.PASS = -1
         self.fname = fname
+        self.gts012 = gts012
 
     def __dealloc__(self):
         if self.hdr != NULL:
@@ -140,56 +144,30 @@ cdef class Variant(object):
                 j += 1
             return np.array(a, np.str)
 
-            #cdef np.npy_intp shape[1]
-            #shape[0] = <np.npy_intp> self.vcf.n_samples * 2
-            #return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_idxs)
-    def relatedness(self, asum, n, vmax=3):
-        self._relatedness(asum, n, vmax)
-
-    cdef inline void _relatedness(self, double[:, ::1] asum, int[:, ::1] N, double vmax):
-        """
-        N track the number of snps that were used for each sample. The original
-        used a fixed N for all samples due to GWAS, but for sequencing, we must
-        allow for missing N.
-        """
-        cdef int j, k
-        cdef float denom, numer, val
-        cdef np.ndarray[dtype=np.float_t, ndim=1] x = np.array(self.gt_types, dtype=np.float64)
-        # flip the alleles as they did in the paper. so homalt is 0
-        # also flip the aaf or it doesn't work out.
-        cdef float pi = self.aaf
-        if pi == 0 or pi == 1: return
-        x[x == 2] = -1
-        x[x == 3] = 2
-
-        denom = 2.0 * pi * (1.0 - pi)
-        for j in range(self.vcf.n_samples):
-            if x[j] < 0:
-                continue
-            for k in range(j, self.vcf.n_samples):
-                if x[k] < 0:
-                    continue
-                N[j, k] += 1
-                if j != k:
-                    numer = (x[j] - 2.0 * pi) * (x[k] - 2.0 * pi)
-                    val = numer / denom
-                else:
-                    numer = (x[j]**2.0 - (1.0 + 2.0 * pi) * x[j] + 2.0 * pi**2.0)
-                    val = numer / denom
-
-                if val < vmax:
-                    asum[j, k] += val
-                else:
-                    asum[j, k] += vmax
+    #def relatedness(self, np.ndarray[np.float64_t, ndim=2, mode="c"] asum,
+    #                     np.ndarray[int32_t, ndim=2, mode="c"] n, vmax=3):
+    def relatedness(self, double[:, ::view.contiguous] asum,
+                          int32_t[:, ::view.contiguous] n, vmax=3):
+        if not self.vcf.gts012:
+            raise Exception("must call relatedness with gts012")
+        if self._gt_types == NULL:
+            self.gt_types
+        cdef int n_samples = self.vcf.n_samples
+        return related(self._gt_types, &asum[0, 0], &n[0, 0], n_samples)
 
     property num_called:
         def __get__(self):
             if self._gt_types == NULL:
                 self.gt_types
             cdef int n = 0, i = 0
-            for i in range(self.vcf.n_samples):
-                if self._gt_types[i] != 2:
-                    n+=1
+            if self.vcf.gts012:
+                for i in range(self.vcf.n_samples):
+                    if self._gt_types[i] != 3:
+                        n+=1
+            else:
+                for i in range(self.vcf.n_samples):
+                    if self._gt_types[i] != 2:
+                        n+=1
             return n
 
     property call_rate:
@@ -235,9 +213,14 @@ cdef class Variant(object):
             if self._gt_types == NULL:
                 self.gt_types
             cdef int n = 0, i = 0
-            for i in range(self.vcf.n_samples):
-                if self._gt_types[i] == 3:
-                    n+=1
+            if self.vcf.gts012:
+                for i in range(self.vcf.n_samples):
+                    if self._gt_types[i] == 2:
+                        n+=1
+            else:
+                for i in range(self.vcf.n_samples):
+                    if self._gt_types[i] == 3:
+                        n+=1
             return n
 
     property num_unknown:
@@ -261,7 +244,6 @@ cdef class Variant(object):
                 ngts = bcf_get_genotypes(self.vcf.hdr, self.b, &self._gt_types, &ndst)
                 nper = ndst / self.vcf.n_samples
                 self._gt_idxs = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples * nper)
-                import sys
                 for i in range(0, ndst, nper):
                     self._gt_idxs[i] = bcf_gt_allele(self._gt_types[i])
                     for k in range(i + 1, i + nper):
@@ -269,7 +251,10 @@ cdef class Variant(object):
                     self._gt_phased[j] = <int>bcf_gt_is_phased(self._gt_types[i+1])
                     j += 1
 
-                n = as_gts(self._gt_types, self.vcf.n_samples)
+                if self.vcf.gts012:
+                    n = as_gts012(self._gt_types, self.vcf.n_samples)
+                else:
+                    n = as_gts(self._gt_types, self.vcf.n_samples)
             #print self.vcf.fname, self.POS, [self._gt_phased[i] for i in range(self.vcf.n_samples)]
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
@@ -706,7 +691,6 @@ cdef class INFO(object):
     def __next__(self):
         cdef bcf_info_t *info = NULL
         cdef char *name
-        import sys
         while info == NULL:
             if self._i >= self.b.n_info:
                 raise StopIteration

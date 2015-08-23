@@ -3,8 +3,12 @@ import numpy as np
 cimport numpy as np
 np.import_array()
 
+cdef extern from "relatedness.h":
+    int related(int *gt_types, double *asum, int32_t *N, int32_t n_samples)
+
 cdef extern from "helpers.h":
     int as_gts(int *gts, int num_samples);
+    int as_gts012(int *gts, int num_samples);
 
 cdef extern from "htslib/hts.h":
     struct htsFile:

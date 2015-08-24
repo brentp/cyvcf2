@@ -17,6 +17,8 @@ inline float aaf(int *gt_types, int32_t n_samples){
 
 // related takes an array of genotypes (0=HOM_REF, 1=HET, 2=HOMALT, 3=UNKNOWN) and updates asum and N
 // which are used to calculate relatedness between samples j, k as asum[j, k] / N[j, k].
+// The result value should be ~1 for self and idential twins, ~0.5 for sibs and parent off-spring
+// though that usually seems to be ~0.4 in practice.
 // This should be called on few hundred to a few thousand variants that are
 // not in linkage and have an aaf > 1 / n_samples (or so).
 // asum and N are of length n_samples * n_samples and assumed to be in C order.
@@ -51,11 +53,14 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t n_samples) {
 			}
 			val = numer / denom;
 			// heuristic to avoid too-large values
-			if((j != k) && (val > 2.9)) {
-				val = 2.9;
-			} else if (val < -2.5){
-				continue;
+			if((j != k) && (val > 5)) {
+				val = 5;
 			}
+		    //	else if (val < -2.5){
+
+	 //		continue;
+
+ //		}*/
 			asum[j * n_samples + k] += val;
 			N[j * n_samples + k]+= 1;
 		}

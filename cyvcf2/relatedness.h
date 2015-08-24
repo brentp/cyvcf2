@@ -2,7 +2,7 @@
 
 inline float aaf(int *gt_types, int32_t n_samples){
 	float af = 0;
-	int i = 0, n_called = 0;
+	int i, n_called = 0;
 
 	for (i = 0; i < n_samples; i++){
 		if(gt_types[i] == 3){
@@ -35,9 +35,10 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t n_samples) {
 			}
 			valk = (float)gt_types[k];
 			if(j != k){
-				numer = (valj - 2.0 * pi) * (valk - 2.0 * pi);
+				numer = 2.0 * (valj - 2.0 * pi) * (valk - 2.0 * pi);
 			}else {
 				numer = (valj * valj) - (1.0 + 2.0 * pi) * valj + 2.0 * pi * pi;
+				asum[j * n_samples + k]+= 1;
 			}
 			val = numer / denom;
 			if((j != k) && (val > 2.5)) {

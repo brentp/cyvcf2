@@ -4,7 +4,8 @@ cimport numpy as np
 np.import_array()
 
 cdef extern from "relatedness.h":
-    int related(int *gt_types, double *asum, int32_t *N, int32_t n_samples)
+    int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t n_samples)
+    float r_unphased(int *a_gts, int *b_gts, float f, int32_t n_samples);
 
 cdef extern from "helpers.h":
     int as_gts(int *gts, int num_samples);

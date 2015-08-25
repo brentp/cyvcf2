@@ -8,6 +8,9 @@ np.seterr(invalid='ignore')
 
 from cython cimport view
 
+def r_(int[::view.contiguous] a_gts, int[::view.contiguous] b_gts, float f, int32_t n_samples):
+    return r_unphased(&a_gts[0], &b_gts[0], f, n_samples)
+
 cdef class VCF(object):
 
     cdef htsFile *hts
@@ -16,6 +19,7 @@ cdef class VCF(object):
     cdef int PASS
     cdef char *fname
     cdef bint gts012
+    cdef bint lazy
 
     # pull something out of the HEADER, e.g. CSQ
     def __getitem__(self, key):
@@ -31,7 +35,7 @@ cdef class VCF(object):
         #bcf_hrec_destroy(b)
         return d
 
-    def __init__(self, fname, mode="r", gts012=False):
+    def __init__(self, fname, mode="r", gts012=False, lazy=False):
         if fname == "-":
             fname = "/dev/stdin"
         if not os.path.exists(fname):
@@ -44,6 +48,7 @@ cdef class VCF(object):
         self.PASS = -1
         self.fname = fname
         self.gts012 = gts012
+        self.lazy = lazy
 
     def __dealloc__(self):
         if self.hdr != NULL:
@@ -78,6 +83,72 @@ cdef class VCF(object):
             cdef int hlen
             s = bcf_hdr_fmt_text(self.hdr, 0, &hlen)
             return s
+
+    def relatedness(self, int n_variants=2000, int gap=50000, float min_af=0.02,
+            float max_af=0.6, plot=False):
+
+        cdef Variant v
+
+        cdef int last = -gap, nv = 0
+        samples = self.samples
+        cdef int n_samples = len(samples)
+        cdef float aaf
+
+        a = np.zeros((n_samples, n_samples), np.float64)
+        n = np.zeros((n_samples, n_samples), np.int32)
+        ibs0 = np.zeros((n_samples, n_samples), np.int32)
+
+        for v in self:
+            if v.POS - last < gap and v.POS > last:
+                continue
+            aaf = v.aaf
+            if aaf < min_af: continue
+            if aaf > max_af: continue
+            last = v.POS
+
+            v.relatedness(a, n, ibs0)
+            nv += 1
+            if nv == n_variants:
+                break
+
+        a /= n
+        ibs0 = ibs0.astype(float) / n.astype(float)
+        for sj, sample_j in enumerate(samples):
+            for sk, sample_k in enumerate(samples[sj:], start=sj):
+                if sj == sk: continue
+
+                rel, ibs = a[sj, sk], ibs0[sj, sk]
+                pair = sample_j, sample_k
+
+                # self or twin
+                if rel > 0.8:
+                    yield (pair, ['identical twins', 'self'], rel, ibs)
+                elif rel > 0.7:
+                    opts = ['identical twins', 'self']
+                    if ibs < 0.012:
+                        yield (pair, opts + ['parent-child'], rel, ibs)
+                    else:
+                        yield (pair, opts + ['full-siblings'], rel, ibs)
+
+                # sib or parent-child
+                elif 0.3 < rel < 0.7:
+                    if ibs > 0.018:
+                        yield (pair, ['full siblings'], rel, ibs)
+                    elif ibs < 0.012:
+                        yield (pair, ['parent-child'], rel, ibs)
+                    else:
+                        yield (pair, ['parent-child', 'full siblings'], rel, ibs)
+                elif 0.15 < rel < 0.3:
+                        yield (pair, ['related level 2'], rel, ibs)
+                elif rel < 0.04:
+                        yield (pair, ['unrelated'], rel, ibs)
+                elif rel < 0.15:
+                        yield (pair, ['distant relations', 'unrelated'], rel, ibs)
+                else:
+                    print pair, rel, ibs
+                    raise Exception('impossible')
+
+
 
 
 cdef class Variant(object):
@@ -144,16 +215,15 @@ cdef class Variant(object):
                 j += 1
             return np.array(a, np.str)
 
-    #def relatedness(self, np.ndarray[np.float64_t, ndim=2, mode="c"] asum,
-    #                     np.ndarray[int32_t, ndim=2, mode="c"] n, vmax=3):
-    def relatedness(self, double[:, ::view.contiguous] asum,
-                          int32_t[:, ::view.contiguous] n, vmax=3):
+    cpdef relatedness(self, double[:, ::view.contiguous] asum,
+                          int32_t[:, ::view.contiguous] n,
+                          int32_t[:, ::view.contiguous] ibs0):
         if not self.vcf.gts012:
             raise Exception("must call relatedness with gts012")
         if self._gt_types == NULL:
             self.gt_types
         cdef int n_samples = self.vcf.n_samples
-        return related(self._gt_types, &asum[0, 0], &n[0, 0], n_samples)
+        return related(self._gt_types, &asum[0, 0], &n[0, 0], &ibs0[0, 0], n_samples)
 
     property num_called:
         def __get__(self):
@@ -341,7 +411,7 @@ cdef class Variant(object):
                 gls = (-10 * gls).round().astype(np.int32)
                 return gls
 
-    property gt_ref_depths:    
+    property gt_ref_depths:
         def __get__(self):
             cdef int ndst, nret = 0, n, i, j = 0, nper = 0
             if self.vcf.n_samples == 0:
@@ -382,7 +452,7 @@ cdef class Variant(object):
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_ref_depths)
 
 
-    property gt_alt_depths:    
+    property gt_alt_depths:
         def __get__(self):
             cdef int ndst, nret = 0, n, i, j = 0, k = 0, nper = 0
             if self.vcf.n_samples == 0:
@@ -472,7 +542,7 @@ cdef class Variant(object):
 
     property gt_phases:
         def __get__(self):
-            # run for side-effect 
+            # run for side-effect
             if self._gt_phased == NULL:
                 self.gt_types
             cdef np.npy_intp shape[1]
@@ -539,7 +609,7 @@ cdef class Variant(object):
             alt = self.ALT[0]
             if alt is None or alt == ".":
                 return True
-            
+
             if len(self.REF) > len(alt):
                 return True
             return False
@@ -755,8 +825,9 @@ cdef bcf_array_to_object(void *data, int type, int n, int scalar=0):
 cdef inline Variant newVariant(bcf1_t *b, VCF vcf):
     cdef Variant v = Variant.__new__(Variant)
     v.b = b
-    with nogil:
-        bcf_unpack(v.b, 15)
+    if not vcf.lazy:
+        with nogil:
+            bcf_unpack(v.b, 15)
     v.vcf = vcf
     v.POS = v.b.pos + 1
     cdef INFO i = INFO.__new__(INFO)

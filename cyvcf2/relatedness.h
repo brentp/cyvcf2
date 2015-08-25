@@ -80,6 +80,7 @@ float r_unphased(int *a_gts, int *b_gts, float f, int32_t n_samples) {
 		if (a == 3) continue;
         b = b_gts[i];
 		if (b == 3) continue;
+
         n += 1;
         suma += a;
         sumb += b;
@@ -87,9 +88,7 @@ float r_unphased(int *a_gts, int *b_gts, float f, int32_t n_samples) {
         sumbb += b*b;
         sumab += a*b;
     }
-    /* Calculate numerators in integer arithmetic to
-     * avoid roundoff.
-     */
+
     nsqr = (double) n*(n-1);
     cov = (n*sumab - suma*sumb)/nsqr;
     vA = (n*sumaa - suma*suma)/nsqr;

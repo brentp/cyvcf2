@@ -1,5 +1,6 @@
 #cython: profile=False
 import os.path
+import sys
 from libc cimport stdlib
 import numpy as np
 cimport numpy as np
@@ -84,32 +85,83 @@ cdef class VCF(object):
             s = bcf_hdr_fmt_text(self.hdr, 0, &hlen)
             return s
 
-    def relatedness(self, int n_variants=2000, int gap=50000, float min_af=0.02,
-            float max_af=0.6, plot=False):
+    def plot_relatedness(self, riter):
+        import pandas as pd
+        from matplotlib import pyplot as plt
+        from matplotlib import gridspec
+        import seaborn as sns
+
+        df = []
+        for row in riter:
+          row['tags'] = '|'.join(row['tags'])
+          df.append(row)
+
+        df = pd.DataFrame(df)
+        fig = plt.figure(figsize=(9, 9))
+
+        gs = gridspec.GridSpec(2, 1, height_ratios=[3.5, 1])
+        colors = sns.color_palette("Set1", len(set(df.tags)))
+
+        for i, tag in enumerate(set(df.tags)):
+            subset = df[df.tags == tag]
+            subset.plot(kind='scatter', x='rel', y='ibs', c=colors[i],
+                      label=tag, ax=plt.subplot(gs[0]))
+
+        plt.subplot(gs[0]).legend()
+
+        ax = plt.subplot(gs[1])
+        ax.hist(df.rel, 60)
+        ax.set_yscale('log', nonposy='clip')
+        return fig
+
+    def relatedness(self, int n_variants=3000, int gap=30000, float min_af=0.02,
+                    float max_af=0.6, float linkage_max=0.05):
 
         cdef Variant v
 
-        cdef int last = -gap, nv = 0
+        cdef int last = -gap, nv = 0, nvt=0
+        cdef int *last_gts
         samples = self.samples
         cdef int n_samples = len(samples)
         cdef float aaf
+        cdef int n_unlinked = 0
 
         a = np.zeros((n_samples, n_samples), np.float64)
         n = np.zeros((n_samples, n_samples), np.int32)
         ibs0 = np.zeros((n_samples, n_samples), np.int32)
 
         for v in self:
+            nvt += 1
+            if last_gts == NULL:
+                if v._gt_types == NULL:
+                    v.gt_types
+                last_gts = v._gt_types
             if v.POS - last < gap and v.POS > last:
                 continue
             aaf = v.aaf
             if aaf < min_af: continue
             if aaf > max_af: continue
-            last = v.POS
+            if linkage_max < 1 and v.POS - last < 40000:
+                if v._gt_types == NULL:
+                    v.gt_types
+                # require 5 unlinked variants
+                if r_unphased(last_gts, v._gt_types, 1e-5, n_samples) > linkage_max:
+                    continue
+                n_unlinked += 1
+                if n_unlinked < 5:
+                    continue
+
+            n_unlinked = 0
+
+            if v._gt_types == NULL:
+                v.gt_types
+            last, last_gts = v.POS, v._gt_types
 
             v.relatedness(a, n, ibs0)
             nv += 1
             if nv == n_variants:
                 break
+        sys.stderr.write("tested: %d variants out of %d\n" % (nv, nvt))
 
         a /= n
         ibs0 = ibs0.astype(float) / n.astype(float)
@@ -120,36 +172,37 @@ cdef class VCF(object):
                 rel, ibs = a[sj, sk], ibs0[sj, sk]
                 pair = sample_j, sample_k
 
+                d = {'pair': pair, 'rel': rel, 'ibs': ibs}
+
                 # self or twin
                 if rel > 0.8:
-                    yield (pair, ['identical twins', 'self'], rel, ibs)
+                    d['tags'] = ['identical twins', 'self']
                 elif rel > 0.7:
                     opts = ['identical twins', 'self']
                     if ibs < 0.012:
-                        yield (pair, opts + ['parent-child'], rel, ibs)
+                        opts += ['parent-child']
                     else:
-                        yield (pair, opts + ['full-siblings'], rel, ibs)
+                        opts += ['full-siblings']
+                    d['tags'] = opts
 
                 # sib or parent-child
                 elif 0.3 < rel < 0.7:
                     if ibs > 0.018:
-                        yield (pair, ['full siblings'], rel, ibs)
+
+                        d['tags'] = ['full siblings']
                     elif ibs < 0.012:
-                        yield (pair, ['parent-child'], rel, ibs)
+                        d['tags'] = ['parent-child']
                     else:
-                        yield (pair, ['parent-child', 'full siblings'], rel, ibs)
+                        d['tags'] = ['parent-child', 'full siblings']
                 elif 0.15 < rel < 0.3:
-                        yield (pair, ['related level 2'], rel, ibs)
+                    d['tags'] = ['related level 2']
                 elif rel < 0.04:
-                        yield (pair, ['unrelated'], rel, ibs)
+                    d['tags'] = ['unrelated']
                 elif rel < 0.15:
-                        yield (pair, ['distant relations', 'unrelated'], rel, ibs)
+                    d['tags'] = ['distant relations', 'unrelated']
                 else:
-                    print pair, rel, ibs
                     raise Exception('impossible')
-
-
-
+                yield d
 
 cdef class Variant(object):
     cdef bcf1_t *b

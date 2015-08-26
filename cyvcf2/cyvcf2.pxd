@@ -11,13 +11,36 @@ cdef extern from "helpers.h":
     int as_gts(int *gts, int num_samples);
     int as_gts012(int *gts, int num_samples);
 
+cdef extern from "htslib/kstring.h":
+
+    ctypedef struct kstring_t:
+        size_t l, m;
+        char *s;
+
 cdef extern from "htslib/hts.h":
-    struct htsFile:
+    ctypedef struct htsFile:
         pass
 
     htsFile *hts_open(char *fn, char *mode);
 
     cdef int hts_verbose = 1
+
+    ctypedef struct hts_itr_t:
+        pass
+
+    #int hts_itr_next(BGZF *fp, hts_itr_t *iter, void *r, void *data);
+    void hts_itr_destroy(hts_itr_t *iter);
+
+cdef extern from "htslib/tbx.h":
+
+    ctypedef struct tbx_t:
+        pass
+
+    tbx_t *tbx_index_load(const char *fn);
+    hts_itr_t *tbx_itr_queryi(tbx_t *tbx, int tid, int beg, int end)
+    hts_itr_t *tbx_itr_querys(tbx_t *tbx, char *reg)
+    int tbx_itr_next(htsFile *fp, tbx_t *tbx, hts_itr_t *iter, void *data);
+    void tbx_destroy(tbx_t *tbx);
 
 cdef extern from "htslib/vcf.h":
     const int BCF_DT_ID = 0;
@@ -135,8 +158,10 @@ cdef extern from "htslib/vcf.h":
 
     void bcf_destroy(bcf1_t *v);
     bcf1_t * bcf_init();
+    int vcf_parse(kstring_t *s, const bcf_hdr_t *h, bcf1_t *v);
 
     bcf_hdr_t *bcf_hdr_read(htsFile *fp);
+
     int bcf_hdr_set_samples(bcf_hdr_t *hdr, const char *samples, int is_file);
     int bcf_hdr_nsamples(const bcf_hdr_t *hdr);
     void bcf_hdr_destroy(const bcf_hdr_t *hdr)

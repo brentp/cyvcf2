@@ -51,6 +51,30 @@ cdef class VCF(object):
         self.gts012 = gts012
         self.lazy = lazy
 
+    def __call__(VCF self, char *region):
+        if not os.path.exists(self.name + ".tbi"):
+            raise Exception("cant extraction region without tabix index")
+        cdef tbx_t *idx = tbx_index_load(self.name + ".tbi")
+        cdef hts_itr_t *itr = tbx_itr_querys(idx, region)
+        cdef kstring_t s
+        cdef bcf1_t *b
+        cdef int slen, ret
+
+        try:
+            slen = tbx_itr_next(self.hts, idx, itr, &s)
+            while slen > 0:
+                b = bcf_init()
+                ret = vcf_parse(&s, self.hdr, b)
+                if ret > 0:
+                    raise Exception("error parsing")
+                yield newVariant(b, self)
+                slen = tbx_itr_next(self.hts, idx, itr, &s)
+
+        finally:
+            stdlib.free(s.s)
+            hts_itr_destroy(itr)
+            tbx_destroy(idx)
+
     def __dealloc__(self):
         if self.hdr != NULL:
             bcf_hdr_destroy(self.hdr)
@@ -93,21 +117,22 @@ cdef class VCF(object):
 
         df = []
         for row in riter:
-          row['tags'] = '|'.join(row['tags'])
+          row['jtags'] = '|'.join(row['tags'])
           df.append(row)
 
         df = pd.DataFrame(df)
         fig = plt.figure(figsize=(9, 9))
 
         gs = gridspec.GridSpec(2, 1, height_ratios=[3.5, 1])
-        colors = sns.color_palette("Set1", len(set(df.tags)))
+        colors = sns.color_palette("Set1", len(set(df.jtags)))
 
-        for i, tag in enumerate(set(df.tags)):
-            subset = df[df.tags == tag]
+        for i, tag in enumerate(set(df.jtags)):
+            subset = df[df.jtags == tag]
             subset.plot(kind='scatter', x='rel', y='ibs', c=colors[i],
                       label=tag, ax=plt.subplot(gs[0]))
 
         plt.subplot(gs[0]).legend()
+        plt.subplot(gs[0]).set_ylim(ymin=0)
 
         ax = plt.subplot(gs[1])
         ax.hist(df.rel, 60)
@@ -798,8 +823,6 @@ cdef class INFO(object):
         if info == NULL:
             raise KeyError
         return self._getval(info)
-
-
 
     def get(self, char *key, default=None):
         try:

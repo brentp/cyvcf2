@@ -16,6 +16,7 @@ cdef class VCF(object):
 
     cdef htsFile *hts
     cdef const bcf_hdr_t *hdr
+    cdef tbx_t *idx
     cdef int n_samples
     cdef int PASS
     cdef char *fname
@@ -52,28 +53,30 @@ cdef class VCF(object):
         self.lazy = lazy
 
     def __call__(VCF self, char *region):
-        if not os.path.exists(self.name + ".tbi"):
-            raise Exception("cant extraction region without tabix index")
-        cdef tbx_t *idx = tbx_index_load(self.name + ".tbi")
-        cdef hts_itr_t *itr = tbx_itr_querys(idx, region)
+        if self.idx == NULL:
+            # we load the index on first use if possible and re-use
+            if not os.path.exists(self.name + ".tbi"):
+                raise Exception("cant extraction region without tabix index")
+            self.idx = tbx_index_load(self.name + ".tbi")
+
+        cdef hts_itr_t *itr = tbx_itr_querys(self.idx, region)
         cdef kstring_t s
         cdef bcf1_t *b
         cdef int slen, ret
 
         try:
-            slen = tbx_itr_next(self.hts, idx, itr, &s)
+            slen = tbx_itr_next(self.hts, self.idx, itr, &s)
             while slen > 0:
                 b = bcf_init()
                 ret = vcf_parse(&s, self.hdr, b)
                 if ret > 0:
                     raise Exception("error parsing")
                 yield newVariant(b, self)
-                slen = tbx_itr_next(self.hts, idx, itr, &s)
+                slen = tbx_itr_next(self.hts, self.idx, itr, &s)
 
         finally:
             stdlib.free(s.s)
             hts_itr_destroy(itr)
-            tbx_destroy(idx)
 
     def __dealloc__(self):
         if self.hdr != NULL:
@@ -82,6 +85,8 @@ cdef class VCF(object):
         if self.hts != NULL:
             hts_close(self.hts)
             self.hts = NULL
+        if self.idx != NULL:
+            tbx_destroy(self.idx)
 
     def __iter__(self):
         return self
@@ -126,17 +131,20 @@ cdef class VCF(object):
         gs = gridspec.GridSpec(2, 1, height_ratios=[3.5, 1])
         colors = sns.color_palette("Set1", len(set(df.jtags)))
 
+        ax0, ax1 = plt.subplot(gs[0]), plt.subplot(gs[1])
+
         for i, tag in enumerate(set(df.jtags)):
             subset = df[df.jtags == tag]
             subset.plot(kind='scatter', x='rel', y='ibs', c=colors[i],
-                      label=tag, ax=plt.subplot(gs[0]))
+                      label=tag, ax=ax0)
 
-        plt.subplot(gs[0]).legend()
-        plt.subplot(gs[0]).set_ylim(ymin=0)
+        ax0.legend()
+        ax0.set_ylim(ymin=0)
+        ax0.set_xlim(xmin=-0.2)
 
-        ax = plt.subplot(gs[1])
-        ax.hist(df.rel, 60)
-        ax.set_yscale('log', nonposy='clip')
+        ax1.set_xlim(*ax0.get_xlim())
+        ax1.hist(df.rel, 60)
+        ax1.set_yscale('log', nonposy='clip')
         return fig
 
     def relatedness(self, int n_variants=3000, int gap=30000, float min_af=0.02,

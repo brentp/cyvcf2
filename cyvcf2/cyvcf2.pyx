@@ -23,19 +23,6 @@ cdef class VCF(object):
     cdef bint gts012
     cdef bint lazy
 
-    # pull something out of the HEADER, e.g. CSQ
-    def __getitem__(self, key):
-        cdef bcf_hrec_t *b = bcf_hdr_get_hrec(self.hdr, BCF_HL_INFO, "ID", key, NULL);
-        cdef int i
-        if b == NULL:
-            b = bcf_hdr_get_hrec(self.hdr, BCF_HL_GEN, key, NULL, NULL);
-            if b == NULL:
-                raise KeyError
-            d = {b.key: b.value}
-        else:
-            d =  {b.keys[i]: b.vals[i] for i in range(b.nkeys)}
-        #bcf_hrec_destroy(b)
-        return d
 
     def __init__(self, fname, mode="r", gts012=False, lazy=False):
         if fname == "-":
@@ -55,11 +42,13 @@ cdef class VCF(object):
     def __call__(VCF self, char *region):
         if self.idx == NULL:
             # we load the index on first use if possible and re-use
-            if not os.path.exists(self.name + ".tbi"):
+            if not os.path.exists(self.fname + ".tbi"):
                 raise Exception("cant extraction region without tabix index")
-            self.idx = tbx_index_load(self.name + ".tbi")
+            self.idx = tbx_index_load(self.fname + ".tbi")
+            assert self.idx != NULL, "error loading index for %s" % self.fname
 
         cdef hts_itr_t *itr = tbx_itr_querys(self.idx, region)
+        assert itr != NULL, "error starting query for %s at %s" % (self.name, region)
         cdef kstring_t s
         cdef bcf1_t *b
         cdef int slen, ret
@@ -73,10 +62,23 @@ cdef class VCF(object):
                     raise Exception("error parsing")
                 yield newVariant(b, self)
                 slen = tbx_itr_next(self.hts, self.idx, itr, &s)
-
         finally:
             stdlib.free(s.s)
             hts_itr_destroy(itr)
+
+    # pull something out of the HEADER, e.g. CSQ
+    def __getitem__(self, key):
+        cdef bcf_hrec_t *b = bcf_hdr_get_hrec(self.hdr, BCF_HL_INFO, "ID", key, NULL);
+        cdef int i
+        if b == NULL:
+            b = bcf_hdr_get_hrec(self.hdr, BCF_HL_GEN, key, NULL, NULL);
+            if b == NULL:
+                raise KeyError
+            d = {b.key: b.value}
+        else:
+            d =  {b.keys[i]: b.vals[i] for i in range(b.nkeys)}
+        #bcf_hrec_destroy(b)
+        return d
 
     def __dealloc__(self):
         if self.hdr != NULL:
@@ -260,6 +262,9 @@ cdef class Variant(object):
         self._gt_phased = NULL
         self._gt_pls
 
+    def __repr__(self):
+        return "Variant(%s:%d %s/%s)" % (self.CHROM, self.POS, self.REF,
+                ",".join(self.ALT))
 
     def __dealloc__(self):
         if self.b is not NULL:

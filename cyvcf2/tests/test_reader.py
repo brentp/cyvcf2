@@ -21,6 +21,19 @@ def test_type():
         else:
             print v.var_type, v.REF, v.ALT
 
+def test_region():
+    vcf = VCF(VCF_PATH)
+
+    start = 12783
+    end = 13783
+    k = 0
+    reg = '1:%d-%d' % (start, end)
+    for var in vcf(reg):
+        k += 1
+        assert var.start <= end, var
+        assert var.end >= start, var
+    assert k == 28, k
+
 def test_phases():
     vcf = VCF(VCF_PHASE_PATH)
 

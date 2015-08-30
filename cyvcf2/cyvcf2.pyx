@@ -917,6 +917,10 @@ cdef inline Variant newVariant(bcf1_t *b, VCF vcf):
     if not vcf.lazy:
         with nogil:
             bcf_unpack(v.b, 15)
+    else:
+        with nogil:
+            bcf_unpack(v.b, 1|2|4)
+
     v.vcf = vcf
     v.POS = v.b.pos + 1
     cdef INFO i = INFO.__new__(INFO)
@@ -928,17 +932,30 @@ cdef class Writer(object):
     cdef htsFile *hts
     cdef bcf_hdr_t *hdr
     cdef public str name
+    cdef bint header_written
+
+    # TODO: see cgotabix AddHeaderInfo for how to add stuff to header.
 
     def __init__(self, fname, VCF tmpl):
         self.name = fname
         self.hts = hts_open(fname, "w")
         cdef bcf_hdr_t *h = tmpl.hdr
-        self.hdr = h
-        bcf_hdr_write(self.hts, h)
+        cdef bcf_hdr_t *hdup = bcf_hdr_dup(h)
+        self.hdr = hdup
+        self.header_written = False
 
     def write_record(self, Variant var):
+        if not self.header_written:
+            bcf_hdr_write(self.hts, self.hdr)
+            self.header_written = True
         return bcf_write(self.hts, self.hdr, var.b)
 
     def close(self):
         if self.hts != NULL:
             hts_close(self.hts)
+
+    def __dealloc__(self):
+        bcf_hdr_destroy(self.hdr)
+        self.hdr = NULL
+        self.close()
+        self.hts = NULL

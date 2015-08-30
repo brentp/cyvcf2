@@ -32,6 +32,8 @@ def test_region():
         k += 1
         assert var.start <= end, var
         assert var.end >= start, var
+        assert isinstance(var.REF, basestring)
+        assert isinstance(var.ALT, list)
     assert k == 28, k
 
 def test_phases():

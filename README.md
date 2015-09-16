@@ -30,6 +30,8 @@ for variant in VCF('some.vcf.gz'):
     a = variant.gt_phred_ll_homref # numpy array
     b = variant.gt_phred_ll_het # numpy array
     c = variant.gt_phred_ll_homalt # numpy array
+
+	str(variant)
 ```
 
 Installation

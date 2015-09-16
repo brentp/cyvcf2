@@ -21,6 +21,30 @@ def test_type():
         else:
             print v.var_type, v.REF, v.ALT
 
+def test_pls():
+    vcf = VCF(VCF_PATH)
+    v = next(vcf)
+
+    assert v.gt_phred_ll_homref[0] == 0, v.gt_phred_ll_homref[0]
+    assert v.gt_phred_ll_het[0] == 7, v.gt_phred_ll_het[0]
+    assert v.gt_phred_ll_homalt[0] == 922, v.gt_phred_ll_homalt[0]
+
+    import numpy as np
+    imax = np.iinfo(np.int32(0)).max
+    # missing
+    assert v.gt_phred_ll_homref[1] == imax, v.gt_phred_ll_homref[1]
+    assert v.gt_phred_ll_het[1] == imax, v.gt_phred_ll_het[1]
+    assert v.gt_phred_ll_homalt[1] == imax, v.gt_phred_ll_homalt[1]
+
+def test_str():
+    vcf = VCF(VCF_PATH, lazy=True)
+    v = next(vcf)
+    s = str(v)
+
+    assert "10172\t.\tCCCTAA\t" in s
+    assert "fitcons_float=0.1266" in s
+
+
 def test_region():
     vcf = VCF(VCF_PATH)
 

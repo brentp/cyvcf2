@@ -17,6 +17,8 @@ cdef extern from "htslib/kstring.h":
         size_t l, m;
         char *s;
 
+    inline char *ks_release(kstring_t *s)
+
 cdef extern from "htslib/hts.h":
     ctypedef struct htsFile:
         pass
@@ -169,7 +171,7 @@ cdef extern from "htslib/vcf.h":
 
     int bcf_write(htsFile *fp, const bcf_hdr_t *h, bcf1_t *v);
     int bcf_hdr_write(htsFile *fp, bcf_hdr_t *h);
-
+    int vcf_format(const bcf_hdr_t *h, const bcf1_t *v, kstring_t *s);
 
     bcf_hrec_t *bcf_hdr_get_hrec(const bcf_hdr_t *hdr, int type, const char *key, const char *value, const char *str_class);
     void bcf_hrec_destroy(bcf_hrec_t *)

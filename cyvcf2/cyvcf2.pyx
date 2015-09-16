@@ -266,6 +266,12 @@ cdef class Variant(object):
         return "Variant(%s:%d %s/%s)" % (self.CHROM, self.POS, self.REF,
                 ",".join(self.ALT))
 
+    def __str__(self):
+        cdef kstring_t s
+        s.s, s.l, s.m = NULL, 0, 0
+        vcf_format(self.vcf.hdr, self.b, &s)
+        return ks_release(&s)
+
     def __dealloc__(self):
         if self.b is not NULL:
             bcf_destroy(self.b)
@@ -426,6 +432,9 @@ cdef class Variant(object):
             if self.vcf.n_samples == 0:
                 return []
             cdef int ndst = 0, nret=0, n, i, j, nper
+
+            cdef int imax = np.iinfo(np.int32(0)).max
+
             if self._gt_pls == NULL and self._gt_gls == NULL:
                 nret = bcf_get_format_int32(self.vcf.hdr, self.b, "PL", &self._gt_pls, &ndst)
                 if nret < 0:
@@ -434,14 +443,13 @@ cdef class Variant(object):
                         return []
                     else:
                         for i in range(nret):
-                            if self._gt_gls[i] < -2147483646:
-                                # this gets translated to -1 when converted to
-                                # pls
-                                self._gt_gls[i] = 0.1
+                            if self._gt_gls[i] <= -2147483646:
+                                # this gets translated on conversion to PL
+                                self._gt_gls[i] = imax / -10.0
                 else:
                     for i in range(nret):
                         if self._gt_pls[i] < 0:
-                            self._gt_pls[i] = -1
+                            self._gt_pls[i] = imax
 
                 self._gt_nper = nret / self.vcf.n_samples
             cdef np.npy_intp shape[1]
@@ -461,6 +469,8 @@ cdef class Variant(object):
             if self.vcf.n_samples == 0:
                 return []
             if self._gt_pls == NULL and self._gt_gls == NULL:
+                # NOTE: the missing values for all homref, het, homalt are set
+                # by this call.
                 self.gt_phred_ll_homref
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples

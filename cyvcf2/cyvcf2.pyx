@@ -52,9 +52,9 @@ cdef class VCF(object):
         if self.idx == NULL:
             # we load the index on first use if possible and re-use
             if not os.path.exists(self.fname + ".tbi"):
-                raise Exception("cant extraction region without tabix index")
+                raise Exception("can't extract region without tabix index")
             self.idx = tbx_index_load(self.fname + ".tbi")
-            assert self.idx != NULL, "error loading index for %s" % self.fname
+            assert self.idx != NULL, "error loading tabix index for %s" % self.fname
 
         cdef hts_itr_t *itr = tbx_itr_querys(self.idx, region)
         assert itr != NULL, "error starting query for %s at %s" % (self.name, region)

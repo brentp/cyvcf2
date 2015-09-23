@@ -1,19 +1,62 @@
 #include <stdint.h>
 #include <math.h>
 
+#define UNKNOWN 3
+
 // internal calculate of alternate allele frequency.
 inline float aaf(int *gt_types, int32_t n_samples){
 	float af = 0;
 	int i, n_called = 0;
 
 	for (i = 0; i < n_samples; i++){
-		if(gt_types[i] == 3){
+		if(gt_types[i] == UNKNOWN){
 			continue;
 		}
 		af += gt_types[i];
 		n_called += 1;
 	}
 	return af / (float)(2 * n_called);
+}
+
+int pow2(uint32_t v) {
+
+	int r = 0; // r will be lg(v)
+	while (v >>= 1) {
+		r++;
+	}
+	return r;
+}
+
+// calculate a bins of IBD between 2 pairs of samples.
+// returns 0 starting a new run-length and run_length + 1 if continuing.
+// *bins are filled in powers of 2 so that we have a bins of, e.g.:
+// (0, 1), (2, 3), (4, 7), (8, 15), (16, 31) ...
+// this should be called iteratively, sending the return value in as the new
+// run_length.
+int ibd(int agt, int bgt, int run_length, float pi, int *bins, int32_t n_bins) {
+	if(agt == bgt) {
+		if (agt != UNKNOWN) {
+			run_length++;
+		}
+		return run_length;
+	}
+	// skip unknown.
+	if (agt == UNKNOWN || bgt == UNKNOWN) {
+		return run_length;
+	}
+
+	// if they arent equal genotypes, we only stop the run if they have a lowish relatedness
+	float val = 2.0 * (agt - 2 * pi) * (bgt - 2 * pi);
+	// end this block.
+	if (val < 0) {
+		int b = pow2(run_length);
+        b = (b >= n_bins) ? n_bins : b;
+		bins[b]++;
+		run_length = 0;
+    } else {
+		run_length += 1;
+	}
+	return run_length;
 }
 
 // related takes an array of genotypes (0=HOM_REF, 1=HET, 2=HOMALT, 3=UNKNOWN) and updates asum and N

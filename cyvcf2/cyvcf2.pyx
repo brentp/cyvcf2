@@ -176,7 +176,6 @@ cdef class VCF(object):
         ax1.set_xlim(*ax0.get_xlim())
         ax1.hist(df.rel, 40)
         ax1.set_yscale('log', nonposy='clip')
-        plt.tight_layout()
         return fig
 
     def relatedness(self, int n_variants=3000, int gap=30000, float min_af=0.02,

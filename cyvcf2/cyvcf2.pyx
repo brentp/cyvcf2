@@ -4,8 +4,8 @@ import sys
 from libc cimport stdlib
 import numpy as np
 cimport numpy as np
-np.import_array()
 np.seterr(invalid='ignore')
+np.import_array()
 
 from cython cimport view
 
@@ -74,6 +74,31 @@ cdef class VCF(object):
         finally:
             stdlib.free(s.s)
             hts_itr_destroy(itr)
+
+    def ibd(self, samples):
+        assert self.gts012
+
+        all_samples = self.samples
+        sample_to_idx = {s: all_samples.index(s) for s in samples}
+        sample_pairs = [(s0, s1) for i, s0 in enumerate(samples[:-1]) for s1 in samples[i+1:]]
+        # values of bins, run_length
+
+        cdef int rl, n_bins = 16
+        cdef float pi
+        cdef int[:] b
+        cdef int[:] gts
+        bins = np.zeros((len(sample_pairs), n_bins), dtype=np.int32)
+        rls = np.zeros(len(sample_pairs), dtype=np.int32)
+
+        for v in self:
+            gts = v.gt_types
+            pi = v.aaf
+            for i, (s0, s1) in enumerate(sample_pairs):
+                b = bins[i, :]
+                idx0, idx1 = sample_to_idx[s0], sample_to_idx[s1]
+                rls[i] = ibd(gts[idx0], gts[idx1], rls[i], pi, &b[0], n_bins)
+
+        return {sample_pairs[i]: bins[i, :] for i in range(len(sample_pairs))}
 
     # pull something out of the HEADER, e.g. CSQ
     def __getitem__(self, key):

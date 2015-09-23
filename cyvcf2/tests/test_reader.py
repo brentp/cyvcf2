@@ -21,6 +21,15 @@ def test_type():
         else:
             print v.var_type, v.REF, v.ALT
 
+def test_ibd():
+    vcf = VCF(VCF_PATH, gts012=True)
+    samples = ['101976-101976', '100920-100920', '100231-100231']
+    res = vcf.ibd(samples)
+    assert len(res) == 3, (len(res))
+    arr = res[('101976-101976', '100920-100920')]
+    assert len(arr) > 0
+
+
 def test_pls():
     vcf = VCF(VCF_PATH)
     v = next(vcf)

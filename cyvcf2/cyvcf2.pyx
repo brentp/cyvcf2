@@ -24,7 +24,7 @@ cdef class VCF(object):
     cdef bint lazy
 
 
-    def __init__(self, fname, mode="r", gts012=False, lazy=False):
+    def __init__(self, fname, mode="r", gts012=False, lazy=False, samples=None):
         if fname == "-":
             fname = "/dev/stdin"
         if not os.path.exists(fname):
@@ -32,7 +32,16 @@ cdef class VCF(object):
         self.hts = hts_open(fname, mode)
         cdef bcf_hdr_t *hdr
         hdr = self.hdr = bcf_hdr_read(self.hts)
-        assert bcf_hdr_set_samples(self.hdr, "-", 0) == 0, ("error setting samples")
+        if samples is None:
+            samples = "-"
+        if isinstance(samples, list):
+            samples = ",".join(samples)
+        ret = bcf_hdr_set_samples(self.hdr, samples, 0)
+        assert ret >= 0, ("error setting samples", ret)
+        if ret != 0 and samples != "-":
+            s = samples.split(",")
+            if ret < len(s):
+                sys.stderr.write("problem with sample: %s\n" % s[ret - 1])
         self.n_samples = bcf_hdr_nsamples(self.hdr)
         self.PASS = -1
         self.fname = fname
@@ -121,32 +130,53 @@ cdef class VCF(object):
         from matplotlib import pyplot as plt
         from matplotlib import gridspec
         import seaborn as sns
+        sns.set_style("ticks")
 
         df = []
         for row in riter:
           row['jtags'] = '|'.join(row['tags'])
           df.append(row)
 
+
         df = pd.DataFrame(df)
         fig = plt.figure(figsize=(9, 9))
 
         gs = gridspec.GridSpec(2, 1, height_ratios=[3.5, 1])
-        colors = sns.color_palette("Set1", len(set(df.jtags)))
 
         ax0, ax1 = plt.subplot(gs[0]), plt.subplot(gs[1])
 
-        for i, tag in enumerate(set(df.jtags)):
-            subset = df[df.jtags == tag]
-            subset.plot(kind='scatter', x='rel', y='ibs', c=colors[i],
-                      label=tag, ax=ax0)
+        if "error" in df.columns:
+            # plot all gray except points that don't match our expectation.
+            import matplotlib
+            matplotlib.rcParams['pdf.fonttype'] = 42
+            import matplotlib.colors as mc
+            colors = [mc.hex2color(h) for h in ('#b6b6b6', '#ff3333')]
+            for i, err in enumerate(("ok", "error")):
+                subset = df[df.error == err]
+                subset.plot(kind='scatter', x='rel', y='ibs0', c=colors[i],
+                          edgecolor=colors[0],
+                          label=err, ax=ax0, s=17 if i == 0 else 35)
+            sub = df[df.error == "error"]
+            for i, row in sub.iterrows():
+                ax0.annotate(row['sample_a'] + "\n" + row['sample_b'],
+                        (row['rel'], row['ibs0']), fontsize=8)
+        else:
+            # color by the relation derived from the genotypes.
+            colors = sns.color_palette("Set1", len(set(df.jtags)))
+            for i, tag in enumerate(set(df.jtags)):
+                subset = df[df.jtags == tag]
+                subset.plot(kind='scatter', x='rel', y='ibs0', c=colors[i],
+                          label=tag, ax=ax0)
 
-        ax0.legend()
+            ax0.legend()
+
         ax0.set_ylim(ymin=0)
-        ax0.set_xlim(xmin=-0.2)
+        ax0.set_xlim(xmin=df.rel.min())
 
         ax1.set_xlim(*ax0.get_xlim())
-        ax1.hist(df.rel, 60)
+        ax1.hist(df.rel, 40)
         ax1.set_yscale('log', nonposy='clip')
+        plt.tight_layout()
         return fig
 
     def relatedness(self, int n_variants=3000, int gap=30000, float min_af=0.02,
@@ -207,7 +237,7 @@ cdef class VCF(object):
                 rel, ibs = a[sj, sk], ibs0[sj, sk]
                 pair = sample_j, sample_k
 
-                d = {'pair': pair, 'rel': rel, 'ibs': ibs}
+                d = {'pair': pair, 'rel': rel, 'ibs0': ibs}
 
                 # self or twin
                 if rel > 0.8:
@@ -422,7 +452,6 @@ cdef class Variant(object):
                     n = as_gts012(self._gt_types, self.vcf.n_samples)
                 else:
                     n = as_gts(self._gt_types, self.vcf.n_samples)
-            #print self.vcf.fname, self.POS, [self._gt_phased[i] for i in range(self.vcf.n_samples)]
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_types)

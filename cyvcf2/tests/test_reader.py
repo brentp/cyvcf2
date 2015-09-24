@@ -22,9 +22,9 @@ def test_type():
             print v.var_type, v.REF, v.ALT
 
 def test_ibd():
-    vcf = VCF(VCF_PATH, gts012=True)
     samples = ['101976-101976', '100920-100920', '100231-100231']
-    res = vcf.ibd(samples)
+    vcf = VCF(VCF_PATH, gts012=True, samples=samples)
+    res = vcf.ibd()
     assert len(res) == 3, (len(res))
     arr = res[('101976-101976', '100920-100920')]
     assert len(arr) > 0

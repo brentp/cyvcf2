@@ -32,21 +32,26 @@ cdef class VCF(object):
         self.hts = hts_open(fname, mode)
         cdef bcf_hdr_t *hdr
         hdr = self.hdr = bcf_hdr_read(self.hts)
+        if samples is not None:
+            self.set_samples(samples)
+        self.n_samples = bcf_hdr_nsamples(self.hdr)
+        self.PASS = -1
+        self.fname = fname
+        self.gts012 = gts012
+        self.lazy = lazy
+
+    def set_samples(self, samples):
         if samples is None:
             samples = "-"
         if isinstance(samples, list):
             samples = ",".join(samples)
+
         ret = bcf_hdr_set_samples(self.hdr, samples, 0)
         assert ret >= 0, ("error setting samples", ret)
         if ret != 0 and samples != "-":
             s = samples.split(",")
             if ret < len(s):
                 sys.stderr.write("problem with sample: %s\n" % s[ret - 1])
-        self.n_samples = bcf_hdr_nsamples(self.hdr)
-        self.PASS = -1
-        self.fname = fname
-        self.gts012 = gts012
-        self.lazy = lazy
 
     def __call__(VCF self, char *region):
         if self.idx == NULL:
@@ -75,15 +80,16 @@ cdef class VCF(object):
             stdlib.free(s.s)
             hts_itr_destroy(itr)
 
-    def ibd(self, samples):
+    def ibd(self, int nmax=-1):
         assert self.gts012
 
-        all_samples = self.samples
-        sample_to_idx = {s: all_samples.index(s) for s in samples}
+        samples = self.samples
+        sample_to_idx = {s: samples.index(s) for s in samples}
         sample_pairs = [(s0, s1) for i, s0 in enumerate(samples[:-1]) for s1 in samples[i+1:]]
         # values of bins, run_length
 
-        cdef int rl, n_bins = 16
+        cdef int i, rl, n_bins = 16
+        cdef int n = 0
         cdef float pi
         cdef int[:] b
         cdef int[:] gts
@@ -91,6 +97,8 @@ cdef class VCF(object):
         rls = np.zeros(len(sample_pairs), dtype=np.int32)
 
         for v in self:
+            if n == nmax: break
+            n += 1
             gts = v.gt_types
             pi = v.aaf
             for i, (s0, s1) in enumerate(sample_pairs):

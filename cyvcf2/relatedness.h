@@ -46,9 +46,9 @@ int ibd(int agt, int bgt, int run_length, float pi, int *bins, int32_t n_bins) {
 	}
 
 	// if they arent equal genotypes, we only stop the run if they have a lowish relatedness
-	float val = 2.0 * (agt - 2 * pi) * (bgt - 2 * pi);
+	float val = (agt - 2 * pi) * (bgt - 2 * pi);
 	// end this block.
-	if (val < 0) {
+	if (val < -0.8) {
 		int b = pow2(run_length);
         b = (b >= n_bins) ? n_bins : b;
 		bins[b]++;

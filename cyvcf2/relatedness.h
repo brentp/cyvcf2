@@ -1,6 +1,9 @@
 #include <stdint.h>
 #include <math.h>
 
+#define HOM_REF 0
+#define HET 1
+#define HOM_ALT 2
 #define UNKNOWN 3
 
 // internal calculate of alternate allele frequency.
@@ -66,9 +69,9 @@ int ibd(int agt, int bgt, int run_length, float pi, int *bins, int32_t n_bins) {
 // This should be called on few hundred to a few thousand variants that are
 // not in linkage and have an aaf > 1 / n_samples (or so).
 // asum and N are of length n_samples * n_samples and assumed to be in C order.
-int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t n_samples) {
+int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs2, int32_t n_samples) {
 
-	int n_used = 0;
+	int idx, n_used = 0;
 	int32_t j, k;
 	float pi = aaf(gt_types, n_samples);
 	float numer, val;
@@ -77,24 +80,26 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t n_sa
 
 	for(j=0; j <n_samples; j++){
 		// skip unknown
-		if(gt_types[j] == 3){
+		if(gt_types[j] == UNKNOWN){
 			continue;
 		}
 		valj = gt_types[j];
 		n_used++;
 		for(k=j; k<n_samples; k++){
-			if(gt_types[k] == 3){
+			if(gt_types[k] == UNKNOWN){
 				continue;
 			}
 			valk = gt_types[k];
+			idx = j * n_samples + k;
 			if(j != k){
 				// multiply by 2 here to get the correct scale. differs from
 				// original paper.
 				numer = 2.0 * (valj - 2.0 * pi) * (valk - 2.0 * pi);
-				ibs0[j * n_samples + k] += (valj != 1 && valk != 1 && valj != valk);
+				ibs0[idx] += (valj != HET && valk != HET && valj != valk);
+				ibs2[idx] += (valj == valk && valk != HET);
 			} else {
 				numer = (valj * valj) - (1.0 + 2.0 * pi) * valj + 2.0 * pi * pi;
-				asum[j * n_samples + k]+= 1;
+				asum[idx]+= 1;
 			}
 			val = numer / denom;
 			// heuristic to avoid too-large values
@@ -104,8 +109,8 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t n_sa
 				continue;
 			}
 
-			asum[j * n_samples + k] += val;
-			N[j * n_samples + k]+= 1;
+			asum[idx] += val;
+			N[idx]+= 1;
 		}
 	}
 	return n_used;

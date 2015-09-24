@@ -83,12 +83,13 @@ cdef class VCF(object):
     def ibd(self, int nmax=-1):
         assert self.gts012
 
+        cdef int i, rl, n_bins = 16
+
         samples = self.samples
         sample_to_idx = {s: samples.index(s) for s in samples}
         sample_pairs = [(s0, s1) for i, s0 in enumerate(samples[:-1]) for s1 in samples[i+1:]]
         # values of bins, run_length
 
-        cdef int i, rl, n_bins = 16
         cdef int n = 0
         cdef float pi
         cdef int[:] b
@@ -223,9 +224,10 @@ cdef class VCF(object):
         cdef float aaf
         cdef int n_unlinked = 0
 
-        a = np.zeros((n_samples, n_samples), np.float64)
-        n = np.zeros((n_samples, n_samples), np.int32)
-        ibs0 = np.zeros((n_samples, n_samples), np.int32)
+        cdef double[:, ::view.contiguous] va = np.zeros((n_samples, n_samples), np.float64)
+        cdef int32_t[:, ::view.contiguous] vn = np.zeros((n_samples, n_samples), np.int32)
+        cdef int32_t[:, ::view.contiguous] vibs0 = np.zeros((n_samples, n_samples), np.int32)
+        cdef int32_t[:, ::view.contiguous] vibs2 = np.zeros((n_samples, n_samples), np.int32)
 
         for v in self:
             nvt += 1
@@ -254,29 +256,36 @@ cdef class VCF(object):
                 v.gt_types
             last, last_gts = v.POS, v._gt_types
 
-            v.relatedness(a, n, ibs0)
+            v.relatedness(va, vn, vibs0, vibs2)
             nv += 1
             if nv == n_variants:
                 break
         sys.stderr.write("tested: %d variants out of %d\n" % (nv, nvt))
 
+        n = np.asarray(vn).astype(float)
+        a = np.asarray(va)
+        ibs0, ibs2 = np.asarray(vibs0).astype(float), np.asarray(vibs2).astype(float)
+
         a /= n
-        ibs0 = ibs0.astype(float) / n.astype(float)
+        ibs0 = ibs0 / n
+        ibs2 = ibs2 / n
+
+        cdef int sj, sk
         for sj, sample_j in enumerate(samples):
             for sk, sample_k in enumerate(samples[sj:], start=sj):
                 if sj == sk: continue
 
-                rel, ibs = a[sj, sk], ibs0[sj, sk]
+                rel, iibs0, iibs2 = a[sj, sk], ibs0[sj, sk], ibs2[sj, sk]
                 pair = sample_j, sample_k
 
-                d = {'pair': pair, 'rel': rel, 'ibs0': ibs}
+                d = {'pair': pair, 'rel': rel, 'ibs0': iibs0, 'ibs2': iibs2}
 
                 # self or twin
                 if rel > 0.8:
                     d['tags'] = ['identical twins', 'self']
                 elif rel > 0.7:
                     opts = ['identical twins', 'self']
-                    if ibs < 0.012:
+                    if iibs0 < 0.012:
                         opts += ['parent-child']
                     else:
                         opts += ['full-siblings']
@@ -284,10 +293,10 @@ cdef class VCF(object):
 
                 # sib or parent-child
                 elif 0.3 < rel < 0.7:
-                    if ibs > 0.018:
+                    if iibs0 > 0.018:
 
                         d['tags'] = ['full siblings']
-                    elif ibs < 0.012:
+                    elif iibs0 < 0.012:
                         d['tags'] = ['parent-child']
                     else:
                         d['tags'] = ['parent-child', 'full siblings']
@@ -376,13 +385,15 @@ cdef class Variant(object):
 
     cpdef relatedness(self, double[:, ::view.contiguous] asum,
                           int32_t[:, ::view.contiguous] n,
-                          int32_t[:, ::view.contiguous] ibs0):
+                          int32_t[:, ::view.contiguous] ibs0,
+                          int32_t[:, ::view.contiguous] ibs2):
         if not self.vcf.gts012:
             raise Exception("must call relatedness with gts012")
         if self._gt_types == NULL:
             self.gt_types
         cdef int n_samples = self.vcf.n_samples
-        return related(self._gt_types, &asum[0, 0], &n[0, 0], &ibs0[0, 0], n_samples)
+        return related(self._gt_types, &asum[0, 0], &n[0, 0], &ibs0[0, 0],
+                       &ibs2[0, 0], n_samples)
 
     property num_called:
         def __get__(self):

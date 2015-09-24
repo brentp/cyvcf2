@@ -29,6 +29,12 @@ def test_ibd():
     arr = res[('101976-101976', '100920-100920')]
     assert len(arr) > 0
 
+def test_relatedness():
+    vcf = VCF(VCF_PATH, gts012=True)
+    res = next(vcf.relatedness(gap=0, linkage_max=2))
+    assert "ibs0" in res
+    assert "ibs2" in res
+
 
 def test_pls():
     vcf = VCF(VCF_PATH)

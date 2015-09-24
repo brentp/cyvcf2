@@ -56,7 +56,7 @@ int ibd(int agt, int bgt, int run_length, float pi, int *bins, int32_t n_bins) {
         b = (b >= n_bins) ? n_bins : b;
 		bins[b]++;
 		run_length = 0;
-    } else {
+    } else if (val > 0) { // only increment if any info
 		run_length += 1;
 	}
 	return run_length;

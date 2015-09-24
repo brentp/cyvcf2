@@ -82,12 +82,14 @@ cdef class VCF(object):
 
     def ibd(self, int nmax=-1):
         assert self.gts012
+        import itertools
 
         cdef int i, rl, n_bins = 16
 
         samples = self.samples
         sample_to_idx = {s: samples.index(s) for s in samples}
-        sample_pairs = [(s0, s1) for i, s0 in enumerate(samples[:-1]) for s1 in samples[i+1:]]
+        sample_pairs = list(itertools.combinations(samples, 2))
+        print(len(sample_pairs))
         # values of bins, run_length
 
         cdef int n = 0

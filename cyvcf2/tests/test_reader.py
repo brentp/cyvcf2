@@ -31,9 +31,15 @@ def test_ibd():
 
 def test_relatedness():
     vcf = VCF(VCF_PATH, gts012=True)
-    res = next(vcf.relatedness(gap=0, linkage_max=2))
+    viter = vcf.relatedness(gap=0, linkage_max=2)
+    res = next(viter)
     assert "ibs0" in res
     assert "ibs2" in res
+    assert "ibs2*" in res
+    #vcf = VCF(VCF_PATH, gts012=True)
+    #for r in viter:
+    #    print r['pair'], r['ibs0'], r['ibs2'], r['ibs2*']
+
 
 
 def test_pls():

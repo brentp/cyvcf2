@@ -71,7 +71,7 @@ int ibd(int agt, int bgt, int run_length, float pi, int *bins, int32_t n_bins) {
 // asum and N are of length n_samples * n_samples and assumed to be in C order.
 int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs2, int32_t n_samples) {
 
-	int idx, n_used = 0;
+	int idx, uidx, n_used = 0;
 	int32_t j, k;
 	float pi = aaf(gt_types, n_samples);
 	float numer, val;
@@ -89,8 +89,9 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 			if(gt_types[k] == UNKNOWN){
 				continue;
 			}
-			valk = gt_types[k];
+			uidx = j + k * n_samples;
 			idx = j * n_samples + k;
+			valk = gt_types[k];
 			if(j != k){
 				// multiply by 2 here to get the correct scale. differs from
 				// original paper.
@@ -99,7 +100,8 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 				ibs2[idx] += (valj == valk && valk != HET);
 			} else {
 				numer = (valj * valj) - (1.0 + 2.0 * pi) * valj + 2.0 * pi * pi;
-				asum[idx]+= 1;
+				// add 1 for self.
+				asum[idx]+=1;
 			}
 			val = numer / denom;
 			// heuristic to avoid too-large values
@@ -107,6 +109,12 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 				val = 4.5;
 			} else if (val < -4.5){
 				continue;
+			}
+
+			// likely IBD2* of concoardant HETs.
+			// we don't know the phasing but we just use the prob.
+			if (valj == HET && valk == HET && val > 1) {
+				ibs2[uidx]+=1;
 			}
 
 			asum[idx] += val;
@@ -125,9 +133,9 @@ float r_unphased(int *a_gts, int *b_gts, float f, int32_t n_samples) {
 
     for(i=0; i<n_samples; i++) {
         a = a_gts[i];
-		if (a == 3) continue;
+		if (a == UNKNOWN) continue;
         b = b_gts[i];
-		if (b == 3) continue;
+		if (b == UNKNOWN) continue;
 
         n += 1;
         suma += a;

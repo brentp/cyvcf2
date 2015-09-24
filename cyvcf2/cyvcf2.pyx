@@ -89,7 +89,6 @@ cdef class VCF(object):
         samples = self.samples
         sample_to_idx = {s: samples.index(s) for s in samples}
         sample_pairs = list(itertools.combinations(samples, 2))
-        print(len(sample_pairs))
         # values of bins, run_length
 
         cdef int n = 0
@@ -265,8 +264,12 @@ cdef class VCF(object):
         sys.stderr.write("tested: %d variants out of %d\n" % (nv, nvt))
 
         n = np.asarray(vn).astype(float)
-        a = np.asarray(va)
+        a = np.asarray(va).astype(float)
         ibs0, ibs2 = np.asarray(vibs0).astype(float), np.asarray(vibs2).astype(float)
+
+        # the counts only went to the upper diagonal. translate to lower for
+        # ibs2*
+        n[np.tril_indices(len(n))] = n[np.triu_indices(len(n))]
 
         a /= n
         ibs0 = ibs0 / n
@@ -278,9 +281,11 @@ cdef class VCF(object):
                 if sj == sk: continue
 
                 rel, iibs0, iibs2 = a[sj, sk], ibs0[sj, sk], ibs2[sj, sk]
+                iibs2_star = ibs2[sk, sj]
                 pair = sample_j, sample_k
 
-                d = {'pair': pair, 'rel': rel, 'ibs0': iibs0, 'ibs2': iibs2}
+                d = {'pair': pair, 'rel': rel, 'ibs0': iibs0, 'ibs2': iibs2,
+                     'ibs2*': iibs2_star, 'n': n[sj, sk]}
 
                 # self or twin
                 if rel > 0.8:
@@ -309,7 +314,7 @@ cdef class VCF(object):
                 elif rel < 0.15:
                     d['tags'] = ['distant relations', 'unrelated']
                 else:
-                    raise Exception('impossible')
+                    raise Exception('impossible %.2f' % rel)
                 yield d
 
 cdef class Variant(object):

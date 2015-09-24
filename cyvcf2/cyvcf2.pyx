@@ -213,8 +213,8 @@ cdef class VCF(object):
         ax1.set_yscale('log', nonposy='clip')
         return fig
 
-    def relatedness(self, int n_variants=3000, int gap=30000, float min_af=0.02,
-                    float max_af=0.6, float linkage_max=0.05):
+    def relatedness(self, int n_variants=35000, int gap=30000, float min_af=0.04,
+                    float max_af=0.8, float linkage_max=0.2, min_depth=8):
 
         cdef Variant v
 
@@ -238,6 +238,9 @@ cdef class VCF(object):
                 last_gts = v._gt_types
             if v.POS - last < gap and v.POS > last:
                 continue
+            if v.call_rate < 0.5: continue
+            # require half of the samples to meet the min depth
+            if np.mean(v.gt_depths > min_depth) < 0.5: continue
             aaf = v.aaf
             if aaf < min_af: continue
             if aaf > max_af: continue

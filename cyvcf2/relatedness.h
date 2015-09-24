@@ -97,7 +97,6 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 				// original paper.
 				numer = 2.0 * (valj - 2.0 * pi) * (valk - 2.0 * pi);
 				ibs0[idx] += (valj != HET && valk != HET && valj != valk);
-				ibs2[idx] += (valj == valk && valk != HET);
 			} else {
 				numer = (valj * valj) - (1.0 + 2.0 * pi) * valj + 2.0 * pi * pi;
 				// add 1 for self.
@@ -105,16 +104,20 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 			}
 			val = numer / denom;
 			// heuristic to avoid too-large values
-			if((j != k) && ((val > 4.5))) {
+			//
+			if(val > 4.5) {
 				val = 4.5;
 			} else if (val < -4.5){
-				continue;
+				val = -3.5;
+				//continue;
 			}
 
 			// likely IBD2* of concoardant HETs.
 			// we don't know the phasing but we just use the prob.
 			if (valj == HET && valk == HET && val > 1) {
 				ibs2[uidx]+=1;
+			} else if (val > 1) {
+				ibs2[idx] += (valj == valk && valk != HET);
 			}
 
 			asum[idx] += val;

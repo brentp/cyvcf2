@@ -266,7 +266,7 @@ cdef class VCF(object):
                 break
         sys.stderr.write("tested: %d variants out of %d\n" % (nv, nvt))
 
-        n = np.asarray(vn).astype(float)
+        n = np.asarray(vn)
         a = np.asarray(va).astype(float)
         ibs0, ibs2 = np.asarray(vibs0).astype(float), np.asarray(vibs2).astype(float)
 
@@ -285,9 +285,10 @@ cdef class VCF(object):
 
                 rel, iibs0, iibs2 = a[sj, sk], ibs0[sj, sk], ibs2[sj, sk]
                 iibs2_star = ibs2[sk, sj]
-                pair = sample_j, sample_k
 
-                d = {'pair': pair, 'rel': rel, 'ibs0': iibs0, 'ibs2': iibs2,
+                d = {'sample_a': sample_j,
+                     'sample_b': sample_k,
+                     'rel': rel, 'ibs0': iibs0, 'ibs2': iibs2,
                      'ibs2*': iibs2_star, 'n': n[sj, sk]}
 
                 # self or twin

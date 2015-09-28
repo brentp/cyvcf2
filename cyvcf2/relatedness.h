@@ -75,7 +75,7 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 	int32_t j, k;
 	float pi = aaf(gt_types, n_samples);
 	float numer, val;
-	float valj, valk;
+	float gtj, gtk;
 	float denom = 2.0 * pi * (1.0 - pi);
 
 	for(j=0; j <n_samples; j++){
@@ -83,7 +83,7 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 		if(gt_types[j] == UNKNOWN){
 			continue;
 		}
-		valj = gt_types[j];
+		gtj = gt_types[j];
 		n_used++;
 		for(k=j; k<n_samples; k++){
 			if(gt_types[k] == UNKNOWN){
@@ -91,14 +91,14 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 			}
 			uidx = j + k * n_samples;
 			idx = j * n_samples + k;
-			valk = gt_types[k];
+			gtk = gt_types[k];
 			if(j != k){
 				// multiply by 2 here to get the correct scale. differs from
 				// original paper.
-				numer = 2.0 * (valj - 2.0 * pi) * (valk - 2.0 * pi);
-				ibs0[idx] += (valj != HET && valk != HET && valj != valk);
+				numer = 2.0 * (gtj - 2.0 * pi) * (gtk - 2.0 * pi);
+				ibs0[idx] += (gtj != HET && gtk != HET && gtj != gtk);
 			} else {
-				numer = (valj * valj) - (1.0 + 2.0 * pi) * valj + 2.0 * pi * pi;
+				numer = (gtj * gtj) - (1.0 + 2.0 * pi) * gtj + 2.0 * pi * pi;
 				// add 1 for self.
 				asum[idx]+=1;
 			}
@@ -112,12 +112,13 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 				//continue;
 			}
 
-			// likely IBD2* of concoardant HETs.
+			// likely IBD2* of concordant HETs.
 			// we don't know the phasing but we just use the prob.
-			if (valj == HET && valk == HET && val > 1) {
+			if (gtj == gtk && gtj != HOM_REF && val > 2.5) {
+				// ibs2*
 				ibs2[uidx]+=1;
-			} else if (val > 1) {
-				ibs2[idx] += (valj == valk && valk != HET);
+			} else if (val > 2.5) {
+				ibs2[idx] += (gtj == gtk && gtk != HET);
 			}
 
 			asum[idx] += val;

@@ -286,40 +286,10 @@ cdef class VCF(object):
                 rel, iibs0, iibs2 = a[sj, sk], ibs0[sj, sk], ibs2[sj, sk]
                 iibs2_star = ibs2[sk, sj]
 
-                d = {'sample_a': sample_j,
-                     'sample_b': sample_k,
-                     'rel': rel, 'ibs0': iibs0, 'ibs2': iibs2,
-                     'ibs2*': iibs2_star, 'n': n[sj, sk]}
-
-                # self or twin
-                if rel > 0.8:
-                    d['tags'] = ['identical twins', 'self']
-                elif rel > 0.7:
-                    opts = ['identical twins', 'self']
-                    if iibs0 < 0.012:
-                        opts += ['parent-child']
-                    else:
-                        opts += ['full-siblings']
-                    d['tags'] = opts
-
-                # sib or parent-child
-                elif 0.3 < rel < 0.7:
-                    if iibs0 > 0.018:
-
-                        d['tags'] = ['full siblings']
-                    elif iibs0 < 0.012:
-                        d['tags'] = ['parent-child']
-                    else:
-                        d['tags'] = ['parent-child', 'full siblings']
-                elif 0.15 < rel < 0.3:
-                    d['tags'] = ['related level 2']
-                elif rel < 0.04:
-                    d['tags'] = ['unrelated']
-                elif rel < 0.15:
-                    d['tags'] = ['distant relations', 'unrelated']
-                else:
-                    raise Exception('impossible %.2f' % rel)
-                yield d
+                yield {'sample_a': sample_j,
+                       'sample_b': sample_k,
+                       'rel': rel, 'ibs0': iibs0, 'ibs2': iibs2,
+                       'ibs2*': iibs2_star, 'n': n[sj, sk]}
 
 cdef class Variant(object):
     cdef bcf1_t *b

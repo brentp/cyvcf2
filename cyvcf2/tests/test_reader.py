@@ -7,6 +7,11 @@ VCF_PATH = os.path.join(HERE, "test.vcf.gz")
 VCF_PATH2 = os.path.join(HERE, "test.snpeff.vcf")
 VCF_PHASE_PATH = os.path.join(HERE, "test.comp_het.3.vcf")
 
+try:
+    basestring
+except NameError:
+    basestring = (str, bytes)
+
 def test_init():
     v = VCF(VCF_PATH)
     assert v
@@ -19,7 +24,7 @@ def test_type():
         elif v.ALT[0][0] != "<":
             assert v.var_type == 'indel'
         else:
-            print v.var_type, v.REF, v.ALT
+            print(v.var_type, v.REF, v.ALT)
 
 def test_ibd():
     samples = ['101976-101976', '100920-100920', '100231-100231']
@@ -73,7 +78,7 @@ def test_region():
     end = 13783
     k = 0
     reg = '1:%d-%d' % (start, end)
-    for var in vcf(reg):
+    for var in vcf(reg.encode()):
         k += 1
         assert var.start <= end, var
         assert var.end >= start, var
@@ -131,15 +136,15 @@ def test_attrs():
     v = VCF(VCF_PATH)
     variant = next(v)
     assert variant.POS == 10172
-    assert variant.CHROM == '1'
+    assert variant.CHROM == b"1"
     assert variant.ID is None, variant.ID
     assert variant.start == 10171
     assert variant.end == 10177, variant.end
     assert variant.FILTER is None
     assert variant.QUAL == 92.0
 
-    assert variant.REF == "CCCTAA"
-    assert variant.ALT == ["C"]
+    assert variant.REF == b"CCCTAA"
+    assert variant.ALT == [b"C"]
 
 
 def test_var_type():
@@ -187,19 +192,19 @@ def _get_samples(v):
 
 def test_header_info():
     v = VCF(VCF_PATH)
-    csq = v['CSQ']
-    assert csq['ID'] == "CSQ"
-    assert "Description" in csq
+    csq = v[b'CSQ']
+    assert csq[b'ID'] == b"CSQ"
+    assert b"Description" in csq
 
 
-    assert_raises(KeyError, v.__getitem__, 'XXXXX')
+    assert_raises(KeyError, v.__getitem__, b'XXXXX')
 
 def test_snpeff_header():
     v = VCF(VCF_PATH2)
 
-    f = v['SnpEffVersion']
+    f = v[b'SnpEffVersion']
     assert f != {}, f
-    assert 'SnpEffVersion' in f
+    assert b'SnpEffVersion' in f
 
 """
 def test_info_update():

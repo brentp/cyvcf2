@@ -9,6 +9,23 @@ np.import_array()
 
 from cython cimport view
 
+from cpython.version cimport PY_MAJOR_VERSION
+
+cdef unicode xstr(s):
+    if type(s) is unicode:
+        # fast path for most common case(s)
+        return <unicode>s
+    elif PY_MAJOR_VERSION < 3 and isinstance(s, bytes):
+        # only accept byte strings in Python 2.x, not in Py3
+        return (<bytes>s).decode('ascii')
+    elif isinstance(s, unicode):
+        # an evil cast to <unicode> might work here in some(!) cases,
+        # depending on what the further processing does.  to be safe,
+        # we can always create a copy instead
+        return unicode(s)
+    else:
+        raise TypeError(...)
+
 def r_(int[::view.contiguous] a_gts, int[::view.contiguous] b_gts, float f, int32_t n_samples):
     return r_unphased(&a_gts[0], &b_gts[0], f, n_samples)
 
@@ -29,14 +46,15 @@ cdef class VCF(object):
             fname = "/dev/stdin"
         if not os.path.exists(fname):
             raise Exception("bad path: %s" % fname)
-        self.hts = hts_open(fname, mode)
+        self.hts = hts_open(fname.encode(), mode.encode())
         cdef bcf_hdr_t *hdr
         hdr = self.hdr = bcf_hdr_read(self.hts)
         if samples is not None:
             self.set_samples(samples)
         self.n_samples = bcf_hdr_nsamples(self.hdr)
         self.PASS = -1
-        self.fname = fname
+        tmp = fname.encode("UTF-8")
+        self.fname = tmp
         self.gts012 = gts012
         self.lazy = lazy
 
@@ -46,19 +64,19 @@ cdef class VCF(object):
         if isinstance(samples, list):
             samples = ",".join(samples)
 
-        ret = bcf_hdr_set_samples(self.hdr, samples, 0)
+        ret = bcf_hdr_set_samples(self.hdr, samples.encode(), 0)
         assert ret >= 0, ("error setting samples", ret)
         if ret != 0 and samples != "-":
             s = samples.split(",")
             if ret < len(s):
                 sys.stderr.write("problem with sample: %s\n" % s[ret - 1])
 
-    def __call__(VCF self, char *region):
+    def __call__(VCF self, region):
         if self.idx == NULL:
             # we load the index on first use if possible and re-use
-            if not os.path.exists(self.fname + ".tbi"):
+            if not os.path.exists(self.fname + b".tbi"):
                 raise Exception("can't extract region without tabix index")
-            self.idx = tbx_index_load(self.fname + ".tbi")
+            self.idx = tbx_index_load(self.fname + b".tbi")
             assert self.idx != NULL, "error loading tabix index for %s" % self.fname
 
         cdef hts_itr_t *itr = tbx_itr_querys(self.idx, region)
@@ -111,8 +129,8 @@ cdef class VCF(object):
         return {sample_pairs[i]: bins[i, :] for i in range(len(sample_pairs))}
 
     # pull something out of the HEADER, e.g. CSQ
-    def __getitem__(self, key):
-        cdef bcf_hrec_t *b = bcf_hdr_get_hrec(self.hdr, BCF_HL_INFO, "ID", key, NULL);
+    def __getitem__(self, char *key):
+        cdef bcf_hrec_t *b = bcf_hdr_get_hrec(self.hdr, BCF_HL_INFO, b"ID", key, NULL);
         cdef int i
         if b == NULL:
             b = bcf_hdr_get_hrec(self.hdr, BCF_HL_GEN, key, NULL, NULL);
@@ -322,7 +340,8 @@ cdef class Variant(object):
         cdef kstring_t s
         s.s, s.l, s.m = NULL, 0, 0
         vcf_format(self.vcf.hdr, self.b, &s)
-        return ks_release(&s)
+        st = ks_release(&s)
+        return st.decode()
 
     def __dealloc__(self):
         if self.b is not NULL:
@@ -770,7 +789,7 @@ cdef class Variant(object):
 
     property is_sv:
         def __get__(self):
-            return self.INFO.get('SVTYPE') is not None
+            return self.INFO.get(b'SVTYPE') is not None
 
     property CHROM:
         def __get__(self):
@@ -893,7 +912,7 @@ cdef class INFO(object):
         return bcf_array_to_object(info.vptr, info.type, info.len)
 
     def __getitem__(self, okey):
-        okey = str(okey)
+        okey = str(okey).encode()
         cdef char *key = okey
         cdef bcf_info_t *info = bcf_get_info(self.hdr, self.b, key)
         if info == NULL:

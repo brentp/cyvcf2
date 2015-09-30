@@ -62,7 +62,7 @@ cdef class VCF(object):
             assert self.idx != NULL, "error loading tabix index for %s" % self.fname
 
         cdef hts_itr_t *itr = tbx_itr_querys(self.idx, region)
-        assert itr != NULL, "error starting query for %s at %s" % (self.name, region)
+        assert itr != NULL, "error starting query for %s at %s" % (self.fname, region)
         cdef kstring_t s
         cdef bcf1_t *b
         cdef int slen, ret

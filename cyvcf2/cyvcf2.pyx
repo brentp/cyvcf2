@@ -53,8 +53,7 @@ cdef class VCF(object):
             self.set_samples(samples)
         self.n_samples = bcf_hdr_nsamples(self.hdr)
         self.PASS = -1
-        tmp = fname.encode("UTF-8")
-        self.fname = tmp
+        self.fname = fname
         self.gts012 = gts012
         self.lazy = lazy
 
@@ -74,8 +73,8 @@ cdef class VCF(object):
     def __call__(VCF self, region):
         if self.idx == NULL:
             # we load the index on first use if possible and re-use
-            if not os.path.exists(self.fname + b".tbi"):
-                raise Exception("can't extract region without tabix index")
+            if not os.path.exists(str(self.fname + ".tbi")):
+                raise Exception("can't extract region without tabix index for %s" % self.fname)
             self.idx = tbx_index_load(self.fname + b".tbi")
             assert self.idx != NULL, "error loading tabix index for %s" % self.fname
 

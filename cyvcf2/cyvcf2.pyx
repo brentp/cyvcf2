@@ -141,6 +141,16 @@ cdef class VCF(object):
         #bcf_hrec_destroy(b)
         return d
 
+    def __contains__(self, char *key):
+        try:
+            self[key]
+            return True
+        except KeyError:
+            return False
+
+    contains = __contains__
+
+
     def __dealloc__(self):
         if self.hdr != NULL:
             bcf_hdr_destroy(self.hdr)
@@ -491,9 +501,9 @@ cdef class Variant(object):
                     j += 1
 
                 if self.vcf.gts012:
-                    n = as_gts012(self._gt_types, self.vcf.n_samples)
+                    n = as_gts012(self._gt_types, self.vcf.n_samples, nper)
                 else:
-                    n = as_gts(self._gt_types, self.vcf.n_samples)
+                    n = as_gts(self._gt_types, self.vcf.n_samples, nper)
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_types)

@@ -1,12 +1,33 @@
 #include <htslib/vcf.h>
 
-int as_gts(int *gts, int num_samples) {
-    int j = 0, i;
-    for (i = 0; i < 2 * num_samples; i += 2){
-        if (bcf_gt_is_missing(gts[i]) && bcf_gt_is_missing(gts[i+1])){
-            gts[j++] = 2; // unknown
-            continue;
+int as_gts(int *gts, int num_samples, int ploidy) {
+    int j = 0, i, k;
+	int found = 0;
+    for (i = 0; i < ploidy * num_samples; i += ploidy){
+		found = 0;
+		for (k = 0; k < ploidy; k++) {
+			if (!bcf_gt_is_missing(gts[i+k])) {
+				found = 1;
+				break;
+			}
         }
+		if (found == 0) {
+			gts[j++] = 2; // unknown
+			continue;
+		}
+
+		if(ploidy == 1) {
+			int a = bcf_gt_allele(gts[i]);
+			if (a == 0) {
+			   	gts[j++] = 0;
+			} else if (a == 1) {
+				gts[j++] = 3;
+			} else {
+				gts[j++] = 2;
+			}
+			continue;
+		}
+
         int a = bcf_gt_allele(gts[i]);
         int b = bcf_gt_allele(gts[i+1]);
 
@@ -28,9 +49,33 @@ int as_gts(int *gts, int num_samples) {
     return j;
 }
 
-int as_gts012(int *gts, int num_samples) {
-    int j = 0, i;
-    for (i = 0; i < 2 * num_samples; i += 2){
+int as_gts012(int *gts, int num_samples, int ploidy) {
+    int j = 0, i, k, found;
+    for (i = 0; i < ploidy * num_samples; i += ploidy){
+		found = 0;
+		for (k = 0; k < ploidy; k++) {
+			if (!bcf_gt_is_missing(gts[i+k])) {
+				found = 1;
+				break;
+			}
+        }
+		if (found == 0) {
+			gts[j++] = 3; // unknown
+			continue;
+		}
+
+		if(ploidy == 1) {
+			int a = bcf_gt_allele(gts[i]);
+			if (a == 0) {
+			   	gts[j++] = 0;
+			} else if (a == 1) {
+				gts[j++] = 2;
+			} else {
+				gts[j++] = 3; // unknown
+			}
+			continue;
+		}
+
         if (bcf_gt_is_missing(gts[i]) && bcf_gt_is_missing(gts[i+1])){
             gts[j++] = 3; // unknown
             continue;

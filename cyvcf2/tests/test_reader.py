@@ -206,15 +206,13 @@ def test_snpeff_header():
     assert f != {}, f
     assert b'SnpEffVersion' in f
 
-"""
-def test_info_update():
-    vcf = VCF(VCF_PATH)
-    v = next(vcf)
-    ret = v.INFO.update({'k': 22})
+#def test_info_update():
+#    vcf = VCF(VCF_PATH)
+#    v = next(vcf)
+#    ret = v.INFO.update({'k': 22})
     #print ret
     #assert v.INFO['k'] == 22
     #assert ret == 0, ret
-"""
 
 def test_gt_types():
     v = VCF(VCF_PATH)
@@ -238,4 +236,19 @@ def test_iterate():
     for i, v in enumerate(VCF(VCF_PATH), start=1):
         pass
     assert i == 115, i
+
+
+def test_haploid():
+
+    for (gts012, (HOM_REF, HOM_ALT, UNKNOWN)) in ((False, [0, 3, 2]), (True, [0, 2, 3])):
+        vcf = VCF("%s/test-haploidX.vcf" % HERE, gts012=gts012)
+        for i, v in enumerate(vcf):
+            if i == 0:
+                assert (v.gt_types == [HOM_ALT, HOM_ALT, HOM_ALT]).all(), v.gt_types
+            elif v.start == 2800676:
+                assert (v.gt_types == [UNKNOWN, HOM_ALT, UNKNOWN]).all(), v.gt_types
+            elif v.start == 2832771:
+                assert (v.gt_types == [HOM_REF, HOM_ALT, HOM_ALT]).all(), v.gt_types
+                break
+        break
 

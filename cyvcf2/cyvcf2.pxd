@@ -10,8 +10,8 @@ cdef extern from "relatedness.h":
     int ibd(int agt, int bgt, int run_length, float pi, int *bins, int32_t n_bins)
 
 cdef extern from "helpers.h":
-    int as_gts(int *gts, int num_samples);
-    int as_gts012(int *gts, int num_samples);
+    int as_gts(int *gts, int num_samples, int ploidy);
+    int as_gts012(int *gts, int num_samples, int ploidy);
 
 cdef extern from "htslib/kstring.h":
 

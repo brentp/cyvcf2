@@ -243,6 +243,7 @@ def test_haploid():
     for (gts012, (HOM_REF, HOM_ALT, UNKNOWN)) in ((False, [0, 3, 2]), (True, [0, 2, 3])):
         vcf = VCF("%s/test-haploidX.vcf" % HERE, gts012=gts012)
         for i, v in enumerate(vcf):
+            assert not any("/" in b for b in v.gt_bases), (v.start + 1, v.gt_bases)
             if i == 0:
                 assert (v.gt_types == [HOM_ALT, HOM_ALT, HOM_ALT]).all(), v.gt_types
             elif v.start == 2800676:
@@ -250,5 +251,18 @@ def test_haploid():
             elif v.start == 2832771:
                 assert (v.gt_types == [HOM_REF, HOM_ALT, HOM_ALT]).all(), v.gt_types
                 break
+
+            if v.start == 2700156:
+                assert (v.gt_bases == ['A', 'A', 'A']).all(), v.gt_bases
         break
+
+
+def test_diploid():
+    vcf = VCF("%s/test.comp_het.3.vcf" % HERE)
+    for v in vcf:
+        if v.start == 17362:
+            assert (v.gt_bases == ['TTCT|TTCT', 'TTCT|TTCT', 'TTCT|TTCT',
+                                   'TTCT|TTCT', 'TTCT|TTCT', 'TTCT|TTCT', 'TTCT|T', 'TTCT|T',
+                                   'TTCT|TTCT', 'TTCT|T', 'TTCT|T',
+                                   'TTCT|TTCT']).all(), v.gt_bases
 

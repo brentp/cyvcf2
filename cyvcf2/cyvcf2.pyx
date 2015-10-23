@@ -332,6 +332,7 @@ cdef class Variant(object):
     cdef int *_gt_pls
     cdef float *_gt_gls
     cdef readonly INFO INFO
+    cdef int _ploidy
 
     cdef readonly int POS
 
@@ -340,6 +341,7 @@ cdef class Variant(object):
         self._gt_types = NULL
         self._gt_phased = NULL
         self._gt_pls
+        self._ploidy = -1
 
     def __repr__(self):
         return "Variant(%s:%d %s/%s)" % (self.CHROM, self.POS, self.REF,
@@ -379,16 +381,22 @@ cdef class Variant(object):
         def __get__(self):
             if self._gt_idxs == NULL:
                 self.gt_types
-            cdef int i, n = self.b.n_allele, j=0
+            cdef int i, n = self.ploidy, j=0
             cdef char **alleles = self.b.d.allele
-            cdef dict d = {i:alleles[i] for i in range(n)}
+            cdef dict d = {i:alleles[i] for i in range(self.b.n_allele)}
             cdef list a = []
             cdef np.ndarray phased = self.gt_phases
             cdef char **lookup = ["/", "|"]
             for i in range(0, n * self.vcf.n_samples, n):
-                a.append(d.get(self._gt_idxs[i], ".")
-                        + lookup[phased[j]] +
-                        d.get(self._gt_idxs[i+1], "."))
+                if n == 2:
+                    a.append(d.get(self._gt_idxs[i], ".")
+                            + lookup[phased[j]] +
+                            d.get(self._gt_idxs[i+1], "."))
+                elif n == 1:
+                    a.append(d.get(self._gt_idxs[i], "."))
+                else:
+                    raise Exception("gt_bases not implemented for ploidy > 2")
+
                 j += 1
             return np.array(a, np.str)
 
@@ -492,6 +500,7 @@ cdef class Variant(object):
                 ndst = 0
                 ngts = bcf_get_genotypes(self.vcf.hdr, self.b, &self._gt_types, &ndst)
                 nper = ndst / self.vcf.n_samples
+                self._ploidy = nper
                 self._gt_idxs = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples * nper)
                 for i in range(0, ndst, nper):
                     self._gt_idxs[i] = bcf_gt_allele(self._gt_types[i])
@@ -507,6 +516,12 @@ cdef class Variant(object):
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_types)
+
+    property ploidy:
+        def __get__(self):
+            if self._ploidy == -1:
+                self.gt_types
+            return self._ploidy
 
     property gt_phred_ll_homref:
         def __get__(self):

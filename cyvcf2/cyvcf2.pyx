@@ -70,6 +70,14 @@ cdef class VCF(object):
             if ret < len(s):
                 sys.stderr.write("problem with sample: %s\n" % s[ret - 1])
 
+    def update(self, id, type, number, description):
+        ret = bcf_hdr_append(self.hdr, "##INFO=<ID={id},Number={number},Type={type},Description=\"{description}\">".format(id=id, type=type, number=number, description=description))
+        if ret != 0:
+            raise Exception("unable to update to header: %d", ret)
+        ret = bcf_hdr_sync(self.hdr)
+        if ret != 0:
+            raise Exception("unable to update to header")
+
     def __call__(VCF self, region):
         if self.idx == NULL:
             # we load the index on first use if possible and re-use
@@ -903,6 +911,12 @@ cdef class INFO(object):
 
     def __cinit__(INFO self):
         self._i = 0
+
+    def __setitem__(self, char *key, char *value):
+        # only support strings for now.
+        ret = bcf_update_info_string(self.hdr, self.b, key, value)
+        if ret != 0:
+            raise Exception("not able to set: %s -> %s (%d)", key, value, ret)
 
     cdef _getval(INFO self, bcf_info_t * info):
 

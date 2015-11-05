@@ -1073,9 +1073,9 @@ cdef class Writer(object):
     def close(self):
         if self.hts != NULL:
             hts_close(self.hts)
+            self.hts = NULL
 
     def __dealloc__(self):
         bcf_hdr_destroy(self.hdr)
         self.hdr = NULL
         self.close()
-        self.hts = NULL

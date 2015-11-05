@@ -1,4 +1,4 @@
-from cyvcf2 import VCF, Variant
+from cyvcf2 import VCF, Variant, Writer
 import os.path
 from nose.tools import assert_raises
 
@@ -145,6 +145,12 @@ def test_attrs():
 
     assert variant.REF == b"CCCTAA"
     assert variant.ALT == [b"C"]
+
+def test_writer():
+    v = VCF(VCF_PATH)
+    o = Writer("/dev/stdout", v)
+    o.close()
+    del o
 
 
 def test_var_type():

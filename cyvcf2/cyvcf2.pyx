@@ -34,6 +34,7 @@ cdef class VCF(object):
     cdef htsFile *hts
     cdef const bcf_hdr_t *hdr
     cdef tbx_t *idx
+    cdef hts_idx_t *hidx
     cdef int n_samples
     cdef int PASS
     cdef char *fname
@@ -81,17 +82,35 @@ cdef class VCF(object):
     def __call__(VCF self, region):
         if self.idx == NULL:
             # we load the index on first use if possible and re-use
-            if not os.path.exists(str(self.fname + ".tbi")):
-                raise Exception("can't extract region without tabix index for %s" % self.fname)
-            self.idx = tbx_index_load(self.fname + b".tbi")
-            assert self.idx != NULL, "error loading tabix index for %s" % self.fname
+            if not os.path.exists(str(self.fname + ".tbi")): #  or os.path.exists(self.name + ".csi"):
+                raise Exception("can't extract region without tabix or csi index for %s" % self.fname)
 
-        cdef hts_itr_t *itr = tbx_itr_querys(self.idx, region)
-        assert itr != NULL, "error starting query for %s at %s" % (self.fname, region)
+            if os.path.exists(self.fname + ".tbi"):
+                self.idx = tbx_index_load(self.fname + b".tbi")
+                assert self.idx != NULL, "error loading tabix index for %s" % self.fname
+            #else:
+            #    self.hidx = bcf_index_load(self.fname)
+            #    assert self.hidx != NULL, "error loading csi index for %s" % self.fname
+
+        cdef hts_itr_t *itr
         cdef kstring_t s
         cdef bcf1_t *b
         cdef int slen, ret
-
+        #if self.hidx != NULL:
+        #    itr = bcf_itr_querys(self.hidx, self.hdr, region)
+        #    assert itr != NULL, "error starting query for %s at %s" % (self.fname, region)
+        #    try:
+        #        b = bcf_init()
+        #        ret = bcf_itr_next(self.hidx, itr, b)
+        #        while ret >= 0:
+        #            yield newVariant(b, self)
+        #            b = bcf_init()
+        #            ret = bcf_itr_next(self.hidx, itr, b)
+        #    finally:
+        #        hts_itr_destroy(itr)
+        #else:
+        itr = tbx_itr_querys(self.idx, region)
+        assert itr != NULL, "error starting query for %s at %s" % (self.fname, region)
         try:
             slen = tbx_itr_next(self.hts, self.idx, itr, &s)
             while slen > 0:
@@ -168,6 +187,8 @@ cdef class VCF(object):
             self.hts = NULL
         if self.idx != NULL:
             tbx_destroy(self.idx)
+        if self.hidx != NULL:
+            hts_idx_destroy(self.hidx)
 
     def __iter__(self):
         return self
@@ -248,6 +269,21 @@ cdef class VCF(object):
         ax1.set_yscale('log', nonposy='clip')
         return fig
 
+    def site_relatedness(self, sites):
+
+        cdef int n_samples = len(self.samples)
+
+        cdef double[:, ::view.contiguous] va = np.zeros((n_samples, n_samples), np.float64)
+        cdef int32_t[:, ::view.contiguous] vn = np.zeros((n_samples, n_samples), np.int32)
+        cdef int32_t[:, ::view.contiguous] vibs0 = np.zeros((n_samples, n_samples), np.int32)
+        cdef int32_t[:, ::view.contiguous] vibs2 = np.zeros((n_samples, n_samples), np.int32)
+
+        cdef Variant v
+        for chrom, pos in sites:
+            for v in self("%s:%s-%s" % (chrom, pos, pos)):
+                v.relatedness(va, vn, vibs0, vibs2)
+        return self._relatedness_finish(va, vn, vibs0, vibs2)
+
     def relatedness(self, int n_variants=35000, int gap=30000, float min_af=0.04,
                     float max_af=0.8, float linkage_max=0.2, min_depth=8):
 
@@ -300,11 +336,16 @@ cdef class VCF(object):
             if nv == n_variants:
                 break
         sys.stderr.write("tested: %d variants out of %d\n" % (nv, nvt))
+        return self._relatedness_finish(va, vn, vibs0, vibs2)
 
+    cdef list _relatedness_finish(self, double[:, ::view.contiguous] va,
+                                        int32_t[:, ::view.contiguous] vn,
+                                        int32_t[:, ::view.contiguous] vibs0,
+                                        int32_t[:, ::view.contiguous] vibs2):
+        samples = self.samples
         n = np.asarray(vn)
-        a = np.asarray(va).astype(float)
-        ibs0, ibs2 = np.asarray(vibs0).astype(float), np.asarray(vibs2).astype(float)
-
+        a = np.asarray(va)
+        ibs0, ibs2 = np.asarray(vibs0, a.dtype), np.asarray(vibs2, a.dtype)
         # the counts only went to the upper diagonal. translate to lower for
         # ibs2*
         n[np.tril_indices(len(n))] = n[np.triu_indices(len(n))]
@@ -314,6 +355,7 @@ cdef class VCF(object):
         ibs2 = ibs2 / n
 
         cdef int sj, sk
+        res = []
         for sj, sample_j in enumerate(samples):
             for sk, sample_k in enumerate(samples[sj:], start=sj):
                 if sj == sk: continue
@@ -321,10 +363,11 @@ cdef class VCF(object):
                 rel, iibs0, iibs2 = a[sj, sk], ibs0[sj, sk], ibs2[sj, sk]
                 iibs2_star = ibs2[sk, sj]
 
-                yield {'sample_a': sample_j,
-                       'sample_b': sample_k,
-                       'rel': rel, 'ibs0': iibs0, 'ibs2': iibs2,
-                       'ibs2*': iibs2_star, 'n': n[sj, sk]}
+                res.append({'sample_a': sample_j,
+                            'sample_b': sample_k,
+                            'rel': rel, 'ibs0': iibs0, 'ibs2': iibs2,
+                            'ibs2*': iibs2_star, 'n': n[sj, sk]})
+        return res
 
 cdef class Variant(object):
     cdef bcf1_t *b
@@ -348,7 +391,7 @@ cdef class Variant(object):
         self.b = NULL
         self._gt_types = NULL
         self._gt_phased = NULL
-        self._gt_pls
+        self._gt_pls = NULL
         self._ploidy = -1
 
     def __repr__(self):

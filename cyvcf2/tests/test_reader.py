@@ -36,7 +36,7 @@ def test_ibd():
 
 def test_relatedness():
     vcf = VCF(VCF_PATH, gts012=True)
-    viter = vcf.relatedness(gap=0, linkage_max=2)
+    viter = iter(vcf.relatedness(gap=0, linkage_max=2))
     res = next(viter)
     assert "ibs0" in res
     assert "ibs2" in res

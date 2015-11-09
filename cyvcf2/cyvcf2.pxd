@@ -32,8 +32,14 @@ cdef extern from "htslib/hts.h":
     ctypedef struct hts_itr_t:
         pass
 
+    ctypedef struct hts_idx_t:
+        pass
+
+    hts_idx_t *bcf_index_load(char *fn)
+
     #int hts_itr_next(BGZF *fp, hts_itr_t *iter, void *r, void *data);
     void hts_itr_destroy(hts_itr_t *iter);
+    void hts_idx_destroy(hts_idx_t *idx);
 
 cdef extern from "htslib/tbx.h":
 
@@ -47,6 +53,14 @@ cdef extern from "htslib/tbx.h":
     void tbx_destroy(tbx_t *tbx);
 
 cdef extern from "htslib/vcf.h":
+
+    ctypedef struct hts_idx_t:
+        pass
+
+    int bcf_itr_next(hts_idx_t *, hts_itr_t* iter, bcf1_t*)
+    hts_itr_t *bcf_itr_querys(hts_idx_t *, void *, char *);
+
+
     const int BCF_DT_ID = 0;
     const int BCF_DT_SAMPLE = 2;
 

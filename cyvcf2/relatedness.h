@@ -77,6 +77,9 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 	float numer, val;
 	float gtj, gtk;
 	float denom = 2.0 * pi * (1.0 - pi);
+	if(denom == 0) {
+		return 0;
+	}
 
 	for(j=0; j <n_samples; j++){
 		// skip unknown

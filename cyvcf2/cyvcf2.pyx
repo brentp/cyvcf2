@@ -269,19 +269,51 @@ cdef class VCF(object):
         ax1.set_yscale('log', nonposy='clip')
         return fig
 
-    def site_relatedness(self, sites):
-
+    def site_relatedness(self, sites, extra='1kg'):
+        """
+        sites must be an iterable of (chrom, pos1, ref, alt) where
+        we match on all parts.
+        """
         cdef int n_samples = len(self.samples)
+        cdef int all_samples = n_samples
+        cdef int k
+        cdef int32_t[:, ::view.contiguous] extras
 
-        cdef double[:, ::view.contiguous] va = np.zeros((n_samples, n_samples), np.float64)
-        cdef int32_t[:, ::view.contiguous] vn = np.zeros((n_samples, n_samples), np.int32)
-        cdef int32_t[:, ::view.contiguous] vibs0 = np.zeros((n_samples, n_samples), np.int32)
-        cdef int32_t[:, ::view.contiguous] vibs2 = np.zeros((n_samples, n_samples), np.int32)
+        if extra == '1kg':
+            import gzip
+            f = '1kg.sites.5793.2504.bin.gz'
+            shape = (5793, 2504)
+            extras = np.fromstring(gzip.open(f).read(), dtype=np.uint8).reshape(shape).astype(np.int32)
+            assert len(extras) == len(sites)
+            all_samples += shape[1]
+
+        cdef double[:, ::view.contiguous] va = np.zeros((all_samples, all_samples), np.float64)
+        cdef int32_t[:, ::view.contiguous] vn = np.zeros((all_samples, all_samples), np.int32)
+        cdef int32_t[:, ::view.contiguous] vibs0 = np.zeros((all_samples, all_samples), np.int32)
+        cdef int32_t[:, ::view.contiguous] vibs2 = np.zeros((all_samples, all_samples), np.int32)
+        cdef int32_t[:] all_gt_types = np.zeros((all_samples, ), np.int32)
 
         cdef Variant v
-        for chrom, pos in sites:
+        for i, (chrom, pos, ref, alt) in enumerate(sites):
             for v in self("%s:%s-%s" % (chrom, pos, pos)):
-                v.relatedness(va, vn, vibs0, vibs2)
+                if v.REF != ref: continue
+                if len(v.ALT) != 1: continue
+                if v.ALT[0] != alt: continue
+                if n_samples != all_samples:
+                    #extra_gts = extras[i, :]
+                    # add these genotypes to the end of _gts
+                    v.gt_types
+                    all_gt_types[n_samples:] = extras[i, :]
+                    for k in range(n_samples):
+                        all_gt_types[k] = v._gt_types[k]
+                    v.relatedness_extra(va, vn, vibs0, vibs2, all_gt_types, all_samples)
+                else:
+                    v.relatedness(va, vn, vibs0, vibs2)
+        if n_samples != all_samples:
+            return self._relatedness_finish(va[:n_samples, :n_samples],
+                                            vn[:n_samples, :n_samples],
+                                            vibs0[:n_samples, :n_samples],
+                                            vibs2[:n_samples, :n_samples])
         return self._relatedness_finish(va, vn, vibs0, vibs2)
 
     def relatedness(self, int n_variants=35000, int gap=30000, float min_af=0.04,
@@ -462,6 +494,20 @@ cdef class Variant(object):
         cdef int n_samples = self.vcf.n_samples
         return related(self._gt_types, &asum[0, 0], &n[0, 0], &ibs0[0, 0],
                        &ibs2[0, 0], n_samples)
+
+    cdef int relatedness_extra(self, double[:, ::view.contiguous] asum,
+                          int32_t[:, ::view.contiguous] n,
+                          int32_t[:, ::view.contiguous] ibs0,
+                          int32_t[:, ::view.contiguous] ibs2,
+                          int32_t[:] all_gt_types,
+                          int n_samples_total):
+        if not self.vcf.gts012:
+            raise Exception("must call relatedness with gts012")
+        if self._gt_types == NULL:
+            self.gt_types
+
+        ret = related(<int *>&all_gt_types[0], &asum[0, 0], &n[0, 0], &ibs0[0, 0],
+                      &ibs2[0, 0], n_samples_total)
 
     property num_called:
         def __get__(self):

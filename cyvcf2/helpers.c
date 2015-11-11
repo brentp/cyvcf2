@@ -2,17 +2,20 @@
 
 int as_gts(int *gts, int num_samples, int ploidy) {
     int j = 0, i, k;
-	int found = 0;
+	int missing;
     for (i = 0; i < ploidy * num_samples; i += ploidy){
-		found = 0;
+		missing = 0;
 		for (k = 0; k < ploidy; k++) {
-			if (!bcf_gt_is_missing(gts[i+k])) {
-				found = 1;
-				break;
+			if (gts[i+k] <= 0) {
+				missing += 1;
 			}
+			//fprintf(stderr, "%d\n", gts[i + k]);
         }
-		if (found == 0) {
+		if (missing == ploidy) {
 			gts[j++] = 2; // unknown
+			continue;
+		} else if (missing != 0) {
+			gts[j++] = 1; // HET
 			continue;
 		}
 
@@ -50,17 +53,21 @@ int as_gts(int *gts, int num_samples, int ploidy) {
 }
 
 int as_gts012(int *gts, int num_samples, int ploidy) {
-    int j = 0, i, k, found;
+    int j = 0, i, k;
+	int missing;
     for (i = 0; i < ploidy * num_samples; i += ploidy){
-		found = 0;
+		missing = 0;
 		for (k = 0; k < ploidy; k++) {
-			if (!bcf_gt_is_missing(gts[i+k])) {
-				found = 1;
-				break;
+			if (gts[i+k] <= 0) {
+				missing += 1;
 			}
+			//fprintf(stderr, "%d\n", gts[i + k]);
         }
-		if (found == 0) {
+		if (missing == ploidy) {
 			gts[j++] = 3; // unknown
+			continue;
+		} else if (missing != 0) {
+			gts[j++] = 1; // HET
 			continue;
 		}
 
@@ -71,15 +78,11 @@ int as_gts012(int *gts, int num_samples, int ploidy) {
 			} else if (a == 1) {
 				gts[j++] = 2;
 			} else {
-				gts[j++] = 3; // unknown
+				gts[j++] = 3;
 			}
 			continue;
 		}
 
-        if (bcf_gt_is_missing(gts[i]) && bcf_gt_is_missing(gts[i+1])){
-            gts[j++] = 3; // unknown
-            continue;
-        }
         int a = bcf_gt_allele(gts[i]);
         int b = bcf_gt_allele(gts[i+1]);
 

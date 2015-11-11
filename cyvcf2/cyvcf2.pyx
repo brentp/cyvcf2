@@ -590,6 +590,7 @@ cdef class Variant(object):
     property gt_types:
         def __get__(self):
             cdef int ndst, ngts, n, i, nper, j = 0, k = 0
+            cdef int a
             if self.vcf.n_samples == 0:
                 return []
             if self._gt_types == NULL:
@@ -600,12 +601,17 @@ cdef class Variant(object):
                 self._ploidy = nper
                 self._gt_idxs = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples * nper)
                 for i in range(0, ndst, nper):
-                    self._gt_idxs[i] = bcf_gt_allele(self._gt_types[i])
-                    for k in range(i + 1, i + nper):
-                        self._gt_idxs[k] = bcf_gt_allele(self._gt_types[k])
-                    self._gt_phased[j] = <int>bcf_gt_is_phased(self._gt_types[i+1])
+                    for k in range(i, i + nper):
+                        a = self._gt_types[k]
+                        if a >= 0:
+                            self._gt_idxs[k] = bcf_gt_allele(a)
+                        else:
+                            self._gt_idxs[k] = a
+
+                    self._gt_phased[j] = self._gt_types[i] > 0 and <int>bcf_gt_is_phased(self._gt_types[i+1])
                     j += 1
 
+                #print [self._gt_types[x] for x in range(self.vcf.n_samples * nper)]
                 if self.vcf.gts012:
                     n = as_gts012(self._gt_types, self.vcf.n_samples, nper)
                 else:

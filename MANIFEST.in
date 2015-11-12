@@ -11,3 +11,5 @@ include htslib/htslib
 include htslib/htslib/*.h
 include htslib/cram/*.c
 include htslib/cram/*.h
+include cyvcf2/1kg.sites
+include cyvcf2/1kg.sites.bin.gz

@@ -1,5 +1,5 @@
 #cython: profile=False
-import os.path
+import os.path as op
 import sys
 from libc cimport stdlib
 import numpy as np
@@ -10,6 +10,11 @@ np.import_array()
 from cython cimport view
 
 from cpython.version cimport PY_MAJOR_VERSION
+
+# overcome lack of __file__ in cython
+import inspect
+if not hasattr(sys.modules[__name__], '__file__'):
+    __file__ = inspect.getfile(inspect.currentframe())
 
 cdef unicode xstr(s):
     if type(s) is unicode:
@@ -45,7 +50,7 @@ cdef class VCF(object):
     def __init__(self, fname, mode="r", gts012=False, lazy=False, samples=None):
         if fname == "-":
             fname = "/dev/stdin"
-        if not os.path.exists(fname):
+        if not op.exists(fname):
             raise Exception("bad path: %s" % fname)
         self.hts = hts_open(fname.encode(), mode.encode())
         cdef bcf_hdr_t *hdr
@@ -82,10 +87,10 @@ cdef class VCF(object):
     def __call__(VCF self, region):
         if self.idx == NULL:
             # we load the index on first use if possible and re-use
-            if not os.path.exists(str(self.fname + ".tbi")): #  or os.path.exists(self.name + ".csi"):
+            if not op.exists(str(self.fname + ".tbi")): #  or os.path.exists(self.name + ".csi"):
                 raise Exception("can't extract region without tabix or csi index for %s" % self.fname)
 
-            if os.path.exists(self.fname + ".tbi"):
+            if op.exists(self.fname + ".tbi"):
                 self.idx = tbx_index_load(self.fname + b".tbi")
                 assert self.idx != NULL, "error loading tabix index for %s" % self.fname
             #else:
@@ -269,23 +274,36 @@ cdef class VCF(object):
         ax1.set_yscale('log', nonposy='clip')
         return fig
 
-    def site_relatedness(self, sites, extra='1kg'):
+    def site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites')):
         """
-        sites must be an iterable of (chrom, pos1, ref, alt) where
+        sites must be an file of format: chrom:pos1:ref:alt where
         we match on all parts.
+        it must have a matching file with a suffix of .bin.gz that is the binary
+        genotype data. with 0 == hom_ref, 1 == het, 2 == hom_alt, 3 == unknown.
         """
         cdef int n_samples = len(self.samples)
         cdef int all_samples = n_samples
-        cdef int k
+        cdef int k, last_pos
         cdef int32_t[:, ::view.contiguous] extras
 
-        if extra == '1kg':
+        if sites is not None:
+            isites = []
+            for i in (x.strip().split(":") for x in open(sites)):
+                i[1] = int(i[1])
+                isites.append(i)
+
             import gzip
-            f = '1kg.sites.5793.2504.bin.gz'
-            shape = (5793, 2504)
-            extras = np.fromstring(gzip.open(f).read(), dtype=np.uint8).reshape(shape).astype(np.int32)
-            assert len(extras) == len(sites)
-            all_samples += shape[1]
+            f = sites + ".bin.gz"
+            if op.exists(f):
+                tmp = np.fromstring(gzip.open(f).read(), dtype=np.uint8).astype(np.int32)
+                rows = len(isites)
+                cols = len(tmp) / rows
+                extras = tmp.reshape((rows, cols))
+                del tmp
+                all_samples += cols
+            else:
+                sys.stderr.write("didn't find extra samples in site_relatedness; using sample from vcf only\n")
+                
 
         cdef double[:, ::view.contiguous] va = np.zeros((all_samples, all_samples), np.float64)
         cdef int32_t[:, ::view.contiguous] vn = np.zeros((all_samples, all_samples), np.int32)
@@ -294,21 +312,40 @@ cdef class VCF(object):
         cdef int32_t[:] all_gt_types = np.zeros((all_samples, ), np.int32)
 
         cdef Variant v
-        for i, (chrom, pos, ref, alt) in enumerate(sites):
-            for v in self("%s:%s-%s" % (chrom, pos, pos)):
-                if v.REF != ref: continue
-                if len(v.ALT) != 1: continue
-                if v.ALT[0] != alt: continue
-                if n_samples != all_samples:
-                    #extra_gts = extras[i, :]
-                    # add these genotypes to the end of _gts
-                    v.gt_types
-                    all_gt_types[n_samples:] = extras[i, :]
-                    for k in range(n_samples):
-                        all_gt_types[k] = v._gt_types[k]
-                    v.relatedness_extra(va, vn, vibs0, vibs2, all_gt_types, all_samples)
-                else:
-                    v.relatedness(va, vn, vibs0, vibs2)
+
+        if sites:
+            def genvariants():
+                for i, (chrom, pos, ref, alt) in enumerate(isites):
+                    for v in self("%s:%s-%s" % (chrom, pos, pos)):
+                        if v.REF != ref: continue
+                        if len(v.ALT) != 1: continue
+                        if v.ALT[0] != alt: continue
+                        yield i, v
+
+        else:
+            def genvariants():
+                last_pos, k = -10000, 0
+                for v in self:
+                    if abs(v.POS - last_pos) < 5000: continue
+                    if len(v.REF) != 1: continue
+                    if len(v.ALT) != 1: continue
+                    if v.call_rate < 0.5: continue
+                    if not 0.03 < v.aaf < 0.6: continue
+                    if np.mean(v.gt_depths > 7) < 0.5: continue
+                    last_pos = v.POS
+                    yield k, v
+                    k += 1
+                    if k > 20000: break
+
+        for i, v in genvariants():
+            if n_samples != all_samples:
+                v.gt_types
+                for k in range(n_samples):
+                    all_gt_types[k] = v._gt_types[k]
+                all_gt_types[n_samples:] = extras[i, :]
+                v.relatedness_extra(va, vn, vibs0, vibs2, all_gt_types, all_samples)
+            else:
+                v.relatedness(va, vn, vibs0, vibs2)
         if n_samples != all_samples:
             return self._relatedness_finish(va[:n_samples, :n_samples],
                                             vn[:n_samples, :n_samples],

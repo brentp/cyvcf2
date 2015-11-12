@@ -98,7 +98,7 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 			if(j != k){
 				// multiply by 2 here to get the correct scale. differs from
 				// original paper.
-				numer = 2.0 * (gtj - 2.0 * pi) * (gtk - 2.0 * pi);
+				numer = (gtj - 2.0 * pi) * (gtk - 2.0 * pi);
 				ibs0[idx] += (gtj != HET && gtk != HET && gtj != gtk);
 			} else {
 				numer = (gtj * gtj) - (1.0 + 2.0 * pi) * gtj + 2.0 * pi * pi;

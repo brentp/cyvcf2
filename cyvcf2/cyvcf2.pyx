@@ -1,6 +1,7 @@
 #cython: profile=False
 import os.path as op
 import sys
+from collections import defaultdict
 from libc cimport stdlib
 import numpy as np
 cimport numpy as np
@@ -274,18 +275,10 @@ cdef class VCF(object):
         ax1.set_yscale('log', nonposy='clip')
         return fig
 
-    def site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites')):
-        """
-        sites must be an file of format: chrom:pos1:ref:alt where
-        we match on all parts.
-        it must have a matching file with a suffix of .bin.gz that is the binary
-        genotype data. with 0 == hom_ref, 1 == het, 2 == hom_alt, 3 == unknown.
-        """
-        cdef int n_samples = len(self.samples)
-        cdef int all_samples = n_samples
-        cdef int k, last_pos
-        cdef int32_t[:, ::view.contiguous] extras
-
+    def gen_variants(self, sites=op.join(op.dirname(__file__), '1kg.sites')):
+    
+        cdef int all_samples = len(self.samples)
+        extras = None
         if sites is not None:
             isites = []
             for i in (x.strip().split(":") for x in open(sites)):
@@ -303,27 +296,19 @@ cdef class VCF(object):
                 all_samples += cols
             else:
                 sys.stderr.write("didn't find extra samples in site_relatedness; using sample from vcf only\n")
-                
-
-        cdef double[:, ::view.contiguous] va = np.zeros((all_samples, all_samples), np.float64)
-        cdef int32_t[:, ::view.contiguous] vn = np.zeros((all_samples, all_samples), np.int32)
-        cdef int32_t[:, ::view.contiguous] vibs0 = np.zeros((all_samples, all_samples), np.int32)
-        cdef int32_t[:, ::view.contiguous] vibs2 = np.zeros((all_samples, all_samples), np.int32)
-        cdef int32_t[:] all_gt_types = np.zeros((all_samples, ), np.int32)
 
         cdef Variant v
-
+        cdef int k, last_pos
         if sites:
-            def genvariants():
+            def gen():
                 for i, (chrom, pos, ref, alt) in enumerate(isites):
                     for v in self("%s:%s-%s" % (chrom, pos, pos)):
                         if v.REF != ref: continue
                         if len(v.ALT) != 1: continue
                         if v.ALT[0] != alt: continue
                         yield i, v
-
         else:
-            def genvariants():
+            def gen():
                 last_pos, k = -10000, 0
                 for v in self:
                     if abs(v.POS - last_pos) < 5000: continue
@@ -336,8 +321,63 @@ cdef class VCF(object):
                     yield k, v
                     k += 1
                     if k > 20000: break
+        return all_samples, extras, gen
 
-        for i, v in genvariants():
+    def het_check(self, min_depth=8, percentiles=(10, 90)):
+
+        cdef int i, k, n_samples = len(self.samples), j = 0
+        cdef Variant v
+        cdef np.ndarray het_counts = np.zeros((n_samples,), dtype=np.int32)
+
+        _, _, gen = self.gen_variants()
+        maf_lists = defaultdict(list)
+        idxs = np.arange(n_samples)
+        for i, v in gen():
+            if v.CHROM in ('X', 'chrX'): break
+            j += 1
+            alts = v.gt_alt_depths
+            assert len(alts) == n_samples
+            depths = (alts + v.gt_ref_depths).astype(float)
+            mafs = alts / depths
+            gt_types = v.gt_types
+            hets = gt_types == 1
+            het_counts[hets] += 1
+            for k in idxs[hets]:
+                if depths[k] <= min_depth: continue
+                maf_lists[k].append(mafs[k])
+
+        sample_ranges = {}
+        for i, sample in enumerate(self.samples):
+            qs = np.percentile(maf_lists[i], percentiles)
+            sample_ranges[sample] = dict(zip(['p' + str(p) for p in percentiles], qs))
+            sample_ranges[sample]['range'] = qs.max() - qs.min()
+            sample_ranges[sample]['het_ratio'] = het_counts[i] / float(j)
+
+        return sample_ranges
+
+    def site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites')):
+        """
+        sites must be an file of format: chrom:pos1:ref:alt where
+        we match on all parts.
+        it must have a matching file with a suffix of .bin.gz that is the binary
+        genotype data. with 0 == hom_ref, 1 == het, 2 == hom_alt, 3 == unknown.
+        """
+        cdef int n_samples = len(self.samples)
+        cdef int all_samples
+        cdef int k, i
+        cdef int32_t[:, ::view.contiguous] extras
+
+        all_samples, extras, gen = self.gen_variants(sites)
+
+        cdef double[:, ::view.contiguous] va = np.zeros((all_samples, all_samples), np.float64)
+        cdef int32_t[:, ::view.contiguous] vn = np.zeros((all_samples, all_samples), np.int32)
+        cdef int32_t[:, ::view.contiguous] vibs0 = np.zeros((all_samples, all_samples), np.int32)
+        cdef int32_t[:, ::view.contiguous] vibs2 = np.zeros((all_samples, all_samples), np.int32)
+        cdef int32_t[:] all_gt_types = np.zeros((all_samples, ), np.int32)
+
+        cdef Variant v
+
+        for i, v in gen():
             if n_samples != all_samples:
                 v.gt_types
                 for k in range(n_samples):

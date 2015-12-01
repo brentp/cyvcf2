@@ -9,6 +9,8 @@ It is targetted toward our use-case in [gemini](http://gemini.rtfd.org) but shou
 On a file with 189 samples that takes [cyvcf](https://github.com/arq5x/cyvcf) **21 seconds** to parse and extract all sample information, it takes `cyvcf2` **1.4 seconds**.
 
 Attributes like `variant.gt_ref_depths` return a numpy array directly so they are immediately ready for downstream use.
+**note** that the array is backed by the underlying C data, so, once `variant` goes out of scope. The array will contain nonsense.
+To persist a copy, use: `cpy = np.array(variant.gt_ref_depths)` instead of just `arr = variant.gt_ref_depths`.
 
 Example
 =======

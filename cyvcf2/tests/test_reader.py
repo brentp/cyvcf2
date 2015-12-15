@@ -149,6 +149,11 @@ def test_attrs():
 def test_writer():
     v = VCF(VCF_PATH)
     o = Writer("/dev/stdout", v)
+    rec = v.next()
+    rec.INFO["AC"] = "3"
+    rec.FILTER = ["Filter1", "Filter2"]
+    rec.FILTER = ["PASS"]
+    o.write_record(rec)
     o.close()
     del o
 

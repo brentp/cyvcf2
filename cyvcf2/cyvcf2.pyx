@@ -1068,6 +1068,15 @@ cdef class Variant(object):
                         return None
                     return v
             return ';'.join(bcf_hdr_int2id(h, BCF_DT_ID, self.b.d.flt[i]) for i in range(n))
+        def __set__(self, filters):
+            cdef bcf_hdr_t *h = self.vcf.hdr
+            cdef int *flt_ids = <int *>stdlib.malloc(sizeof(int) * len(filters))
+            for i, fname in enumerate(filters):
+                flt_ids[i] = bcf_hdr_id2int(h, BCF_DT_ID, fname)
+            ret = bcf_update_filter(h, self.b, flt_ids, len(filters))
+            stdlib.free(flt_ids)
+            if ret != 0:
+                raise Exception("not able to set filter: %s", filters)
 
     property QUAL:
         def __get__(self):
@@ -1133,7 +1142,7 @@ cdef class INFO(object):
         try:
             return self.__getitem__(key)
         except KeyError:
-            return None
+            return default
 
     def __iter__(self):
         self._i = 0

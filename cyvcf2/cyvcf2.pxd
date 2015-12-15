@@ -215,6 +215,7 @@ cdef extern from "htslib/vcf.h":
     bcf_info_t *bcf_get_info(const bcf_hdr_t *hdr, bcf1_t *line, const char *key);
 
     int bcf_update_info(const bcf_hdr_t *hdr, bcf1_t *line, const char *key, const void *values, int n, int type);
+    int bcf_update_filter(const bcf_hdr_t *hdr, bcf1_t *line, int *flt_ids, int n);
 
 
     int bcf_add_id(const bcf_hdr_t *hdr, bcf1_t *line, const char *id);

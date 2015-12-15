@@ -1069,6 +1069,8 @@ cdef class Variant(object):
                     return v
             return ';'.join(bcf_hdr_int2id(h, BCF_DT_ID, self.b.d.flt[i]) for i in range(n))
         def __set__(self, filters):
+            if isinstance(filters, basestring):
+                filters = filters.split(";")
             cdef bcf_hdr_t *h = self.vcf.hdr
             cdef int *flt_ids = <int *>stdlib.malloc(sizeof(int) * len(filters))
             for i, fname in enumerate(filters):

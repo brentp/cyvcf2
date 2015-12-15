@@ -1,6 +1,9 @@
 from cyvcf2 import VCF, Variant, Writer
 import os.path
 from nose.tools import assert_raises
+import tempfile
+import os
+import atexit
 
 HERE = os.path.dirname(__file__)
 VCF_PATH = os.path.join(HERE, "test.vcf.gz")
@@ -147,15 +150,31 @@ def test_attrs():
     assert variant.ALT == [b"C"]
 
 def test_writer():
+
     v = VCF(VCF_PATH)
-    o = Writer("/dev/stdout", v)
+    f = tempfile.mktemp(suffix=".vcf")
+    atexit.register(os.unlink, f)
+    o = Writer(f, v)
     rec = v.next()
     rec.INFO["AC"] = "3"
-    rec.FILTER = ["Filter1", "Filter2"]
-    rec.FILTER = ["PASS"]
+    rec.FILTER = ["LowQual"]
     o.write_record(rec)
+
+    rec.FILTER = ["LowQual", "VQSRTrancheSNP99.90to100.00"]
+    o.write_record(rec)
+
+
+    rec.FILTER = "PASS"
+    o.write_record(rec)
+
     o.close()
-    del o
+
+    expected = ["LowQual", "LowQual;VQSRTrancheSNP99.90to100.00", None]
+
+    for i, variant in enumerate(VCF(f)):
+        assert variant.FILTER == expected[i], (variant.FILTER, expected[i])
+
+
 
 
 def test_var_type():

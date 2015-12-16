@@ -47,6 +47,23 @@ cdef class VCF(object):
     cdef bint gts012
     cdef bint lazy
 
+    def add_to_header(self, line):
+        ret = bcf_hdr_append(self.hdr, line)
+        if ret != 0:
+            raise Exception("couldn't add '%s' to header")
+        ret = bcf_hdr_sync(self.hdr)
+        if ret != 0:
+            raise Exception("couldn't add '%s' to header")
+        return ret
+
+    def add_info_to_header(self, adict):
+        return self.add_to_header("##INFO=<ID={ID},Number={Number},Type={Type},Description=\"{Description}\">".format(**adict))
+
+    def add_format_to_header(self, adict):
+        return self.add_to_header("##FORMAT=<ID={ID},Number={Number},Type={Type},Description=\"{Description}\">".format(**adict))
+
+    def add_filter_to_header(self, adict):
+        return self.add_to_header("##FILTER=<ID={ID},Description=\"{Description}\">".format(**adict))
 
     def __init__(self, fname, mode="r", gts012=False, lazy=False, samples=None):
         if fname == "-":
@@ -1161,6 +1178,7 @@ cdef class INFO(object):
         name = bcf_hdr_int2id(self.hdr, BCF_DT_ID, info.key)
         return name, self._getval(info)
 
+
 # this function is copied verbatim from pysam/cbcf.pyx
 cdef bcf_array_to_object(void *data, int type, int n, int scalar=0):
     cdef char    *datac
@@ -1236,8 +1254,6 @@ cdef class Writer(object):
     cdef bcf_hdr_t *hdr
     cdef public str name
     cdef bint header_written
-
-    # TODO: see cgotabix AddHeaderInfo for how to add stuff to header.
 
     def __init__(self, fname, VCF tmpl):
         self.name = fname

@@ -174,8 +174,42 @@ def test_writer():
     for i, variant in enumerate(VCF(f)):
         assert variant.FILTER == expected[i], (variant.FILTER, expected[i])
 
+def test_add_info_to_header():
+    v = VCF(VCF_PATH)
+    v.add_info_to_header({'ID': 'abcdefg', 'Description': 'abcdefg',
+        'Type':'Character', 'Number': '1'})
+    # NOTE that we have to add the info to the header of the reader,
+    # not the writer because the record will be associated with the reader
+    f = tempfile.mktemp(suffix=".vcf")
+    atexit.register(os.unlink, f)
+    w = Writer(f, v)
+    import sys
+    rec = v.next()
 
+    rec.INFO["abcdefg"] = "XXX"
+    w.write_record(rec)
+    w.close()
 
+    v = next(VCF(f))
+    assert v.INFO["abcdefg"] == "XXX", dict(v.INFO)
+
+def test_add_filter_to_header():
+    v = VCF(VCF_PATH)
+    # NOTE that we have to add the filter to the header of the reader,
+    # not the writer because the record will be associated with the reader
+    v.add_filter_to_header({'ID': 'abcdefg', 'Description': 'abcdefg'})
+
+    f = tempfile.mktemp(suffix=".vcf")
+    atexit.register(os.unlink, f)
+    w = Writer(f, v)
+    rec = v.next()
+
+    rec.FILTER = ["abcdefg"]
+    w.write_record(rec)
+    w.close()
+
+    v = next(VCF(f))
+    assert v.FILTER == "abcdefg", v.FILTER
 
 def test_var_type():
     v = VCF(VCF_PATH)

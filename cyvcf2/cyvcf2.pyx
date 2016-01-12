@@ -133,7 +133,9 @@ cdef class VCF(object):
         #        hts_itr_destroy(itr)
         #else:
         itr = tbx_itr_querys(self.idx, region)
-        assert itr != NULL, "error starting query for %s at %s" % (self.fname, region)
+        if itr == NULL:
+            sys.stderr.write("no intervals found for %s at %s\n" % (self.fname, region))
+            raise StopIteration
         try:
             slen = tbx_itr_next(self.hts, self.idx, itr, &s)
             while slen > 0:

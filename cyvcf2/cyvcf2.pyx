@@ -1072,21 +1072,21 @@ cdef class Variant(object):
     property FILTER:
         def __get__(self):
             cdef int i
-            cdef bcf_hdr_t *h = self.vcf.hdr
             cdef int n = self.b.d.n_flt
-            if n == 0:
-                return None
             if n == 1:
                 if self.vcf.PASS != -1:
                     if self.b.d.flt[0] == self.vcf.PASS:
                         return None
                 else:
-                    v = bcf_hdr_int2id(h, BCF_DT_ID, self.b.d.flt[0])
+                    v = bcf_hdr_int2id(self.vcf.hdr, BCF_DT_ID, self.b.d.flt[0])
                     if v == b"PASS":
                         self.vcf.PASS = self.b.d.flt[0]
                         return None
                     return v
-            return ';'.join(bcf_hdr_int2id(h, BCF_DT_ID, self.b.d.flt[i]) for i in range(n))
+            if n == 0:
+                return None
+            return ';'.join(bcf_hdr_int2id(self.vcf.hdr, BCF_DT_ID, self.b.d.flt[i]) for i in range(n))
+
         def __set__(self, filters):
             if isinstance(filters, basestring):
                 filters = filters.split(";")

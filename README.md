@@ -34,6 +34,11 @@ for variant in VCF('some.vcf.gz'):
     c = variant.gt_phred_ll_homalt # numpy array
 
 	str(variant)
+	# Get a numpy array of the depth per sample:
+    dp = variant.samples('DP', int)
+    # or of any other format field:
+    sb = variant.samples('SB', float)
+    assert sb.shape == (n_samples, 4) # 4-values per
 ```
 
 Installation

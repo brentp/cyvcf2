@@ -330,3 +330,17 @@ def test_diploid():
                                    'TTCT|TTCT', 'TTCT|T', 'TTCT|T',
                                    'TTCT|TTCT']).all(), v.gt_bases
 
+
+def test_format():
+
+    vcf = VCF('{}/test.vcf.gz'.format(HERE))
+    import sys
+    for v in vcf:
+        a = v.format('PL', int)
+        assert a.shape == (189, 3)
+
+        a = v.format('SB', int)
+        assert a is None
+
+        a = v.format('DP', int)
+        assert a.shape == (189, 1)

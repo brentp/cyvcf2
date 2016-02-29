@@ -503,6 +503,7 @@ cdef class Variant(object):
     cdef int *_gt_types
     cdef int *_gt_ref_depths
     cdef int *_gt_alt_depths
+    cdef void *fmt_buffer
     cdef int *_gt_phased
     cdef float *_gt_quals
     cdef int *_int_gt_quals
@@ -682,6 +683,40 @@ cdef class Variant(object):
                 if self._gt_types[i] == 2:
                     n+=1
             return n
+
+    def format(self, tag, vtype=None):
+        """
+        type is one of [int, float, str]
+        TODO: get vtype from header
+        returns None on error.
+        """
+        cdef bcf_fmt_t *fmt = bcf_get_fmt(self.vcf.hdr, self.b, tag)
+        cdef int n, nret
+        cdef void *buf = NULL;
+        cdef int typenum = 0
+        if vtype == int:
+            nret = bcf_get_format_int32(self.vcf.hdr, self.b, tag, <int **>&buf, &n)
+            typenum = np.NPY_INT32
+        elif vtype == float:
+            nret = bcf_get_format_float(self.vcf.hdr, self.b, tag, <float **>&buf, &n)
+            typenum = np.NPY_FLOAT32
+        elif vtype == str:
+            nret = bcf_get_format_string(self.vcf.hdr, self.b, tag, <char ***>&buf, &n)
+            typenum = np.NPY_STRING
+        else:
+            raise Exception("type %s not supported to format()" % vtype)
+        if nret < 0:
+            return None
+
+        cdef np.npy_intp shape[2]
+        shape[0] = <np.npy_intp> self.vcf.n_samples
+        shape[1] = fmt.n # values per sample
+        v = np.PyArray_SimpleNewFromData(2, shape, typenum, buf)
+        ret = np.array(v)
+        if vtype == str:
+            stdlib.free(&buf[0])
+        stdlib.free(buf)
+        return ret
 
     property gt_types:
         def __get__(self):
@@ -1105,6 +1140,8 @@ cdef class Variant(object):
             if bcf_float_is_missing(q):
                 return None
             return q
+
+
 
 cdef class INFO(object):
     cdef bcf_hdr_t *hdr

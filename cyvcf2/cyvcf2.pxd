@@ -97,7 +97,9 @@ cdef extern from "htslib/vcf.h":
     ctypedef struct variant_t:
         pass
     ctypedef struct bcf_fmt_t:
-        pass
+        int n; # n: number of values per-sample; size: number of bytes per-sample; type: one of BCF_BT_* types
+
+
     ctypedef struct bcf_info_t:
         int key;        # key: numeric tag id, the corresponding string is bcf_hdr_t::id[BCF_DT_ID][$key].key
         int type, len;  # type: one of BCF_BT_* types; len: vector length, 1 for scalars
@@ -173,7 +175,6 @@ cdef extern from "htslib/vcf.h":
     bint bcf_float_is_missing(float f)
     bint bcf_float_is_vector_end(float f)
 
-
     void bcf_destroy(bcf1_t *v);
     bcf1_t * bcf_init();
     int vcf_parse(kstring_t *s, const bcf_hdr_t *h, bcf1_t *v);
@@ -203,9 +204,12 @@ cdef extern from "htslib/vcf.h":
     int bcf_unpack(bcf1_t *b, int which) nogil;
 
 
+    bcf_fmt_t *bcf_get_fmt(const bcf_hdr_t *hdr, bcf1_t *line, const char *key);
+
     int bcf_get_genotypes(const bcf_hdr_t *hdr, bcf1_t *line, int **dst, int *ndst);
     int bcf_get_format_int32(const bcf_hdr_t *hdr, bcf1_t *line, char * tag, int **dst, int *ndst);
     int bcf_get_format_float(const bcf_hdr_t *hdr, bcf1_t *line, char * tag, float **dst, int *ndst)
+    int bcf_get_format_string(const bcf_hdr_t *hdr, bcf1_t *line, const char *tag, char ***dst, int *ndst);
 
     int bcf_get_format_values(const bcf_hdr_t *hdr, bcf1_t *line, const char *tag, void **dst, int *ndst, int type);
     int bcf_gt_is_phased(int);

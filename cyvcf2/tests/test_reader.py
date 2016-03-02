@@ -334,7 +334,6 @@ def test_diploid():
 def test_format():
 
     vcf = VCF('{}/test.vcf.gz'.format(HERE))
-    import sys
     for v in vcf:
         a = v.format('PL', int)
         assert a.shape == (189, 3)
@@ -344,3 +343,16 @@ def test_format():
 
         a = v.format('DP', int)
         assert a.shape == (189, 1)
+
+def test_header_stuff():
+    vcf = VCF('{}/test.vcf.gz'.format(HERE))
+    import sys
+    seen_formats, seen_infos = 0, 0
+    for h in vcf.header_iter():
+        i = h.info(extra=True)
+        assert isinstance(i, dict)
+        seen_formats += i['HeaderType'] == 'FORMAT'
+        seen_infos += i['HeaderType'] == 'INFO'
+    assert seen_formats == 9, seen_formats
+    assert seen_infos == 73, seen_infos
+

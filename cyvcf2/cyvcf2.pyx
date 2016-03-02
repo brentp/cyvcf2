@@ -35,6 +35,7 @@ cdef unicode xstr(s):
 def r_(int[::view.contiguous] a_gts, int[::view.contiguous] b_gts, float f, int32_t n_samples):
     return r_unphased(&a_gts[0], &b_gts[0], f, n_samples)
 
+
 cdef class VCF(object):
 
     cdef htsFile *hts
@@ -148,6 +149,11 @@ cdef class VCF(object):
         finally:
             stdlib.free(s.s)
             hts_itr_destroy(itr)
+
+    def header_iter(self):
+        cdef int i
+        for i in range(self.hdr.nhrec):
+            yield newHREC(self.hdr.hrec[i], self.hdr)
 
     def ibd(self, int nmax=-1):
         assert self.gts012
@@ -1141,7 +1147,54 @@ cdef class Variant(object):
                 return None
             return q
 
+cdef inline HREC newHREC(bcf_hrec_t *hrec, bcf_hdr_t *hdr):
+    cdef HREC h = HREC.__new__(HREC)
+    h.hdr = hdr
+    h.hrec = hrec
+    return h
 
+cdef class HREC(object):
+    cdef bcf_hdr_t *hdr
+    cdef bcf_hrec_t *hrec
+
+    def __cinit__(HREC self):
+        pass
+
+    def __dealloc__(self):
+        #bcf_hrec_destroy(self.hrec)
+        self.hrec = NULL
+        self.hdr = NULL
+
+    @property
+    def type(self):
+        return ["FILTER", "INFO", "FORMAT", "CONTIG", "STR", "GENERIC"][self.hrec.type]
+
+    def __getitem__(self, key):
+        for i in range(self.hrec.nkeys):
+            if self.hrec.keys[i] == key:
+                return self.hrec.vals[i]
+        raise KeyError
+
+    def info(self, extra=False):
+        """
+        return a dict with commonly used stuffs
+        """
+        d = {}
+        for k in ('Type', 'Number', 'ID', 'Description'):
+            try:
+                d[k] = self[k]
+            except KeyError:
+                continue
+        d['HeaderType'] = self.type
+        if extra:
+            for i in range(self.hrec.nkeys):
+                k = self.hrec.keys[i]
+                if k in d: continue
+                d[k] = self.hrec.vals[i]
+        return d
+
+    def __repr__(self):
+        return str(self.info())
 
 cdef class INFO(object):
     cdef bcf_hdr_t *hdr

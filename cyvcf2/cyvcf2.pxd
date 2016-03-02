@@ -96,9 +96,9 @@ cdef extern from "htslib/vcf.h":
 
     ctypedef struct variant_t:
         pass
-    ctypedef struct bcf_fmt_t:
-        int n; # n: number of values per-sample; size: number of bytes per-sample; type: one of BCF_BT_* types
 
+    ctypedef struct bcf_fmt_t:
+        int n; # n 
 
     ctypedef struct bcf_info_t:
         int key;        # key: numeric tag id, the corresponding string is bcf_hdr_t::id[BCF_DT_ID][$key].key

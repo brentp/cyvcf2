@@ -377,6 +377,7 @@ cdef class VCF(object):
             sample_ranges[sample] = dict(zip(['p' + str(p) for p in percentiles], qs))
             sample_ranges[sample]['range'] = qs.max() - qs.min()
             sample_ranges[sample]['het_ratio'] = het_counts[i] / float(j)
+            sample_ranges[sample]['het_counts'] = het_counts[i]
 
         return sample_ranges
 

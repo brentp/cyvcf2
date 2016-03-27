@@ -35,9 +35,9 @@ for variant in VCF('some.vcf.gz'):
 
 	str(variant)
 	# Get a numpy array of the depth per sample:
-    dp = variant.samples('DP', int)
+    dp = variant.format('DP', int)
     # or of any other format field:
-    sb = variant.samples('SB', float)
+    sb = variant.format('SB', float)
     assert sb.shape == (n_samples, 4) # 4-values per
 ```
 

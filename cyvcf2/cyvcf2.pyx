@@ -354,6 +354,11 @@ cdef class VCF(object):
         cdef Variant v
         cdef np.ndarray het_counts = np.zeros((n_samples,), dtype=np.int32)
 
+        cdef np.ndarray sum_depths = np.zeros((n_samples,), dtype=np.int32)
+        cdef np.ndarray sum_counts = np.zeros((n_samples,), dtype=np.int32)
+        cdef int any_counts = 0
+
+
         _, _, gen = self.gen_variants()
         maf_lists = defaultdict(list)
         idxs = np.arange(n_samples)
@@ -362,14 +367,21 @@ cdef class VCF(object):
             j += 1
             alts = v.gt_alt_depths
             assert len(alts) == n_samples
-            depths = (alts + v.gt_ref_depths).astype(float)
-            mafs = alts / depths
+            depths = (alts + v.gt_ref_depths)
+            sum_depths += depths
+            sum_counts += (depths > min_depth)
+            any_counts += 1
+
+            mafs = alts / depths.astype(float)
             gt_types = v.gt_types
             hets = gt_types == 1
             het_counts[hets] += 1
             for k in idxs[hets]:
                 if depths[k] <= min_depth: continue
                 maf_lists[k].append(mafs[k])
+
+
+        mean_depths = sum_depths.astype(float) / any_counts
 
         sample_ranges = {}
         for i, sample in enumerate(self.samples):
@@ -378,6 +390,8 @@ cdef class VCF(object):
             sample_ranges[sample]['range'] = qs.max() - qs.min()
             sample_ranges[sample]['het_ratio'] = het_counts[i] / float(j)
             sample_ranges[sample]['het_count'] = het_counts[i]
+            sample_ranges[sample]['sampled_sites'] = sum_counts[i]
+            sample_ranges[sample]['mean_depth'] = mean_depths[i]
 
         return sample_ranges
 

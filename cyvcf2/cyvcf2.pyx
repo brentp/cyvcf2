@@ -358,6 +358,7 @@ cdef class VCF(object):
         cdef np.ndarray sum_counts = np.zeros((n_samples,), dtype=np.int32)
         cdef int any_counts = 0
 
+        mean_depths = []
 
         _, _, gen = self.gen_variants()
         maf_lists = defaultdict(list)
@@ -371,6 +372,7 @@ cdef class VCF(object):
             sum_depths += depths
             sum_counts += (depths > min_depth)
             any_counts += 1
+            mean_depths.append(depths)
 
             mafs = alts / depths.astype(float)
             gt_types = v.gt_types
@@ -380,8 +382,7 @@ cdef class VCF(object):
                 if depths[k] <= min_depth: continue
                 maf_lists[k].append(mafs[k])
 
-
-        mean_depths = sum_depths.astype(float) / any_counts
+        mean_depths = np.array(mean_depths).T
 
         sample_ranges = {}
         for i, sample in enumerate(self.samples):
@@ -391,16 +392,19 @@ cdef class VCF(object):
             sample_ranges[sample]['het_ratio'] = het_counts[i] / float(j)
             sample_ranges[sample]['het_count'] = het_counts[i]
             sample_ranges[sample]['sampled_sites'] = sum_counts[i]
-            sample_ranges[sample]['mean_depth'] = mean_depths[i]
+            sample_ranges[sample]['mean_depth'] = np.mean(mean_depths[i])
+            sample_ranges[sample]['median_depth'] = np.median(mean_depths[i])
 
         return sample_ranges
 
-    def site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites')):
+    def site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
+            min_depth=5, each=1):
         """
         sites must be an file of format: chrom:pos1:ref:alt where
         we match on all parts.
         it must have a matching file with a suffix of .bin.gz that is the binary
         genotype data. with 0 == hom_ref, 1 == het, 2 == hom_alt, 3 == unknown.
+        min_depth applies per-sample
         """
         cdef int n_samples = len(self.samples)
         cdef int all_samples
@@ -414,14 +418,19 @@ cdef class VCF(object):
         cdef int32_t[:, ::view.contiguous] vibs0 = np.zeros((all_samples, all_samples), np.int32)
         cdef int32_t[:, ::view.contiguous] vibs2 = np.zeros((all_samples, all_samples), np.int32)
         cdef int32_t[:] all_gt_types = np.zeros((all_samples, ), np.int32)
+        cdef int32_t[:] depths = np.zeros((n_samples, ), np.int32)
 
         cdef Variant v
 
-        for i, v in gen():
+        for j, (i, v) in enumerate(gen()):
+            if j % each != 0: continue
             if n_samples != all_samples:
                 v.gt_types
+                depths = v.gt_depths
                 for k in range(n_samples):
                     all_gt_types[k] = v._gt_types[k]
+                    if depths[k] < min_depth:
+                        all_gt_types[k] = 3 # UNKNOWN
                 all_gt_types[n_samples:] = extras[i, :]
                 v.relatedness_extra(va, vn, vibs0, vibs2, all_gt_types, all_samples)
             else:

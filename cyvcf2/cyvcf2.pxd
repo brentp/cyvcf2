@@ -230,7 +230,8 @@ cdef extern from "htslib/vcf.h":
 
     int bcf_update_info_int32(const bcf_hdr_t *hdr, bcf1_t * line, const char *key, const int32_t *values, int n)
     int bcf_update_info_float(const bcf_hdr_t *hdr, bcf1_t * line, const char *key, const float *values, int n)
-    int bcf_update_info_flag(const bcf_hdr_t *hdr, bcf1_t * line, const char *key, const int *values, int n)
+    int bcf_update_info_flag(const bcf_hdr_t *hdr, bcf1_t * line, const char
+            *key, const char *value, int n)
     int bcf_update_info_string(const bcf_hdr_t *hdr, bcf1_t * line, const char *key, const char *values)
     #define bcf_update_info_flag(hdr,line,key,string,n)    bcf_update_info((hdr),(line),(key),(string),(n),BCF_HT_FLAG)
     #define bcf_update_info_float(hdr,line,key,values,n)   bcf_update_info((hdr),(line),(key),(values),(n),BCF_HT_REAL)

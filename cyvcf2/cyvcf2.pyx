@@ -1228,9 +1228,16 @@ cdef class INFO(object):
     def __cinit__(INFO self):
         self._i = 0
 
-    def __setitem__(self, char *key, char *value):
+    def __setitem__(self, char *key, value):
         # only support strings for now.
-        ret = bcf_update_info_string(self.hdr, self.b, key, value)
+        if value is True or value is False:
+
+            ret = bcf_update_info_flag(self.hdr, self.b, key, b"", int(value))
+            if ret != 0:
+                raise Exception("not able to set flag", key, value, ret)
+            return
+
+        ret = bcf_update_info_string(self.hdr, self.b, key, str(value))
         if ret != 0:
             raise Exception("not able to set: %s -> %s (%d)", key, value, ret)
 

@@ -193,6 +193,34 @@ def test_add_info_to_header():
     v = next(VCF(f))
     assert v.INFO["abcdefg"] == "XXX", dict(v.INFO)
 
+def test_add_flag():
+    vcf = VCF(VCF_PATH)
+    vcf.add_info_to_header({'ID': 'myflag', 'Description': 'myflag',
+        'Type':'Flag', 'Number': '0'})
+    # NOTE that we have to add the info to the header of the reader,
+    # not the writer because the record will be associated with the reader
+    f = tempfile.mktemp(suffix=".vcf")
+    atexit.register(os.unlink, f)
+    w = Writer(f, vcf)
+    rec = vcf.next()
+
+    rec.INFO["myflag"] = True
+    w.write_record(rec)
+    w.close()
+
+    v = next(VCF(f))
+    assert v.INFO["myflag"] is None, dict(v.INFO)
+
+    f = tempfile.mktemp(suffix=".vcf")
+    atexit.register(os.unlink, f)
+    w = Writer(f, vcf)
+    rec.INFO["myflag"] = False
+    w.write_record(rec)
+    v = next(VCF(f))
+    assert_raises(KeyError, v.INFO.__getitem__, "myflag")
+
+
+
 def test_add_filter_to_header():
     v = VCF(VCF_PATH)
     # NOTE that we have to add the filter to the header of the reader,

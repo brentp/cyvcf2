@@ -103,7 +103,11 @@ cdef class VCF(object):
         if ret != 0:
             raise Exception("unable to update to header")
 
-    def __call__(VCF self, region):
+    def __call__(VCF self, region=None):
+        if not region:
+            yield from self
+            raise StopIteration
+
         if self.idx == NULL:
             # we load the index on first use if possible and re-use
             if not op.exists(str(self.fname + ".tbi")): #  or os.path.exists(self.name + ".csi"):
@@ -120,19 +124,7 @@ cdef class VCF(object):
         cdef kstring_t s
         cdef bcf1_t *b
         cdef int slen, ret
-        #if self.hidx != NULL:
-        #    itr = bcf_itr_querys(self.hidx, self.hdr, region)
-        #    assert itr != NULL, "error starting query for %s at %s" % (self.fname, region)
-        #    try:
-        #        b = bcf_init()
-        #        ret = bcf_itr_next(self.hidx, itr, b)
-        #        while ret >= 0:
-        #            yield newVariant(b, self)
-        #            b = bcf_init()
-        #            ret = bcf_itr_next(self.hidx, itr, b)
-        #    finally:
-        #        hts_itr_destroy(itr)
-        #else:
+
         itr = tbx_itr_querys(self.idx, region)
         if itr == NULL:
             sys.stderr.write("no intervals found for %s at %s\n" % (self.fname, region))

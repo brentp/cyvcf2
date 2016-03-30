@@ -220,7 +220,6 @@ def test_add_flag():
     assert_raises(KeyError, v.INFO.__getitem__, "myflag")
 
 
-
 def test_add_filter_to_header():
     v = VCF(VCF_PATH)
     # NOTE that we have to add the filter to the header of the reader,
@@ -238,6 +237,7 @@ def test_add_filter_to_header():
 
     v = next(VCF(f))
     assert v.FILTER == "abcdefg", v.FILTER
+
 
 def test_var_type():
     v = VCF(VCF_PATH)
@@ -328,6 +328,19 @@ def test_iterate():
     for i, v in enumerate(VCF(VCF_PATH), start=1):
         pass
     assert i == 115, i
+
+
+def test_empty_call():
+
+    for i, v in enumerate(VCF(VCF_PATH)(), start=1):
+        pass
+    assert i == 115, i
+    del i
+
+    for i, v in enumerate(VCF(VCF_PATH)(''), start=1):
+        pass
+    assert i == 115, i
+
 
 
 def test_haploid():

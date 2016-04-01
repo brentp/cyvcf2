@@ -17,6 +17,37 @@ import inspect
 if not hasattr(sys.modules[__name__], '__file__'):
     __file__ = inspect.getfile(inspect.currentframe())
 
+
+
+def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1, sites=op.join(op.dirname(__file__), '1kg.sites')):
+    from multiprocessing import Pool
+    p = Pool(ncpus)
+
+    ava = avn = avibs0 = avibs2 = n_samples = None
+    for (va, vn, vibs0, vibs2, n) in p.imap(_par, [
+        (vcf_path, samples, min_depth, i, ncpus, each, sites) for i in range(ncpus)]):
+
+        if ava is None:
+            ava, avn, avibs0, avibs2, n_samples = va, vn, vibs0, vibs2, n
+        else:
+            ava += va
+            avn += vn
+            avibs0 += vibs0
+            avibs2 += vibs2
+
+    return VCF(vcf_path, samples=samples)._relatedness_finish(ava[:n_samples, :n_samples],
+                                             avn[:n_samples, :n_samples],
+                                             avibs0[:n_samples, :n_samples],
+                                             avibs2[:n_samples, :n_samples])
+
+
+def _par(args):
+    vcf_path, samples, min_depth, offset, ncpus, each, sites = args
+    vcf = VCF(vcf_path, samples=samples, gts012=True)
+    each = each * ncpus
+    va, vn, vibs0, vibs2, n_samples, all_samples = vcf._site_relatedness(min_depth=min_depth, offset=offset, each=each, sites=sites)
+    return (np.asarray(va), np.asarray(vn), np.asarray(vibs0), np.asarray(vibs2), n_samples)
+
 cdef unicode xstr(s):
     if type(s) is unicode:
         # fast path for most common case(s)
@@ -292,7 +323,8 @@ cdef class VCF(object):
         ax1.set_yscale('log', nonposy='clip')
         return fig
 
-    def gen_variants(self, sites=op.join(op.dirname(__file__), '1kg.sites')):
+    def gen_variants(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
+                    offset=0, each=1):
     
         cdef int all_samples = len(self.samples)
         extras = None
@@ -317,6 +349,8 @@ cdef class VCF(object):
         cdef Variant v
         cdef int k, last_pos
         if sites:
+            isites = isites[offset::each]
+            extras = extras[offset::each, :]
             def gen():
                 for i, (chrom, pos, ref, alt) in enumerate(isites):
                     for v in self("%s:%s-%s" % (chrom, pos, pos)):
@@ -335,7 +369,8 @@ cdef class VCF(object):
                     if not 0.03 < v.aaf < 0.6: continue
                     if np.mean(v.gt_depths > 7) < 0.5: continue
                     last_pos = v.POS
-                    yield k, v
+                    if k >= offset and k % each == 0:
+                        yield k, v
                     k += 1
                     if k > 20000: break
         return all_samples, extras, gen
@@ -389,8 +424,21 @@ cdef class VCF(object):
 
         return sample_ranges
 
+
     def site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
-            min_depth=5, each=1):
+                         min_depth=5, each=1):
+
+        va, vn, vibs0, vibs2, n_samples, all_samples = self._site_relatedness(sites=sites, min_depth=min_depth, each=each)
+        if n_samples != all_samples:
+            return self._relatedness_finish(va[:n_samples, :n_samples],
+                                            vn[:n_samples, :n_samples],
+                                            vibs0[:n_samples, :n_samples],
+                                            vibs2[:n_samples, :n_samples])
+        return self._relatedness_finish(va, vn, vibs0, vibs2)
+
+
+    cdef _site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
+            min_depth=5, each=1, offset=0):
         """
         sites must be an file of format: chrom:pos1:ref:alt where
         we match on all parts.
@@ -402,8 +450,9 @@ cdef class VCF(object):
         cdef int all_samples
         cdef int k, i
         cdef int32_t[:, ::view.contiguous] extras
+        assert each >= 0
 
-        all_samples, extras, gen = self.gen_variants(sites)
+        all_samples, extras, gen = self.gen_variants(sites, offset=offset, each=each)
 
         cdef double[:, ::view.contiguous] va = np.zeros((all_samples, all_samples), np.float64)
         cdef int32_t[:, ::view.contiguous] vn = np.zeros((all_samples, all_samples), np.int32)
@@ -415,7 +464,6 @@ cdef class VCF(object):
         cdef Variant v
 
         for j, (i, v) in enumerate(gen()):
-            if j % each != 0: continue
             if n_samples != all_samples:
                 v.gt_types
                 depths = v.gt_depths
@@ -427,12 +475,8 @@ cdef class VCF(object):
                 v.relatedness_extra(va, vn, vibs0, vibs2, all_gt_types, all_samples)
             else:
                 v.relatedness(va, vn, vibs0, vibs2)
-        if n_samples != all_samples:
-            return self._relatedness_finish(va[:n_samples, :n_samples],
-                                            vn[:n_samples, :n_samples],
-                                            vibs0[:n_samples, :n_samples],
-                                            vibs2[:n_samples, :n_samples])
-        return self._relatedness_finish(va, vn, vibs0, vibs2)
+
+        return va, vn, vibs0, vibs2, n_samples, all_samples
 
     def relatedness(self, int n_variants=35000, int gap=30000, float min_af=0.04,
                     float max_af=0.8, float linkage_max=0.2, min_depth=8):

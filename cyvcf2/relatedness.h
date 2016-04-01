@@ -64,8 +64,7 @@ int ibd(int agt, int bgt, int run_length, float pi, int *bins, int32_t n_bins) {
 
 // related takes an array of genotypes (0=HOM_REF, 1=HET, 2=HOMALT, 3=UNKNOWN) and updates asum and N
 // which are used to calculate relatedness between samples j, k as asum[j, k] / N[j, k].
-// The result value should be ~1 for self and idential twins, ~0.5 for sibs and parent off-spring
-// though that usually seems to be ~0.4 in practice.
+// The result value should be ~1 for self and idential twins, ~0.5 for sibs and parent off-spring.
 // This should be called on few hundred to a few thousand variants that are
 // not in linkage and have an aaf > 1 / n_samples (or so).
 // asum and N are of length n_samples * n_samples and assumed to be in C order.
@@ -74,6 +73,7 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 	int idx, uidx, n_used = 0;
 	int32_t j, k;
 	float pi = aaf(gt_types, n_samples);
+	//if(pi < 0.1 || pi > 0.6) { return 0; }
 	float numer, val;
 	float gtj, gtk;
 	float denom = 2.0 * pi * (1.0 - pi);
@@ -108,11 +108,11 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 			val = numer / denom;
 			// heuristic to avoid too-large values
 			//
-			if(val > 4.5) {
-				val = 4.5;
-			} else if (val < -4.5){
-				val = -3.5;
-				//continue;
+			if(val > 3.5) {
+				val = 3.5;
+			} else if (val < -2.0){
+				val = -2.0;
+				fprintf(stderr, "negative: %.1f\n", val);
 			}
 
 			// likely IBD2* of concordant HETs.

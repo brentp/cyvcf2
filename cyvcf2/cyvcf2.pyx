@@ -358,6 +358,7 @@ cdef class VCF(object):
                         if len(v.ALT) != 1: continue
                         if v.ALT[0] != alt: continue
                         yield i, v
+                        break
         else:
             def gen():
                 last_pos, k = -10000, 0

@@ -106,14 +106,6 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 				asum[idx]+=1;
 			}
 			val = numer / denom;
-			// heuristic to avoid too-large values
-			//
-			if(val > 3.5) {
-				val = 3.5;
-			} else if (val < -2.0){
-				val = -2.0;
-				fprintf(stderr, "negative: %.1f\n", val);
-			}
 
 			// likely IBD2* of concordant HETs.
 			// we don't know the phasing but we just use the prob.
@@ -122,6 +114,14 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 				ibs2[uidx]+=1;
 			} else if (val > 2.5) {
 				ibs2[idx] += (gtj == gtk && gtk != HET);
+			}
+
+			// heuristic to avoid too-large values
+			if(val > 4.0) {
+				val = 4.0;
+			} else if (val < -2.0){
+				val = -2.0;
+				fprintf(stderr, "negative: %.1f\n", val);
 			}
 
 			asum[idx] += val;

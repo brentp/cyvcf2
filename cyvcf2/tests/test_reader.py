@@ -89,6 +89,10 @@ def test_region():
         assert isinstance(var.ALT, list)
     assert k == 28, k
 
+def test_empty_info():
+    for v in VCF(VCF_PHASE_PATH):
+        dict(v.INFO)
+
 def test_phases():
     vcf = VCF(VCF_PHASE_PATH)
 

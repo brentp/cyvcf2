@@ -414,7 +414,7 @@ cdef class VCF(object):
 
         sample_ranges = {}
         for i, sample in enumerate(self.samples):
-            qs = np.percentile(maf_lists[i], percentiles)
+            qs = np.percentile(maf_lists[i] or [0], percentiles)
             sample_ranges[sample] = dict(zip(['p' + str(p) for p in percentiles], qs))
             sample_ranges[sample]['range'] = qs.max() - qs.min()
             sample_ranges[sample]['het_ratio'] = het_counts[i] / float(j)
@@ -1303,7 +1303,7 @@ cdef class INFO(object):
 
         if info.type == BCF_BT_CHAR:
             v = info.vptr[:info.vptr_len]
-            if v[0] == 0x7:
+            if len(v) > 0 and v[0] == 0x7:
                 raise KeyError
             return v
 

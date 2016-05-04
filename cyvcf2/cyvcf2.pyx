@@ -1,9 +1,13 @@
 #cython: profile=False
+import os
 import os.path as op
 import sys
 from collections import defaultdict
-from libc cimport stdlib
+import atexit
+import tempfile
 import numpy as np
+
+from libc cimport stdlib
 cimport numpy as np
 np.seterr(invalid='ignore')
 np.import_array()
@@ -24,8 +28,12 @@ def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1, sites=op.join
     p = Pool(ncpus)
 
     ava = avn = avibs0 = avibs2 = n_samples = None
-    for (va, vn, vibs0, vibs2, n) in p.imap(_par, [
+    for (fname, n) in p.imap(_par, [
         (vcf_path, samples, min_depth, i, ncpus, each, sites) for i in range(ncpus)]):
+
+        arrays = np.load(fname)
+        os.unlink(fname)
+        va, vn, vibs0, vibs2 = arrays['va'], arrays['vn'], arrays['vibs0'], arrays['vibs2']
 
         if ava is None:
             ava, avn, avibs0, avibs2, n_samples = va, vn, vibs0, vibs2, n
@@ -46,7 +54,13 @@ def _par(args):
     vcf = VCF(vcf_path, samples=samples, gts012=True)
     each = each * ncpus
     va, vn, vibs0, vibs2, n_samples, all_samples = vcf._site_relatedness(min_depth=min_depth, offset=offset, each=each, sites=sites)
-    return (np.asarray(va), np.asarray(vn), np.asarray(vibs0), np.asarray(vibs2), n_samples)
+    # to get around limits of multiprocessing size of transmitted data, we save
+    # the arrays to disk and return the file
+    fname = tempfile.mktemp(suffix=".npz")
+    atexit.register(os.unlink, fname)
+    np.savez_compressed(fname, va=np.asarray(va), vn=np.asarray(vn), vibs0=np.asarray(vibs0),
+                        vibs2=np.asarray(vibs2))
+    return fname, n_samples
 
 cdef unicode xstr(s):
     if type(s) is unicode:
@@ -414,7 +428,7 @@ cdef class VCF(object):
 
         sample_ranges = {}
         for i, sample in enumerate(self.samples):
-            qs = np.percentile(maf_lists[i] or [0], percentiles)
+            qs = np.asarray(np.percentile(maf_lists[i] or [0], percentiles))
             sample_ranges[sample] = dict(zip(['p' + str(p) for p in percentiles], qs))
             sample_ranges[sample]['range'] = qs.max() - qs.min()
             sample_ranges[sample]['het_ratio'] = het_counts[i] / float(j)

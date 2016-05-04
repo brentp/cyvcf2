@@ -6,6 +6,7 @@ from collections import defaultdict
 import atexit
 import tempfile
 import numpy as np
+from array import array
 
 from libc cimport stdlib
 cimport numpy as np
@@ -563,8 +564,10 @@ cdef class VCF(object):
         ibs0 = ibs0 / n
         ibs2 = ibs2 / n
 
+
         cdef int sj, sk
-        res = {'sample_a': [], 'sample_b': [], 'rel': [], 'ibs0': [], 'n': [], 'ibs2' : []}
+        res = {'sample_a': [], 'sample_b': [], 'rel': array('f'),
+               'ibs0': array('f'), 'n': array('I'), 'ibs2' : array('f')}
 
         for sj, sample_j in enumerate(samples):
             for sk, sample_k in enumerate(samples[sj:], start=sj):

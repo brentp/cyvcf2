@@ -547,7 +547,7 @@ cdef class VCF(object):
         sys.stderr.write("tested: %d variants out of %d\n" % (nv, nvt))
         return self._relatedness_finish(va, vn, vibs0, vibs2)
 
-    cdef list _relatedness_finish(self, double[:, ::view.contiguous] va,
+    cdef dict _relatedness_finish(self, double[:, ::view.contiguous] va,
                                         int32_t[:, ::view.contiguous] vn,
                                         int32_t[:, ::view.contiguous] vibs0,
                                         int32_t[:, ::view.contiguous] vibs2):
@@ -564,18 +564,20 @@ cdef class VCF(object):
         ibs2 = ibs2 / n
 
         cdef int sj, sk
-        res = []
+        res = {'sample_a': [], 'sample_b': [], 'rel': [], 'ibs0': [], 'n': [], 'ibs2' : []}
+
         for sj, sample_j in enumerate(samples):
             for sk, sample_k in enumerate(samples[sj:], start=sj):
                 if sj == sk: continue
 
                 rel, iibs0, iibs2 = a[sj, sk], ibs0[sj, sk], ibs2[sj, sk]
                 iibs2_star = ibs2[sk, sj]
-
-                res.append({'sample_a': sample_j,
-                            'sample_b': sample_k,
-                            'rel': rel, 'ibs0': iibs0, 'ibs2': iibs2,
-                            'ibs2*': iibs2_star, 'n': n[sj, sk]})
+                res['sample_a'].append(sample_j)
+                res['sample_b'].append(sample_k)
+                res['rel'].append(rel)
+                res['ibs0'].append(iibs0)
+                res['ibs2'].append(iibs2)
+                res['n'].append(n[sj, sk])
         return res
 
 cdef class Variant(object):

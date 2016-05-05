@@ -1297,33 +1297,33 @@ cdef class INFO(object):
         if ret != 0:
             raise Exception("not able to set: %s -> %s (%d)", key, value, ret)
 
-    cdef _getval(INFO self, bcf_info_t * info):
+    cdef _getval(INFO self, bcf_info_t * info, char *key):
 
         if info.len == 1:
             if info.type == BCF_BT_INT8:
                 if info.v1.i == INT8_MIN:
-                    raise KeyError
+                    return None
                 return <int>(info.v1.i)
 
             if info.type == BCF_BT_INT16:
                 if info.v1.i == INT16_MIN:
-                    raise KeyError
+                    return None
                 return <int>(info.v1.i)
 
             if info.type == BCF_BT_INT32:
                 if info.v1.i == INT32_MIN:
-                    raise KeyError
+                    return None
                 return <int>(info.v1.i)
 
             if info.type == BCF_BT_FLOAT:
                 if bcf_float_is_missing(info.v1.f):
-                    raise KeyError
+                    return None
                 return info.v1.f
 
         if info.type == BCF_BT_CHAR:
             v = info.vptr[:info.vptr_len]
             if len(v) > 0 and v[0] == 0x7:
-                raise KeyError
+                return None
             return v
 
         return bcf_array_to_object(info.vptr, info.type, info.len)
@@ -1333,8 +1333,8 @@ cdef class INFO(object):
         cdef char *key = okey
         cdef bcf_info_t *info = bcf_get_info(self.hdr, self.b, key)
         if info == NULL:
-            raise KeyError
-        return self._getval(info)
+            raise KeyError(key)
+        return self._getval(info, key)
 
     def get(self, char *key, default=None):
         try:
@@ -1355,7 +1355,7 @@ cdef class INFO(object):
             info = &(self.b.d.info[self._i])
             self._i += 1
         name = bcf_hdr_int2id(self.hdr, BCF_DT_ID, info.key)
-        return name, self._getval(info)
+        return name, self._getval(info, name)
 
 
 # this function is copied verbatim from pysam/cbcf.pyx

@@ -1,4 +1,4 @@
-#cython: profile=False
+#cython: profile=True
 import os
 import os.path as op
 import sys
@@ -647,19 +647,21 @@ cdef class Variant(object):
         def __get__(self):
             if self._gt_idxs == NULL:
                 self.gt_types
-            cdef int i, n = self.ploidy, j=0
+            cdef int i, n = self.ploidy, j=0, k
             cdef char **alleles = self.b.d.allele
-            cdef dict d = {i:alleles[i] for i in range(self.b.n_allele)}
+            #cdef dict d = {i:alleles[i] for i in range(self.b.n_allele)}
+            cdef list d = [alleles[i] for i in range(self.b.n_allele)]
+            d.append(".") # -1 gives .
             cdef list a = []
-            cdef np.ndarray phased = self.gt_phases
+            cdef list phased = list(self.gt_phases)
             cdef char **lookup = ["/", "|"]
             for i in range(0, n * self.vcf.n_samples, n):
                 if n == 2:
-                    a.append(d.get(self._gt_idxs[i], ".")
-                            + lookup[phased[j]] +
-                            d.get(self._gt_idxs[i+1], "."))
+                    a.append(d[self._gt_idxs[i]] +
+                             lookup[phased[j]] +
+                             d[self._gt_idxs[i+1]])
                 elif n == 1:
-                    a.append(d.get(self._gt_idxs[i], "."))
+                    a.append(d[self._gt_idxs[i]])
                 else:
                     raise Exception("gt_bases not implemented for ploidy > 2")
 

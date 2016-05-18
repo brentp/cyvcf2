@@ -139,7 +139,7 @@ cdef class VCF(object):
         if ret != 0 and samples != "-":
             s = samples.split(",")
             if ret < len(s):
-                sys.stderr.write("problem with sample: %s\n" % s[ret - 1])
+                sys.stderr.write("warning: not all samples in PED found in VCF\n")
 
     def update(self, id, type, number, description):
         ret = bcf_hdr_append(self.hdr, "##INFO=<ID={id},Number={number},Type={type},Description=\"{description}\">".format(id=id, type=type, number=number, description=description))

@@ -408,6 +408,8 @@ cdef class VCF(object):
         idxs = np.arange(n_samples)
         for i, v in gen():
             if v.CHROM in ('X', 'chrX'): break
+            if v.aaf < 0.01: continue
+            if v.call_rate < 0.5: continue
             j += 1
             alts = v.gt_alt_depths
             assert len(alts) == n_samples

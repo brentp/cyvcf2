@@ -401,6 +401,9 @@ cdef class VCF(object):
         cdef np.ndarray sum_counts = np.zeros((n_samples,), dtype=np.int32)
         cdef int any_counts = 0
 
+        # keep the sites and gts that we used for PCA
+        sites, all_gt_types = [], []
+
         mean_depths = []
 
         _, _, gen = self.gen_variants()
@@ -410,6 +413,7 @@ cdef class VCF(object):
             if v.CHROM in ('X', 'chrX'): break
             if v.aaf < 0.01: continue
             if v.call_rate < 0.5: continue
+            sites.append("%s:%d:%s:%s" % (v.CHROM, v.start + 1, v.REF, v.ALT[0]))
             j += 1
             alts = v.gt_alt_depths
             assert len(alts) == n_samples
@@ -426,6 +430,7 @@ cdef class VCF(object):
             for k in idxs[hets]:
                 if depths[k] <= min_depth: continue
                 maf_lists[k].append(mafs[k])
+            all_gt_types.append(np.array(gt_types))
 
         mean_depths = np.array(mean_depths).T
 
@@ -440,7 +445,7 @@ cdef class VCF(object):
             sample_ranges[sample]['mean_depth'] = np.mean(mean_depths[i])
             sample_ranges[sample]['median_depth'] = np.median(mean_depths[i])
 
-        return sample_ranges
+        return sample_ranges, sites, np.transpose(all_gt_types)
 
 
     def site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites'),

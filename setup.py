@@ -5,6 +5,14 @@ from Cython.Distutils import build_ext
 import os
 import glob
 
+import sys
+if sys.version_info.major != 2:
+    sys.stderr.write("ERROR: cyvcf2 is only for python 2.7")
+    sys.exit(1)
+if sys.version_info.minor != 7:
+    sys.stderr.write("ERROR: cyvcf2 is only for python 2.7, you are running %d.%d", (sys.version_info.major, sys.version_info.minor))
+    sys.exit(1)
+
 def get_version():
     """Get the version info from the mpld3 package without importing it"""
     import ast

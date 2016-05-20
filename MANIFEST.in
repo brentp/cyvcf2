@@ -7,7 +7,6 @@ include cyvcf2/*.h
 include *.md
 include htslib/*.c
 include htslib/*.h
-include htslib/htslib
 include htslib/htslib/*.h
 include htslib/cram/*.c
 include htslib/cram/*.h

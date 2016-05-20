@@ -130,11 +130,11 @@ cdef class VCF(object):
 
     def set_samples(self, samples):
         if samples is None:
-            samples = "-"
+            samples = "-".encode()
         if isinstance(samples, list):
-            samples = ",".join(samples)
+            samples = ",".join(samples).encode()
 
-        ret = bcf_hdr_set_samples(self.hdr, samples.encode(), 0)
+        ret = bcf_hdr_set_samples(self.hdr, <const char *>samples, 0)
         assert ret >= 0, ("error setting samples", ret)
         if ret != 0 and samples != "-":
             s = samples.split(",")

@@ -29,7 +29,7 @@ def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1, sites=op.join
     p = Pool(ncpus)
 
     ava = avn = avibs0 = avibs2 = n_samples = None
-    for (fname, n) in p.imap(_par, [
+    for (fname, n) in p.imap(_par_relatedness, [
         (vcf_path, samples, min_depth, i, ncpus, each, sites) for i in range(ncpus)]):
 
         arrays = np.load(fname)
@@ -50,7 +50,41 @@ def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1, sites=op.join
                                              avibs2[:n_samples, :n_samples])
 
 
-def _par(args):
+def par_het(vcf_path, samples, ncpus, min_depth=8, percentiles=(10, 90),
+                  int each=1, int offset=0):
+    from multiprocessing import Pool
+    p = Pool(ncpus)
+
+    any_counts, sum_counts, het_counts = 0, 0, 0
+    all_gt_types, mean_depths, sites = [], [], []
+    maf_lists = defaultdict(list)
+    for ret in p.imap(_par_het, [(vcf_path, samples, min_depth, i, ncpus, each) for i in range(ncpus)]):
+        (mean_depths_, maf_lists_, het_counts_, sum_counts_,
+                all_gt_types_, sites_, any_counts_) = ret
+        mean_depths.extend(mean_depths_)
+        any_counts += any_counts_
+        sites.extend(sites_)
+        all_gt_types.extend(all_gt_types_)
+        sum_counts += sum_counts_ # an array
+        het_counts += het_counts_ # an array
+        for k, li in maf_lists_.iteritems():
+            maf_lists[k].extend(li)
+    mean_depths = np.array(mean_depths, dtype=np.int32).T
+    vcf = VCF(vcf_path, samples=samples, gts012=True)
+    return vcf._finish_het(mean_depths, maf_lists,
+                           percentiles,
+                           het_counts, sum_counts, all_gt_types,
+                           sites, any_counts)
+
+
+def _par_het(args):
+    vcf_path, samples, min_depth, offset, ncpus, each = args
+    each *= ncpus
+    vcf = VCF(vcf_path, samples=samples, gts012=True)
+    return vcf.het_check(min_depth=min_depth, each=each, offset=offset, _finish=False)
+
+
+def _par_relatedness(args):
     vcf_path, samples, min_depth, offset, ncpus, each, sites = args
     vcf = VCF(vcf_path, samples=samples, gts012=True)
     each = each * ncpus
@@ -391,7 +425,8 @@ cdef class VCF(object):
                     if k > 20000: break
         return all_samples, extras, gen
 
-    def het_check(self, min_depth=8, percentiles=(10, 90)):
+    def het_check(self, min_depth=8, percentiles=(10, 90), _finish=True,
+                  int each=1, int offset=0):
 
         cdef int i, k, n_samples = len(self.samples)
         cdef Variant v
@@ -406,7 +441,7 @@ cdef class VCF(object):
 
         mean_depths = []
 
-        _, _, gen = self.gen_variants()
+        _, _, gen = self.gen_variants(each=each, offset=offset)
         maf_lists = defaultdict(list)
         idxs = np.arange(n_samples)
         for i, v in gen():
@@ -431,10 +466,16 @@ cdef class VCF(object):
                 maf_lists[k].append(mafs[k])
             all_gt_types.append(np.array(gt_types, dtype=np.uint8))
 
-        mean_depths = np.array(mean_depths, dtype=np.int32).T
 
-        return self._finish_het(mean_depths, maf_lists, percentiles, het_counts,
-                sum_counts, all_gt_types, sites, any_counts)
+        if _finish:
+            mean_depths = np.array(mean_depths, dtype=np.int32).T
+            return self._finish_het(mean_depths, maf_lists,
+                                    percentiles,
+                                    het_counts, sum_counts, all_gt_types,
+                                    sites, any_counts)
+        return (mean_depths, maf_lists, het_counts, sum_counts,
+                all_gt_types, sites, any_counts)
+
 
     def _finish_het(self, mean_depths, maf_lists, percentiles, het_counts,
             sum_counts, all_gt_types, sites, any_counts):

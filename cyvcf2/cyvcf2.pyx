@@ -393,7 +393,7 @@ cdef class VCF(object):
 
     def het_check(self, min_depth=8, percentiles=(10, 90)):
 
-        cdef int i, k, n_samples = len(self.samples), j = 0
+        cdef int i, k, n_samples = len(self.samples)
         cdef Variant v
         cdef np.ndarray het_counts = np.zeros((n_samples,), dtype=np.int32)
 
@@ -414,10 +414,9 @@ cdef class VCF(object):
             if v.aaf < 0.01: continue
             if v.call_rate < 0.5: continue
             sites.append("%s:%d:%s:%s" % (v.CHROM, v.start + 1, v.REF, v.ALT[0]))
-            j += 1
             alts = v.gt_alt_depths
             assert len(alts) == n_samples
-            depths = (alts + v.gt_ref_depths)
+            depths = (alts + v.gt_ref_depths).astype(np.int32)
             sum_depths += depths
             sum_counts += (depths > min_depth)
             any_counts += 1
@@ -430,22 +429,28 @@ cdef class VCF(object):
             for k in idxs[hets]:
                 if depths[k] <= min_depth: continue
                 maf_lists[k].append(mafs[k])
-            all_gt_types.append(np.array(gt_types))
+            all_gt_types.append(np.array(gt_types, dtype=np.uint8))
 
-        mean_depths = np.array(mean_depths).T
+        mean_depths = np.array(mean_depths, dtype=np.int32).T
 
-        sample_ranges = {}
-        for i, sample in enumerate(self.samples):
-            qs = np.asarray(np.percentile(maf_lists[i] or [0], percentiles))
-            sample_ranges[sample] = dict(zip(['p' + str(p) for p in percentiles], qs))
-            sample_ranges[sample]['range'] = qs.max() - qs.min()
-            sample_ranges[sample]['het_ratio'] = het_counts[i] / float(j)
-            sample_ranges[sample]['het_count'] = het_counts[i]
-            sample_ranges[sample]['sampled_sites'] = sum_counts[i]
-            sample_ranges[sample]['mean_depth'] = np.mean(mean_depths[i])
-            sample_ranges[sample]['median_depth'] = np.median(mean_depths[i])
+        return self._finish_het(mean_depths, maf_lists, percentiles, het_counts,
+                sum_counts, all_gt_types, sites, any_counts)
 
-        return sample_ranges, sites, np.transpose(all_gt_types)
+    def _finish_het(self, mean_depths, maf_lists, percentiles, het_counts,
+            sum_counts, all_gt_types, sites, any_counts):
+
+            sample_ranges = {}
+            for i, sample in enumerate(self.samples):
+                qs = np.asarray(np.percentile(maf_lists[i] or [0], percentiles))
+                sample_ranges[sample] = dict(zip(['p' + str(p) for p in percentiles], qs))
+                sample_ranges[sample]['range'] = qs.max() - qs.min()
+                sample_ranges[sample]['het_ratio'] = het_counts[i] / float(any_counts)
+                sample_ranges[sample]['het_count'] = het_counts[i]
+                sample_ranges[sample]['sampled_sites'] = sum_counts[i]
+                sample_ranges[sample]['mean_depth'] = np.mean(mean_depths[i])
+                sample_ranges[sample]['median_depth'] = np.median(mean_depths[i])
+
+            return sample_ranges, sites, np.transpose(all_gt_types)
 
 
     def site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites'),

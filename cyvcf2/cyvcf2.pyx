@@ -461,7 +461,7 @@ cdef class VCF(object):
 
 
     cdef _site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
-            min_depth=5, each=1, offset=0):
+            int min_depth=5, int each=1, int offset=0):
         """
         sites must be an file of format: chrom:pos1:ref:alt where
         we match on all parts.

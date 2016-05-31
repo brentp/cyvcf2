@@ -96,8 +96,6 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 			idx = j * n_samples + k;
 			gtk = gt_types[k];
 			if(j != k){
-				// multiply by 2 here to get the correct scale. differs from
-				// original paper.
 				numer = (gtj - 2.0 * pi) * (gtk - 2.0 * pi);
 				ibs0[idx] += (gtj != HET && gtk != HET && gtj != gtk);
 			} else {

@@ -68,6 +68,7 @@ int ibd(int agt, int bgt, int run_length, float pi, int *bins, int32_t n_bins) {
 // This should be called on few hundred to a few thousand variants that are
 // not in linkage and have an aaf > 1 / n_samples (or so).
 // asum and N are of length n_samples * n_samples and assumed to be in C order.
+// http://www.nature.com/ng/journal/v42/n7/full/ng.608.html
 int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs2, int32_t n_samples) {
 
 	int idx, uidx, n_used = 0;
@@ -115,12 +116,15 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 			}
 
 			// heuristic to avoid too-large values
-			if(val > 4.0) {
-				val = 4.0;
+			/*
+			if(val > 30.0) {
+				fprintf(stderr, "pos: %.1f\taaf: %.4f\tgtj, gtk: %f,%f\n", val, pi, gtj, gtk);
+				val = 30.0;
 			} else if (val < -2.0){
 				val = -2.0;
 				fprintf(stderr, "negative: %.1f\n", val);
 			}
+			*/
 
 			asum[idx] += val;
 			N[idx]+= 1;

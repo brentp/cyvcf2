@@ -29,7 +29,7 @@ def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1, sites=op.join
     p = Pool(ncpus)
 
     ava = avn = avibs0 = avibs2 = n_samples = None
-    for (fname, n) in p.imap(_par_relatedness, [
+    for (fname, n) in p.imap_unordered(_par_relatedness, [
         (vcf_path, samples, min_depth, i, ncpus, each, sites) for i in range(ncpus)]):
 
         arrays = np.load(fname)
@@ -58,7 +58,7 @@ def par_het(vcf_path, samples, ncpus, min_depth=8, percentiles=(10, 90),
     any_counts, sum_counts, het_counts = 0, 0, 0
     all_gt_types, mean_depths, sites = [], [], []
     maf_lists = defaultdict(list)
-    for ret in p.imap(_par_het, [(vcf_path, samples, min_depth, i, ncpus, each) for i in range(ncpus)]):
+    for ret in p.imap_unordered(_par_het, [(vcf_path, samples, min_depth, i, ncpus, each) for i in range(ncpus)]):
         (mean_depths_, maf_lists_, het_counts_, sum_counts_,
                 all_gt_types_, sites_, any_counts_) = ret
         mean_depths.extend(mean_depths_)
@@ -373,7 +373,7 @@ cdef class VCF(object):
         return fig
 
     def gen_variants(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
-                    offset=0, each=1):
+                    offset=0, each=1, call_rate=0.8):
     
         cdef int all_samples = len(self.samples)
         extras = None
@@ -406,6 +406,9 @@ cdef class VCF(object):
                         if v.REF != ref: continue
                         if len(v.ALT) != 1: continue
                         if v.ALT[0] != alt: continue
+                        if v.call_rate < call_rate: continue
+                        if v.aaf == 0:
+                            continue
                         yield i, v
                         break
         else:
@@ -749,6 +752,8 @@ cdef class Variant(object):
 
         ret = related(<int *>&all_gt_types[0], &asum[0, 0], &n[0, 0], &ibs0[0, 0],
                       &ibs2[0, 0], n_samples_total)
+        if ret == -2:
+            print(self.gt_types)
 
     property num_called:
         def __get__(self):

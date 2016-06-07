@@ -121,7 +121,6 @@ cdef class VCF(object):
     cdef htsFile *hts
     cdef const bcf_hdr_t *hdr
     cdef tbx_t *idx
-    cdef hts_idx_t *hidx
     cdef int n_samples
     cdef int PASS
     cdef char *fname
@@ -189,26 +188,23 @@ cdef class VCF(object):
             raise StopIteration
 
         if self.idx == NULL:
-            # we load the index on first use if possible and re-use
-            if not op.exists(str(self.fname + ".tbi")): #  or os.path.exists(self.name + ".csi"):
+            if not (op.exists(str(self.fname + ".tbi"))  or op.exists(self.fname + ".csi")):
                 raise Exception("can't extract region without tabix or csi index for %s" % self.fname)
 
-            if op.exists(self.fname + ".tbi"):
-                self.idx = tbx_index_load(self.fname + b".tbi")
-                assert self.idx != NULL, "error loading tabix index for %s" % self.fname
-            #else:
-            #    self.hidx = bcf_index_load(self.fname)
-            #    assert self.hidx != NULL, "error loading csi index for %s" % self.fname
+            self.idx = tbx_index_load(self.fname)
+            assert self.idx != NULL, "error loading tabix index for %s" % self.fname
 
-        cdef hts_itr_t *itr
+        cdef hts_itr_t *itr = NULL
         cdef kstring_t s
         cdef bcf1_t *b
         cdef int slen, ret
 
         itr = tbx_itr_querys(self.idx, region)
+
         if itr == NULL:
             sys.stderr.write("no intervals found for %s at %s\n" % (self.fname, region))
             raise StopIteration
+
         try:
             slen = tbx_itr_next(self.hts, self.idx, itr, &s)
             while slen > 0:
@@ -290,8 +286,6 @@ cdef class VCF(object):
             self.hts = NULL
         if self.idx != NULL:
             tbx_destroy(self.idx)
-        if self.hidx != NULL:
-            hts_idx_destroy(self.hidx)
 
     def __iter__(self):
         return self

@@ -407,8 +407,6 @@ cdef class VCF(object):
                         if len(v.ALT) != 1: continue
                         if v.ALT[0] != alt: continue
                         if v.call_rate < call_rate: continue
-                        if v.aaf == 0:
-                            continue
                         yield i, v
                         break
         else:

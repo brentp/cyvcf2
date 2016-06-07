@@ -1,6 +1,8 @@
 cyvcf2
 ======
 
+Fast parsing of VCF and BCF including region-queries.
+
 [![Build Status](https://travis-ci.org/brentp/cyvcf2.svg?branch=master)](https://travis-ci.org/brentp/cyvcf2)
 
 cyvcf2 is a cython wrapper around [htslib](https://github.com/samtools/htslib) built for fast parsing of [Variant Call Format](https://en.m.wikipedia.org/wiki/Variant_Call_Format) (VCF) files.
@@ -15,10 +17,12 @@ To persist a copy, use: `cpy = np.array(variant.gt_ref_depths)` instead of just 
 Example
 =======
 
+The example below shows much of the use of cyvcf2.
+
 ```Python
 from cyvcf2 import VCF
 
-for variant in VCF('some.vcf.gz'):
+for variant in VCF('some.vcf.gz'): # or VCF('some.bcf')
 
 	variant.gt_types # numpy array
 	variant.gt_ref_depths, variant.gt_alt_depths # numpy arrays
@@ -39,6 +43,14 @@ for variant in VCF('some.vcf.gz'):
     # or of any other format field:
     sb = variant.format('SB', float)
     assert sb.shape == (n_samples, 4) # 4-values per
+
+# to do a region-query:
+
+vcf = VCF('some.vcf.gz')
+for v in vcf('11:435345-556565'):
+    if v.INFO["AF"] > 0.1: continue
+    print(str(v))
+
 ```
 
 Installation

@@ -2,6 +2,7 @@ from cyvcf2 import VCF, Variant, Writer
 import os.path
 from nose.tools import assert_raises
 import tempfile
+import sys
 import os
 import atexit
 
@@ -398,3 +399,23 @@ def test_header_stuff():
     assert seen_formats == 9, seen_formats
     assert seen_infos == 73, seen_infos
 
+
+def test_bcf():
+    vcf = VCF('{}/test.snpeff.bcf'.format(HERE))
+    l = sum(1 for _ in vcf)
+    assert l == 10, l
+
+    # NOTE: this is 0 becuase we don't SEEK.
+    l = sum(1 for _ in vcf())
+    assert l == 0, l
+
+
+    viter = vcf("1:69260-69438")
+    print >>sys.stderr, "\nOK\n"
+    sys.stderr.flush()
+    l = list(viter)
+    assert len(l) == 0, len(l)
+
+    iter = vcf("chr1:69260-69438")
+    l = list(iter)
+    assert len(l) == 2, len(l)

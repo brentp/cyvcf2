@@ -121,9 +121,10 @@ cdef class VCF(object):
     cdef htsFile *hts
     cdef const bcf_hdr_t *hdr
     cdef tbx_t *idx
+    cdef hts_idx_t *hidx
     cdef int n_samples
     cdef int PASS
-    cdef char *fname
+    cdef bytes fname
     cdef bint gts012
     cdef bint lazy
 
@@ -182,19 +183,48 @@ cdef class VCF(object):
         if ret != 0:
             raise Exception("unable to update to header")
 
+    def _bcf_region(VCF self, region):
+        if self.hidx == NULL:
+            self.hidx = bcf_index_load(self.fname)
+        assert self.hidx != NULL, ("error loading .csi index for %s" % self.fname)
+        cdef bcf1_t *b
+        cdef int ret
+        cdef hts_itr_t *itr
+
+        itr = bcf_itr_querys(self.hidx, self.hdr, region)
+        if itr == NULL:
+            sys.stderr.write("no intervals found for %s at %s\n" % (self.fname, region))
+            raise StopIteration
+        try:
+            while True:
+                b = bcf_init()
+                ret = bcf_itr_next(self.hts, itr, b)
+                if ret < 0: 
+                    bcf_destroy(b)
+                    break
+                yield newVariant(b, self)
+        finally:
+            if itr != NULL:
+                hts_itr_destroy(itr)
+
+
     def __call__(VCF self, region=None):
         if not region:
             yield from self
             raise StopIteration
 
+        if self.fname.endswith(".bcf"):
+            yield from self._bcf_region(region)
+            raise StopIteration
+
         if self.idx == NULL:
-            if not (op.exists(str(self.fname + ".tbi"))  or op.exists(self.fname + ".csi")):
+            if not (op.exists(str(self.fname + ".tbi")) or op.exists(str(self.fname + ".csi"))):
                 raise Exception("can't extract region without tabix or csi index for %s" % self.fname)
 
             self.idx = tbx_index_load(self.fname)
             assert self.idx != NULL, "error loading tabix index for %s" % self.fname
 
-        cdef hts_itr_t *itr = NULL
+        cdef hts_itr_t *itr
         cdef kstring_t s
         cdef bcf1_t *b
         cdef int slen, ret
@@ -211,6 +241,7 @@ cdef class VCF(object):
                 b = bcf_init()
                 ret = vcf_parse(&s, self.hdr, b)
                 if ret > 0:
+                    bcf_destroy(b)
                     raise Exception("error parsing")
                 yield newVariant(b, self)
                 slen = tbx_itr_next(self.hts, self.idx, itr, &s)
@@ -286,6 +317,8 @@ cdef class VCF(object):
             self.hts = NULL
         if self.idx != NULL:
             tbx_destroy(self.idx)
+        if self.hidx != NULL:
+            hts_idx_destroy(self.hidx)
 
     def __iter__(self):
         return self

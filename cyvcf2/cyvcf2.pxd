@@ -57,7 +57,7 @@ cdef extern from "htslib/vcf.h":
     ctypedef struct hts_idx_t:
         pass
 
-    int bcf_itr_next(hts_idx_t *, hts_itr_t* iter, bcf1_t*)
+    int bcf_itr_next(htsFile *, hts_itr_t* iter, bcf1_t*)
     hts_itr_t *bcf_itr_querys(hts_idx_t *, void *, char *);
 
 

@@ -643,8 +643,8 @@ cdef class VCF(object):
         cdef int sj, sk, ns = len(samples)
         res = {'sample_a': [], 'sample_b': [], 
                 'rel': array('f'),
-                'hets_a': array('f'),
-                'hets_b': array('f'),
+                'hets_a': array('I'),
+                'hets_b': array('I'),
                'ibs1': array('I'),
                'ibs0': array('I'), 
                'ibs2': array('I'), 
@@ -665,8 +665,8 @@ cdef class VCF(object):
 
                 res['sample_a'].append(sample_j)
                 res['sample_b'].append(sample_k)
-                res['hets_a'] = _hets[sj]
-                res['hets_b'] = _hets[sk]
+                res['hets_a'].append(_hets[sj])
+                res['hets_b'].append(_hets[sk])
                 res['rel'].append(phi) # rel is 2*kinship
                 res['ibs0'].append(_ibs[sj, sk])
                 res['ibs1'].append(_ibs[sk, sj])

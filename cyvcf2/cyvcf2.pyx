@@ -48,7 +48,7 @@ def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1,
 
     return VCF(vcf_path, samples=samples)._relatedness_finish(aibs[:n_samples, :n_samples],
                                                               an[:n_samples, :n_samples],
-                                                              vhets[:n_samples])
+                                                              ahets[:n_samples])
 
 
 def par_het(vcf_path, samples, ncpus, min_depth=8, percentiles=(10, 90),
@@ -428,9 +428,8 @@ cdef class VCF(object):
         cdef Variant v
         cdef int k, last_pos
         if sites:
-            if each != 1 or offset != 0:
-                isites = isites[offset::each]
-                extras = extras[offset::each, :]
+            isites = isites[offset::each]
+            extras = extras[offset::each, :]
 
             def gen():
                 for i, (chrom, pos, ref, alt) in enumerate(isites):
@@ -637,10 +636,9 @@ cdef class VCF(object):
                                   int32_t[:, ::view.contiguous] _n,
                                   int32_t[:] _hets):
         samples = self.samples
-        ibs = np.asarray(_ibs)
-        hets = np.asarray(_hets)
-        n = np.asarray(_n)
-        #n[np.tril_indices(len(n))] = n[np.triu_indices(len(n))]
+        #ibs = np.asarray(_ibs)
+        #hets = np.asarray(_hets)
+        #n = np.asarray(_n)
 
         cdef int sj, sk, ns = len(samples)
         res = {'sample_a': [], 'sample_b': [], 
@@ -661,18 +659,19 @@ cdef class VCF(object):
                 sample_k = samples[sk]
 
                 # calculate relatedness. we use the geometric mean.
-                bot = 2.0 * math.exp(0.5 * (math.log(_hets[sk]) + math.log(_hets[sj])))
-                phi = (_ibs[sk, sj] - 2.0 * ibs[sj, sk]) / (2.0 * bot)
+                bot = math.exp(0.5 * (math.log(_hets[sk]) + math.log(_hets[sj])))
+                #bot = hets[sk] + hets[sj]
+                phi = (_ibs[sk, sj] - 2.0 * _ibs[sj, sk]) / (bot)
 
                 res['sample_a'].append(sample_j)
                 res['sample_b'].append(sample_k)
-                res['hets_a'] = hets[sj]
-                res['hets_b'] = hets[sk]
+                res['hets_a'] = _hets[sj]
+                res['hets_b'] = _hets[sk]
                 res['rel'].append(phi) # rel is 2*kinship
-                res['ibs0'].append(ibs[sj, sk])
-                res['ibs1'].append(ibs[sk, sj])
-                res['ibs2'].append(n[sk, sj])
-                res['n'].append(n[sj, sk])
+                res['ibs0'].append(_ibs[sj, sk])
+                res['ibs1'].append(_ibs[sk, sj])
+                res['ibs2'].append(_n[sk, sj])
+                res['n'].append(_n[sj, sk])
         return res
 
 cdef class Variant(object):

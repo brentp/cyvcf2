@@ -134,26 +134,37 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 }
 
 // implementation of the relatedness calculation in king.
-// the upper diag of ibs stores ibs0, the lower diag stores ibs1
+// ibs is n_samples * n_samples. the upper diag stores ibs0, the lower diag stores ibs1
+// n is n_samples * n_samples. upper stores the number of times that each pair was used.
+//                             lower diag stores the ibs2.
+// hets is n_samples it counts the number of hets per sample.
 int krelated(int *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t n_samples) {
 	int32_t j, k;
 	int n_used = 0;
 	int32_t gtj, gtk;
+	int is_het = 0;
 
 	for(j=0; j<n_samples; j++){
 		if(gt_types[j] == UNKNOWN){ continue; }
 		gtj = gt_types[j];
-		hets[j] += (gtj == HET);
+		is_het = (gtj == HET);
+		hets[j] += is_het;
 		n_used++;
 		for(k=j+1; k<n_samples; k++){
 			if(gt_types[k] == UNKNOWN){ continue; }
 			gtk = gt_types[k];
 			n[j * n_samples + k]++;
-			// ibs0
-			// 0 + 2 or 2 + 0 only way to satisfy this.
-			ibs[j * n_samples + k] += ((gtk != gtj) && ((gtk + gtj == 2)));
-			// ibs1
-			ibs[k * n_samples + j] += ((gtk == HET) && (gtj == HET));
+			if(is_het) {
+				// 0 + 2 or 2 + 0 only way to satisfy this.
+				// ibs1
+				ibs[k * n_samples + j] += (gtk == HET); // already know gtj is HET
+			} else {
+				// only need to check these if sample 1 isn't het.
+				// ibs0
+				ibs[j * n_samples + k] += ((gtk != gtj) && ((gtk + gtj == 2)));
+				// ibs2
+				n[k * n_samples + j] += gtk == gtj;
+			}
 		}
 
 	}

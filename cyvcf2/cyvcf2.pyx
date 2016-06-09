@@ -7,6 +7,7 @@ import atexit
 import tempfile
 import numpy as np
 from array import array
+import math
 
 from libc cimport stdlib
 cimport numpy as np
@@ -24,20 +25,22 @@ if not hasattr(sys.modules[__name__], '__file__'):
 
 
 
-def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1, sites=op.join(op.dirname(__file__), '1kg.sites')):
+def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1,
+        sites=op.join(op.dirname(__file__), '1kg.sites'), n_extra_samples=50):
     from multiprocessing import Pool
     p = Pool(ncpus)
+    sys.stderr.write("using %d extra 1000 genomes samples to calibrate relatedness calculation\n" % (n_extra_samples))
 
     aibs = ahets = n_samples = None
     for (fname, n) in p.imap_unordered(_par_relatedness, [
-        (vcf_path, samples, min_depth, i, ncpus, each, sites) for i in range(ncpus)]):
+        (vcf_path, samples, min_depth, i, ncpus, each, sites, n_extra_samples) for i in range(ncpus)]):
 
         arrays = np.load(fname)
         os.unlink(fname)
         vibs, vn, vhets, n_samples = arrays['ibs'], arrays['n'], arrays['hets'], n
 
         if aibs is None:
-            aibs, an, ahets, n_samples = vibs, vn, vhets, n_samples
+            aibs, an, ahets = vibs, vn, vhets
         else:
             aibs += vibs
             an += vn
@@ -83,10 +86,10 @@ def _par_het(args):
 
 
 def _par_relatedness(args):
-    vcf_path, samples, min_depth, offset, ncpus, each, sites = args
+    vcf_path, samples, min_depth, offset, ncpus, each, sites, n_sites_samples = args
     vcf = VCF(vcf_path, samples=samples, gts012=True)
     each = each * ncpus
-    vibs, vn, vhet, n_samples, all_samples = vcf._site_relatedness(min_depth=min_depth, offset=offset, each=each, sites=sites)
+    vibs, vn, vhet, n_samples, all_samples = vcf._site_relatedness(min_depth=min_depth, offset=offset, each=each, sites=sites, n_sites_samples=n_sites_samples)
     # to get around limits of multiprocessing size of transmitted data, we save
     # the arrays to disk and return the file
     fname = tempfile.mktemp(suffix=".npz")
@@ -397,7 +400,7 @@ cdef class VCF(object):
         return fig
 
     def gen_variants(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
-                    offset=0, each=1, call_rate=0.8):
+                    offset=0, each=1, call_rate=0.8, n_sites_samples=None):
     
         cdef int all_samples = len(self.samples)
         extras = None
@@ -414,16 +417,21 @@ cdef class VCF(object):
                 rows = len(isites)
                 cols = len(tmp) / rows
                 extras = tmp.reshape((rows, cols))
+                if n_sites_samples:
+                    n_sites_samples = min(n_sites_samples, cols)
+                    extras = extras[:, :n_sites_samples]
                 del tmp
-                all_samples += cols
+                all_samples += extras.shape[1]
             else:
                 sys.stderr.write("didn't find extra samples in site_relatedness; using sample from vcf only\n")
 
         cdef Variant v
         cdef int k, last_pos
         if sites:
-            isites = isites[offset::each]
-            extras = extras[offset::each, :]
+            if each != 1 or offset != 0:
+                isites = isites[offset::each]
+                extras = extras[offset::each, :]
+
             def gen():
                 for i, (chrom, pos, ref, alt) in enumerate(isites):
                     for v in self("%s:%s-%s" % (chrom, pos, pos)):
@@ -531,7 +539,7 @@ cdef class VCF(object):
 
 
     cdef _site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
-            int min_depth=5, int each=1, int offset=0):
+            int min_depth=5, int each=1, int offset=0, n_sites_samples=100):
         """
         sites must be an file of format: chrom:pos1:ref:alt where
         we match on all parts.
@@ -545,7 +553,8 @@ cdef class VCF(object):
         cdef int32_t[:, ::view.contiguous] extras
         assert each >= 0
 
-        all_samples, extras, gen = self.gen_variants(sites, offset=offset, each=each)
+        all_samples, extras, gen = self.gen_variants(sites, offset=offset,
+                each=each, n_sites_samples=n_sites_samples)
 
         cdef int32_t[:, ::view.contiguous] ibs = np.zeros((all_samples, all_samples), np.int32)
         cdef int32_t[:, ::view.contiguous] n = np.zeros((all_samples, all_samples), np.int32)
@@ -640,6 +649,7 @@ cdef class VCF(object):
                 'hets_b': array('f'),
                'ibs1': array('I'),
                'ibs0': array('I'), 
+               'ibs2': array('I'), 
                'n': array('I')}
 
         cdef float bot
@@ -650,16 +660,18 @@ cdef class VCF(object):
                 if sj == sk: continue
                 sample_k = samples[sk]
 
-                bot = (_hets[sk] + _hets[sj])
+                # calculate relatedness. we use the geometric mean.
+                bot = 2.0 * math.exp(0.5 * (math.log(_hets[sk]) + math.log(_hets[sj])))
                 phi = (_ibs[sk, sj] - 2.0 * ibs[sj, sk]) / (2.0 * bot)
 
                 res['sample_a'].append(sample_j)
                 res['sample_b'].append(sample_k)
                 res['hets_a'] = hets[sj]
                 res['hets_b'] = hets[sk]
-                res['rel'].append(phi)
+                res['rel'].append(phi) # rel is 2*kinship
                 res['ibs0'].append(ibs[sj, sk])
                 res['ibs1'].append(ibs[sk, sj])
+                res['ibs2'].append(n[sk, sj])
                 res['n'].append(n[sj, sk])
         return res
 

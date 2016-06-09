@@ -133,6 +133,33 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 	return n_used;
 }
 
+// implementation of the relatedness calculation in king.
+// the upper diag of ibs stores ibs0, the lower diag stores ibs1
+int krelated(int *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t n_samples) {
+	int32_t j, k;
+	int n_used = 0;
+	int32_t gtj, gtk;
+
+	for(j=0; j<n_samples; j++){
+		if(gt_types[j] == UNKNOWN){ continue; }
+		gtj = gt_types[j];
+		hets[j] += (gtj == HET);
+		n_used++;
+		for(k=j+1; k<n_samples; k++){
+			if(gt_types[k] == UNKNOWN){ continue; }
+			gtk = gt_types[k];
+			n[j * n_samples + k]++;
+			// ibs0
+			// 0 + 2 or 2 + 0 only way to satisfy this.
+			ibs[j * n_samples + k] += ((gtk != gtj) && ((gtk + gtj == 2)));
+			// ibs1
+			ibs[k * n_samples + j] += ((gtk == HET) && (gtj == HET));
+		}
+
+	}
+	return n_used;
+}
+
 float r_unphased(int *a_gts, int *b_gts, float f, int32_t n_samples) {
 	// http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2710162/pdf/GEN1823839.pdf
 	// https://github.com/alanrogers/covld/blob/master/estimate_ld.c

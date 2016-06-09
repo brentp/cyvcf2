@@ -9,6 +9,8 @@ cdef extern from "relatedness.h":
     float r_unphased(int *a_gts, int *b_gts, float f, int32_t n_samples)
     int ibd(int agt, int bgt, int run_length, float pi, int *bins, int32_t n_bins)
 
+    int krelated(int *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t n_samples)
+
 cdef extern from "helpers.h":
     int as_gts(int *gts, int num_samples, int ploidy);
     int as_gts012(int *gts, int num_samples, int ploidy);

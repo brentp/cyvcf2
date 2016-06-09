@@ -42,7 +42,6 @@ def test_relatedness():
     vcf = VCF(VCF_PATH, gts012=True)
     df = vcf.relatedness(gap=0, linkage_max=2)
     assert "ibs0" in df, df
-    assert "ibs2" in df
     assert "rel" in df
     #vcf = VCF(VCF_PATH, gts012=True)
     #for r in viter:

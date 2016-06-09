@@ -28,26 +28,24 @@ def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1, sites=op.join
     from multiprocessing import Pool
     p = Pool(ncpus)
 
-    ava = avn = avibs0 = avibs2 = n_samples = None
+    aibs = ahets = n_samples = None
     for (fname, n) in p.imap_unordered(_par_relatedness, [
         (vcf_path, samples, min_depth, i, ncpus, each, sites) for i in range(ncpus)]):
 
         arrays = np.load(fname)
         os.unlink(fname)
-        va, vn, vibs0, vibs2 = arrays['va'], arrays['vn'], arrays['vibs0'], arrays['vibs2']
+        vibs, vn, vhets, n_samples = arrays['ibs'], arrays['n'], arrays['hets'], n
 
-        if ava is None:
-            ava, avn, avibs0, avibs2, n_samples = va, vn, vibs0, vibs2, n
+        if aibs is None:
+            aibs, an, ahets, n_samples = vibs, vn, vhets, n_samples
         else:
-            ava += va
-            avn += vn
-            avibs0 += vibs0
-            avibs2 += vibs2
+            aibs += vibs
+            an += vn
+            ahets += vhets
 
-    return VCF(vcf_path, samples=samples)._relatedness_finish(ava[:n_samples, :n_samples],
-                                             avn[:n_samples, :n_samples],
-                                             avibs0[:n_samples, :n_samples],
-                                             avibs2[:n_samples, :n_samples])
+    return VCF(vcf_path, samples=samples)._relatedness_finish(aibs[:n_samples, :n_samples],
+                                                              an[:n_samples, :n_samples],
+                                                              vhets[:n_samples])
 
 
 def par_het(vcf_path, samples, ncpus, min_depth=8, percentiles=(10, 90),
@@ -88,13 +86,12 @@ def _par_relatedness(args):
     vcf_path, samples, min_depth, offset, ncpus, each, sites = args
     vcf = VCF(vcf_path, samples=samples, gts012=True)
     each = each * ncpus
-    va, vn, vibs0, vibs2, n_samples, all_samples = vcf._site_relatedness(min_depth=min_depth, offset=offset, each=each, sites=sites)
+    vibs, vn, vhet, n_samples, all_samples = vcf._site_relatedness(min_depth=min_depth, offset=offset, each=each, sites=sites)
     # to get around limits of multiprocessing size of transmitted data, we save
     # the arrays to disk and return the file
     fname = tempfile.mktemp(suffix=".npz")
     atexit.register(os.unlink, fname)
-    np.savez_compressed(fname, va=np.asarray(va), vn=np.asarray(vn), vibs0=np.asarray(vibs0),
-                        vibs2=np.asarray(vibs2))
+    np.savez_compressed(fname, ibs=np.asarray(vibs), hets=np.asarray(vhet), n=np.asarray(vn))
     return fname, n_samples
 
 cdef unicode xstr(s):
@@ -525,13 +522,12 @@ cdef class VCF(object):
     def site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
                          min_depth=5, each=1):
 
-        va, vn, vibs0, vibs2, n_samples, all_samples = self._site_relatedness(sites=sites, min_depth=min_depth, each=each)
+        vibs, vn, vhet, n_samples, all_samples = self._site_relatedness(sites=sites, min_depth=min_depth, each=each)
         if n_samples != all_samples:
-            return self._relatedness_finish(va[:n_samples, :n_samples],
+            return self._relatedness_finish(vibs[:n_samples, :n_samples],
                                             vn[:n_samples, :n_samples],
-                                            vibs0[:n_samples, :n_samples],
-                                            vibs2[:n_samples, :n_samples])
-        return self._relatedness_finish(va, vn, vibs0, vibs2)
+                                            vhet[:n_samples])
+        return self._relatedness_finish(vibs, vn, vhet)
 
 
     cdef _site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
@@ -551,10 +547,9 @@ cdef class VCF(object):
 
         all_samples, extras, gen = self.gen_variants(sites, offset=offset, each=each)
 
-        cdef double[:, ::view.contiguous] va = np.zeros((all_samples, all_samples), np.float64)
-        cdef int32_t[:, ::view.contiguous] vn = np.zeros((all_samples, all_samples), np.int32)
-        cdef int32_t[:, ::view.contiguous] vibs0 = np.zeros((all_samples, all_samples), np.int32)
-        cdef int32_t[:, ::view.contiguous] vibs2 = np.zeros((all_samples, all_samples), np.int32)
+        cdef int32_t[:, ::view.contiguous] ibs = np.zeros((all_samples, all_samples), np.int32)
+        cdef int32_t[:, ::view.contiguous] n = np.zeros((all_samples, all_samples), np.int32)
+        cdef int32_t[:] hets = np.zeros((all_samples, ), np.int32)
         cdef int32_t[:] all_gt_types = np.zeros((all_samples, ), np.int32)
         cdef int32_t[:] depths = np.zeros((n_samples, ), np.int32)
 
@@ -569,11 +564,11 @@ cdef class VCF(object):
                     if depths[k] < min_depth:
                         all_gt_types[k] = 3 # UNKNOWN
                 all_gt_types[n_samples:] = extras[i, :]
-                v.relatedness_extra(va, vn, vibs0, vibs2, all_gt_types, all_samples)
+                v.relatedness_extra(ibs, n, hets, all_gt_types, all_samples)
             else:
-                v.relatedness(va, vn, vibs0, vibs2)
+                v.relatedness(ibs, n, hets)
 
-        return va, vn, vibs0, vibs2, n_samples, all_samples
+        return ibs, n, hets, n_samples, all_samples
 
     def relatedness(self, int n_variants=35000, int gap=30000, float min_af=0.04,
                     float max_af=0.8, float linkage_max=0.2, min_depth=8):
@@ -587,10 +582,9 @@ cdef class VCF(object):
         cdef float aaf
         cdef int n_unlinked = 0
 
-        cdef double[:, ::view.contiguous] va = np.zeros((n_samples, n_samples), np.float64)
-        cdef int32_t[:, ::view.contiguous] vn = np.zeros((n_samples, n_samples), np.int32)
-        cdef int32_t[:, ::view.contiguous] vibs0 = np.zeros((n_samples, n_samples), np.int32)
-        cdef int32_t[:, ::view.contiguous] vibs2 = np.zeros((n_samples, n_samples), np.int32)
+        cdef int32_t[:, ::view.contiguous] ibs = np.zeros((n_samples, n_samples), np.int32)
+        cdef int32_t[:, ::view.contiguous] n = np.zeros((n_samples, n_samples), np.int32)
+        cdef int32_t[:] hets = np.zeros((n_samples, ), np.int32)
 
         for v in self:
             nvt += 1
@@ -622,45 +616,50 @@ cdef class VCF(object):
                 v.gt_types
             last, last_gts = v.POS, v._gt_types
 
-            v.relatedness(va, vn, vibs0, vibs2)
+            v.relatedness(ibs, n, hets)
             nv += 1
             if nv == n_variants:
                 break
         sys.stderr.write("tested: %d variants out of %d\n" % (nv, nvt))
-        return self._relatedness_finish(va, vn, vibs0, vibs2)
+        return self._relatedness_finish(ibs, n, hets)
 
-    cdef dict _relatedness_finish(self, double[:, ::view.contiguous] va,
-                                        int32_t[:, ::view.contiguous] vn,
-                                        int32_t[:, ::view.contiguous] vibs0,
-                                        int32_t[:, ::view.contiguous] vibs2):
+    cdef dict _relatedness_finish(self, 
+                                  int32_t[:, ::view.contiguous] _ibs,
+                                  int32_t[:, ::view.contiguous] _n,
+                                  int32_t[:] _hets):
         samples = self.samples
-        n = np.asarray(vn)
-        a = np.asarray(va)
-        ibs0, ibs2 = np.asarray(vibs0, a.dtype), np.asarray(vibs2, a.dtype)
-        # the counts only went to the upper diagonal. translate to lower for
-        # ibs2*
-        n[np.tril_indices(len(n))] = n[np.triu_indices(len(n))]
+        ibs = np.asarray(_ibs)
+        hets = np.asarray(_hets)
+        n = np.asarray(_n)
+        #n[np.tril_indices(len(n))] = n[np.triu_indices(len(n))]
 
-        a /= n
-        ibs0 = ibs0 / n
-        ibs2 = ibs2 / n
+        cdef int sj, sk, ns = len(samples)
+        res = {'sample_a': [], 'sample_b': [], 
+                'rel': array('f'),
+                'hets_a': array('f'),
+                'hets_b': array('f'),
+               'ibs1': array('I'),
+               'ibs0': array('I'), 
+               'n': array('I')}
 
+        cdef float bot
 
-        cdef int sj, sk
-        res = {'sample_a': [], 'sample_b': [], 'rel': array('f'),
-               'ibs0': array('f'), 'n': array('I'), 'ibs2' : array('f')}
-
-        for sj, sample_j in enumerate(samples):
-            for sk, sample_k in enumerate(samples[sj:], start=sj):
+        for sj in range(ns):
+            sample_j = samples[sj]
+            for sk in range(sj, ns):
                 if sj == sk: continue
+                sample_k = samples[sk]
 
-                rel, iibs0, iibs2 = a[sj, sk], ibs0[sj, sk], ibs2[sj, sk]
-                iibs2_star = ibs2[sk, sj]
+                bot = (_hets[sk] + _hets[sj])
+                phi = (_ibs[sk, sj] - 2.0 * ibs[sj, sk]) / (2.0 * bot)
+
                 res['sample_a'].append(sample_j)
                 res['sample_b'].append(sample_k)
-                res['rel'].append(rel)
-                res['ibs0'].append(iibs0)
-                res['ibs2'].append(iibs2)
+                res['hets_a'] = hets[sj]
+                res['hets_b'] = hets[sk]
+                res['rel'].append(phi)
+                res['ibs0'].append(ibs[sj, sk])
+                res['ibs1'].append(ibs[sk, sj])
                 res['n'].append(n[sj, sk])
         return res
 
@@ -752,22 +751,21 @@ cdef class Variant(object):
                 j += 1
             return np.array(a, np.str)
 
-    cpdef relatedness(self, double[:, ::view.contiguous] asum,
-                          int32_t[:, ::view.contiguous] n,
-                          int32_t[:, ::view.contiguous] ibs0,
-                          int32_t[:, ::view.contiguous] ibs2):
+    cpdef relatedness(self, 
+                      int32_t[:, ::view.contiguous] ibs,
+                      int32_t[:, ::view.contiguous] n,
+                      int32_t[:] hets):
         if not self.vcf.gts012:
             raise Exception("must call relatedness with gts012")
         if self._gt_types == NULL:
             self.gt_types
         cdef int n_samples = self.vcf.n_samples
-        return related(self._gt_types, &asum[0, 0], &n[0, 0], &ibs0[0, 0],
-                       &ibs2[0, 0], n_samples)
+        return krelated(self._gt_types, &ibs[0, 0], &n[0, 0], &hets[0], n_samples)
 
-    cdef int relatedness_extra(self, double[:, ::view.contiguous] asum,
+    cdef int relatedness_extra(self, 
+                          int32_t[:, ::view.contiguous] ibs,
                           int32_t[:, ::view.contiguous] n,
-                          int32_t[:, ::view.contiguous] ibs0,
-                          int32_t[:, ::view.contiguous] ibs2,
+                          int32_t[:] hets,
                           int32_t[:] all_gt_types,
                           int n_samples_total):
         if not self.vcf.gts012:
@@ -775,8 +773,7 @@ cdef class Variant(object):
         if self._gt_types == NULL:
             self.gt_types
 
-        ret = related(<int *>&all_gt_types[0], &asum[0, 0], &n[0, 0], &ibs0[0, 0],
-                      &ibs2[0, 0], n_samples_total)
+        ret = krelated(<int *>&all_gt_types[0], &ibs[0, 0], &n[0, 0], &hets[0], n_samples_total)
         if ret == -2:
             print(self.gt_types)
 

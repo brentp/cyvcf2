@@ -872,7 +872,7 @@ cdef class Variant(object):
         returns None on error.
         """
         cdef bcf_fmt_t *fmt = bcf_get_fmt(self.vcf.hdr, self.b, tag)
-        cdef int n, nret
+        cdef int n = 0, nret
         cdef void *buf = NULL;
         cdef int typenum = 0
         if vtype == int:

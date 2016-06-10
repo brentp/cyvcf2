@@ -418,3 +418,14 @@ def test_bcf():
     iter = vcf("chr1:69260-69438")
     l = list(iter)
     assert len(l) == 2, len(l)
+
+
+def test_issue12():
+    fields = "ADP_ALL ADPD ADPO ADP_PASS ADPR AFR AMBIG BMF_PASS BMF_QUANT AF_FAILED FA_FAILED FM_FAILED FP_FAILED FR_FAILED MD_FAILED IMPROPER MQ_FAILED OVERLAP PV_FAILED QSS".split()
+
+    vcf = VCF('{}/bug.vcf.gz'.format(HERE))
+    for v in vcf:
+        for f in fields:
+            v.format(f, int)
+
+        v.format("RVF", float)

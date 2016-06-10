@@ -26,7 +26,7 @@ if not hasattr(sys.modules[__name__], '__file__'):
 
 
 def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1,
-        sites=op.join(op.dirname(__file__), '1kg.sites'), n_extra_samples=50):
+        sites=op.join(op.dirname(__file__), '1kg.sites'), n_extra_samples=0):
     from multiprocessing import Pool
     p = Pool(ncpus)
     sys.stderr.write("using %d extra 1000 genomes samples to calibrate relatedness calculation\n" % (n_extra_samples))
@@ -417,7 +417,7 @@ cdef class VCF(object):
                 rows = len(isites)
                 cols = len(tmp) / rows
                 extras = tmp.reshape((rows, cols))
-                if n_sites_samples:
+                if n_sites_samples is not None:
                     n_sites_samples = min(n_sites_samples, cols)
                     extras = extras[:, :n_sites_samples]
                 del tmp
@@ -430,6 +430,7 @@ cdef class VCF(object):
         if sites:
             isites = isites[offset::each]
             extras = extras[offset::each, :]
+            sys.stderr.write("%s\t%s\n" % (extras.shape, len(isites)))
 
             def gen():
                 for i, (chrom, pos, ref, alt) in enumerate(isites):
@@ -473,7 +474,8 @@ cdef class VCF(object):
 
         mean_depths = []
 
-        _, _, gen = self.gen_variants(each=each, offset=offset)
+        _, _, gen = self.gen_variants(each=each, offset=offset,
+                n_sites_samples=0)
         maf_lists = defaultdict(list)
         idxs = np.arange(n_samples)
         for i, v in gen():
@@ -636,11 +638,8 @@ cdef class VCF(object):
                                   int32_t[:, ::view.contiguous] _n,
                                   int32_t[:] _hets):
         samples = self.samples
-        #ibs = np.asarray(_ibs)
-        #hets = np.asarray(_hets)
-        #n = np.asarray(_n)
-
         cdef int sj, sk, ns = len(samples)
+
         res = {'sample_a': [], 'sample_b': [], 
                 'rel': array('f'),
                 'hets_a': array('I'),
@@ -660,7 +659,7 @@ cdef class VCF(object):
 
                 # calculate relatedness. we use the geometric mean.
                 bot = math.exp(0.5 * (math.log(_hets[sk]) + math.log(_hets[sj])))
-                #bot = hets[sk] + hets[sj]
+                #bot = (_hets[sk] + _hets[sj])
                 phi = (_ibs[sk, sj] - 2.0 * _ibs[sj, sk]) / (bot)
 
                 res['sample_a'].append(sample_j)

@@ -29,7 +29,6 @@ DEALINGS IN THE SOFTWARE.  */
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
-#include <ctype.h>
 #include <sys/stat.h>
 #include "htslib/synced_bcf_reader.h"
 #include "htslib/kseq.h"
@@ -88,14 +87,17 @@ static int *init_filters(bcf_hdr_t *hdr, const char *filters, int *nfilters)
         {
             out = (int*) realloc(out, (nout+1)*sizeof(int));
             if ( tmp-prev==1 && *prev=='.' )
+            {
                 out[nout] = -1;
+                nout++;
+            }
             else
             {
                 str.l = 0;
                 kputsn(prev, tmp-prev, &str);
                 out[nout] = bcf_hdr_id2int(hdr, BCF_DT_ID, str.s);
+                if ( out[nout]>=0 ) nout++;
             }
-            nout++;
             if ( !*tmp ) break;
             prev = tmp+1;
         }
@@ -234,7 +236,7 @@ int bcf_sr_add_reader(bcf_srs_t *files, const char *fname)
         return 0;
     }
 
-    reader->fname = fname;
+    reader->fname = strdup(fname);
     if ( files->apply_filters )
         reader->filter_ids = init_filters(reader->header, files->apply_filters, &reader->nfilter_ids);
 
@@ -264,6 +266,7 @@ bcf_srs_t *bcf_sr_init(void)
 
 static void bcf_sr_destroy1(bcf_sr_t *reader)
 {
+    free(reader->fname);
     if ( reader->tbx_idx ) tbx_destroy(reader->tbx_idx);
     if ( reader->bcf_idx ) hts_idx_destroy(reader->bcf_idx);
     bcf_hdr_destroy(reader->header);
@@ -356,7 +359,7 @@ void debug_buffer(FILE *fp, bcf_sr_t *reader)
     for (j=0; j<=reader->nbuffer; j++)
     {
         bcf1_t *line = reader->buffer[j];
-        fprintf(fp,"%s%s\t%s:%d\t%s ", reader->fname,j==0?"*":"",reader->header->id[BCF_DT_CTG][line->rid].key,line->pos+1,line->n_allele?line->d.allele[0]:"");
+        fprintf(fp,"\t%p\t%s%s\t%s:%d\t%s ", line,reader->fname,j==0?"*":" ",reader->header->id[BCF_DT_CTG][line->rid].key,line->pos+1,line->n_allele?line->d.allele[0]:"");
         int k;
         for (k=1; k<line->n_allele; k++) fprintf(fp," %s", line->d.allele[k]);
         fprintf(fp,"\n");
@@ -576,6 +579,7 @@ static int _reader_match_alleles(bcf_srs_t *files, bcf_sr_t *reader, bcf1_t *tmp
 
             // More thorough checking: REFs must match
             if ( tmpl->rlen != line->rlen ) continue;  // different length
+            if ( !tmpl->d.allele || !line->d.allele ) continue;   // one of the lines is empty, someone is swapped buffered lines?!
             if ( strcmp(tmpl->d.allele[0], line->d.allele[0]) ) continue; // the strings do not match
 
             int ial,jal;
@@ -728,13 +732,13 @@ static void bcf_sr_seek_start(bcf_srs_t *readers)
 
 int bcf_sr_seek(bcf_srs_t *readers, const char *seq, int pos)
 {
+    if ( !readers->regions ) return 0;
     if ( !seq && !pos )
     {
         // seek to start
         bcf_sr_seek_start(readers);
         return 0;
     }
-
     bcf_sr_regions_overlap(readers->regions, seq, pos, pos);
     int i, nret = 0;
     for (i=0; i<readers->nreaders; i++)
@@ -887,7 +891,7 @@ static bcf_sr_regions_t *_regions_init_string(const char *str)
         if ( *ep==':' )
         {
             sp = ep+1;
-            from = hts_parse_decimal(sp,(char**)&ep);
+            from = hts_parse_decimal(sp,(char**)&ep,0);
             if ( sp==ep )
             {
                 fprintf(stderr,"[%s:%d %s] Could not parse the region(s): %s\n", __FILE__,__LINE__,__FUNCTION__,str);
@@ -906,7 +910,7 @@ static bcf_sr_regions_t *_regions_init_string(const char *str)
             }
             ep++;
             sp = ep;
-            to = hts_parse_decimal(sp,(char**)&ep);
+            to = hts_parse_decimal(sp,(char**)&ep,0);
             if ( *ep && *ep!=',' )
             {
                 fprintf(stderr,"[%s:%d %s] Could not parse the region(s): %s\n", __FILE__,__LINE__,__FUNCTION__,str);
@@ -953,15 +957,15 @@ static int _regions_parse_line(char *line, int ichr,int ifrom,int ito, char **ch
     if ( i<=k ) return -1;
     if ( k==l )
     {
-        *from = *to = hts_parse_decimal(ss, &tmp);
+        *from = *to = hts_parse_decimal(ss, &tmp, 0);
         if ( tmp==ss ) return -1;
     }
     else
     {
         if ( k==ifrom )
-            *from = hts_parse_decimal(ss, &tmp);
+            *from = hts_parse_decimal(ss, &tmp, 0);
         else
-            *to = hts_parse_decimal(ss, &tmp);
+            *to = hts_parse_decimal(ss, &tmp, 0);
         if ( ss==tmp ) return -1;
 
         for (i=k; i<l && *se; i++)
@@ -971,9 +975,9 @@ static int _regions_parse_line(char *line, int ichr,int ifrom,int ito, char **ch
         }
         if ( i<l ) return -1;
         if ( k==ifrom )
-            *to = hts_parse_decimal(ss, &tmp);
+            *to = hts_parse_decimal(ss, &tmp, 0);
         else
-            *from = hts_parse_decimal(ss, &tmp);
+            *from = hts_parse_decimal(ss, &tmp, 0);
         if ( ss==tmp ) return -1;
     }
 
@@ -1190,6 +1194,13 @@ int bcf_sr_regions_next(bcf_sr_regions_t *reg)
 
 static int _regions_match_alleles(bcf_sr_regions_t *reg, int als_idx, bcf1_t *rec)
 {
+    if ( reg->regs )
+    {
+        // payload is not supported for in-memory regions, switch to regidx instead in future
+        fprintf(stderr,"Error: Compressed and indexed targets file is required\n");
+        exit(1);
+    }
+
     int i = 0, max_len = 0;
     if ( !reg->nals )
     {

@@ -59,7 +59,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <math.h>
-#include <ctype.h>
 
 #include "htslib/hfile.h"
 #include "hts_internal.h"
@@ -268,7 +267,7 @@ int cram_index_load(cram_fd *fd, const char *fn, const char *fn_idx) {
 	    idx_stack[(idx_stack_ptr = 0)] = idx;
 	}
 
-	while (!(e.start >= idx->start && e.end <= idx->end)) {
+	while (!(e.start >= idx->start && e.end <= idx->end) || idx->end == 0) {
 	    idx = idx_stack[--idx_stack_ptr];
 	}
 
@@ -348,18 +347,16 @@ cram_index *cram_index_query(cram_fd *fd, int refid, int pos,
     if (refid+1 < 0 || refid+1 >= fd->index_sz)
 	return NULL;
 
-    i = 0, j = fd->index[refid+1].nslice-1;
-
     if (!from)
 	from = &fd->index[refid+1];
 
-    // If no entries for this seq, keep backtracking.
-    // This is because the index may be sparse and omit this
-    // container.
-    while (!from->e && refid > 0) {
-	from = &fd->index[--refid+1];
-    }
+    // Ref with nothing aligned against it.
+    if (!from->e)
+	return NULL;
 
+    // This sequence is covered by the index, so binary search to find
+    // the optimal starting block.
+    i = 0, j = fd->index[refid+1].nslice-1;
     for (k = j/2; k != i; k = (j-i)/2 + i) {
 	if (from->e[k].refid > refid) {
 	    j = k;
@@ -412,7 +409,8 @@ cram_index *cram_index_query(cram_fd *fd, int refid, int pos,
  * whole containers when they don't overlap the specified cram_range.
  *
  * Returns 0 on success
- *        -1 on failure
+ *        -1 on general failure
+ *        -2 on no-data (empty chromosome)
  */
 int cram_seek_to_refpos(cram_fd *fd, cram_range *r) {
     cram_index *e;
@@ -424,7 +422,7 @@ int cram_seek_to_refpos(cram_fd *fd, cram_range *r) {
 		return -1;
     } else {
 	// Absent from index, but this most likely means it simply has no data.
-	return 0;
+	return -2;
     }
 
     if (fd->ctr) {
@@ -496,8 +494,8 @@ static int cram_index_build_multiref(cram_fd *fd,
  * fn_idx is the filename of the index file to be written;
  * if NULL, we add ".crai" to fn_base to get the index filename.
  *
- * Returns 0 on success
- *        -1 on failure
+ * Returns 0 on success,
+ *         negative on failure (-1 for read failure, -4 for write failure)
  */
 int cram_index_build(cram_fd *fd, const char *fn_base, const char *fn_idx) {
     cram_container *c;
@@ -514,7 +512,7 @@ int cram_index_build(cram_fd *fd, const char *fn_base, const char *fn_idx) {
     if (!(fp = zfopen(fn_idx, "wz"))) {
         perror(fn_idx);
         free(fn_idx_str.s);
-        return -1;
+        return -4;
     }
 
     free(fn_idx_str.s);
@@ -525,13 +523,13 @@ int cram_index_build(cram_fd *fd, const char *fn_base, const char *fn_idx) {
 
         if (fd->err) {
             perror("Cram container read");
-            return 1;
+            return -1;
         }
 
         hpos = htell(fd->fp);
 
         if (!(c->comp_hdr_block = cram_read_block(fd)))
-            return 1;
+            return -1;
         assert(c->comp_hdr_block->content_type == COMPRESSION_HEADER);
 
         c->comp_hdr = cram_decode_compression_header(fd, c->comp_hdr_block);
@@ -579,5 +577,5 @@ int cram_index_build(cram_fd *fd, const char *fn_base, const char *fn_idx) {
     }
 	
 
-    return zfclose(fp);
+    return (zfclose(fp) >= 0)? 0 : -4;
 }

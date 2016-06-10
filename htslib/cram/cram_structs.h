@@ -727,6 +727,7 @@ typedef struct cram_fd {
     pthread_mutex_t bam_list_lock;
     void *job_pending;
     int ooc;                            // out of containers.
+    int lossy_read_names;
 } cram_fd;
 
 // Translation of required fields to cram data series
@@ -808,6 +809,11 @@ enum cram_fields {
 #define CRAM_FLAG_DETACHED             (1<<1)
 #define CRAM_FLAG_MATE_DOWNSTREAM      (1<<2)
 #define CRAM_FLAG_NO_SEQ               (1<<3)
+#define CRAM_FLAG_MASK                 ((1<<4)-1)
+
+/* Internal only */
+#define CRAM_FLAG_STATS_ADDED          (1<<30)
+#define CRAM_FLAG_DISCARD_NAME         (1<<31)
 
 #ifdef __cplusplus
 }

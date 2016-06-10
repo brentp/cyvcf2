@@ -67,7 +67,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <ctype.h>
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -193,7 +192,7 @@ mFILE *find_file_url(char *file, char *url) {
 	    return NULL;
 	}
     }
-    if (hclose(hf) < 0) {
+    if (hclose(hf) < 0 || len < 0) {
 	mfdestroy(mf);
 	return NULL;
     }

@@ -53,6 +53,7 @@ HTSLIB_PUBLIC_HEADERS = \
 	$(HTSDIR)/htslib/hfile.h \
 	$(HTSDIR)/htslib/hts.h \
 	$(HTSDIR)/htslib/hts_defs.h \
+	$(HTSDIR)/htslib/kbitset.h \
 	$(HTSDIR)/htslib/kfunc.h \
 	$(HTSDIR)/htslib/khash.h \
 	$(HTSDIR)/htslib/khash_str2int.h \
@@ -73,10 +74,12 @@ HTSLIB_ALL = \
 	$(HTSLIB_PUBLIC_HEADERS) \
 	$(HTSDIR)/bgzf.c \
 	$(HTSDIR)/config.h \
+	$(HTSDIR)/errmod.c \
 	$(HTSDIR)/faidx.c \
 	$(HTSDIR)/hfile_internal.h \
 	$(HTSDIR)/hfile.c \
 	$(HTSDIR)/hfile_irods.c \
+	$(HTSDIR)/hfile_libcurl.c \
 	$(HTSDIR)/hfile_net.c \
 	$(HTSDIR)/hts.c \
 	$(HTSDIR)/hts_internal.h \
@@ -84,6 +87,9 @@ HTSLIB_ALL = \
 	$(HTSDIR)/knetfile.c \
 	$(HTSDIR)/kstring.c \
 	$(HTSDIR)/md5.c \
+	$(HTSDIR)/plugin.c \
+	$(HTSDIR)/probaln.c \
+	$(HTSDIR)/realn.c \
 	$(HTSDIR)/regidx.c \
 	$(HTSDIR)/sam.c \
 	$(HTSDIR)/synced_bcf_reader.c \
@@ -154,7 +160,7 @@ $(HTSDIR)/tabix: $(HTSDIR)/tabix.c $(HTSLIB_PUBLIC_HEADERS)
 #
 #	clean: clean-htslib
 
-clean-htslib install-htslib:
+all-htslib clean-htslib install-htslib plugins-htslib:
 	+cd $(HTSDIR) && $(MAKE) $(@:-htslib=)
 
-.PHONY: clean-htslib install-htslib
+.PHONY: all-htslib clean-htslib install-htslib plugins-htslib

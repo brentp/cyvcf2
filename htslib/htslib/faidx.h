@@ -1,5 +1,6 @@
-/* faidx.h -- FASTA random access.
-
+/// @file htslib/faidx.h
+/// FASTA random access.
+/*
    Copyright (C) 2008, 2009, 2013, 2014 Genome Research Ltd.
 
    Author: Heng Li <lh3@sanger.ac.uk>
@@ -60,7 +61,7 @@ typedef struct __faidx_t faidx_t;
       @return     0 on success; or -1 on failure
       @discussion File "fn.fai" will be generated.
      */
-    int fai_build(const char *fn);
+    int fai_build(const char *fn) HTS_RESULT_USED;
 
     /*!
       @abstract    Destroy a faidx_t struct.

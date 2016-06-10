@@ -1,7 +1,9 @@
-/*  hts.h -- format-neutral I/O, indexing, and iterator API functions.
-
-    Copyright (C) 2012-2015 Genome Research Ltd.
-    Copyright (C) 2012 Broad Institute.
+/// @file htslib/hts.h
+/// Format-neutral I/O, indexing, and iterator API functions.
+/*
+    Copyright (C) 2012-2016 Genome Research Ltd.
+    Copyright (C) 2010, 2012 Broad Institute.
+    Portions copyright (C) 2003-2006, 2008-2010 by Heng Li <lh3@live.co.uk>
 
     Author: Heng Li <lh3@sanger.ac.uk>
 
@@ -28,6 +30,8 @@ DEALINGS IN THE SOFTWARE.  */
 
 #include <stddef.h>
 #include <stdint.h>
+
+#include "hts_defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -166,6 +170,7 @@ enum hts_fmt_option {
     CRAM_OPT_USE_LZMA,
     CRAM_OPT_USE_RANS,
     CRAM_OPT_REQUIRED_FIELDS,
+    CRAM_OPT_LOSSY_NAMES,
 
     // General purpose
     HTS_OPT_COMPRESSION_LEVEL = 100,
@@ -279,7 +284,7 @@ char *hts_format_description(const htsFormat *format);
 /*!
   @abstract       Open a SAM/BAM/CRAM/VCF/BCF/etc file
   @param fn       The file name or "-" for stdin/stdout
-  @param mode     Mode matching /[rwa][bcuz0-9]+/
+  @param mode     Mode matching / [rwa][bceguxz0-9]* /
   @discussion
       With 'r' opens for reading; any further format mode letters are ignored
       as the format is detected by checking the first few bytes or BGZF blocks
@@ -291,6 +296,9 @@ char *hts_format_description(const htsFormat *format);
         u  uncompressed
         z  bgzf compressed
         [0-9]  zlib compression level
+      and with non-format option letters (for any of 'r'/'w'/'a'):
+        e  close the file on exec(2) (opens with O_CLOEXEC, where supported)
+        x  create the file exclusively (opens with O_EXCL, where supported)
       Note that there is a distinction between 'u' and '0': the first yields
       plain uncompressed output whereas the latter outputs uncompressed data
       wrapped in the zlib format.
@@ -305,7 +313,7 @@ htsFile *hts_open(const char *fn, const char *mode);
 /*!
   @abstract       Open a SAM/BAM/CRAM/VCF/BCF/etc file
   @param fn       The file name or "-" for stdin/stdout
-  @param mode     Mode matching /[rwa][bcuz0-9]+/
+  @param mode     Open mode, as per hts_open()
   @param fmt      Optional format specific parameters
   @discussion
       See hts_open() for description of fn and mode.
@@ -385,6 +393,19 @@ int hts_set_threads(htsFile *fp, int n);
 */
 int hts_set_fai_filename(htsFile *fp, const char *fn_aux);
 
+
+/*!
+  @abstract  Determine whether a given htsFile contains a valid EOF block
+  @return    3 for a non-EOF checkable filetype;
+             2 for an unseekable file type where EOF cannot be checked;
+             1 for a valid EOF block;
+             0 for if the EOF marker is absent when it should be present;
+            -1 (with errno set) on failure
+  @discussion
+      Check if the BGZF end-of-file (EOF) marker is present
+*/
+int hts_check_EOF(htsFile *fp);
+
 /************
  * Indexing *
  ************/
@@ -445,7 +466,7 @@ typedef struct {
     @param fmt  One of the HTS_FMT_* index formats
     @return  0 if successful, or negative if an error occurred.
 */
-int hts_idx_save(const hts_idx_t *idx, const char *fn, int fmt);
+int hts_idx_save(const hts_idx_t *idx, const char *fn, int fmt) HTS_RESULT_USED;
 
 /// Save an index to a specific file
 /** @param idx    Index to be written
@@ -454,7 +475,7 @@ int hts_idx_save(const hts_idx_t *idx, const char *fn, int fmt);
     @param fmt    One of the HTS_FMT_* index formats
     @return  0 if successful, or negative if an error occurred.
 */
-int hts_idx_save_as(const hts_idx_t *idx, const char *fn, const char *fnidx, int fmt);
+int hts_idx_save_as(const hts_idx_t *idx, const char *fn, const char *fnidx, int fmt) HTS_RESULT_USED;
 
 /// Load an index file
 /** @param fn   BAM/BCF/etc filename, to which .bai/.csi/etc will be added or
@@ -477,18 +498,22 @@ hts_idx_t *hts_idx_load2(const char *fn, const char *fnidx);
     int hts_idx_get_stat(const hts_idx_t* idx, int tid, uint64_t* mapped, uint64_t* unmapped);
     uint64_t hts_idx_get_n_no_coor(const hts_idx_t* idx);
 
+
+#define HTS_PARSE_THOUSANDS_SEP 1  ///< Ignore ',' separators within numbers
+
 /// Parse a numeric string
-/** The number may be expressed in scientific notation, and may contain commas
-    in the integer part (before any decimal point or E notation).
-    @param str  String to be parsed
-    @param end  If non-NULL, set on return to point to the first character
-                in @a str after those forming the parsed number
+/** The number may be expressed in scientific notation, and optionally may
+    contain commas in the integer part (before any decimal point or E notation).
+    @param str     String to be parsed
+    @param strend  If non-NULL, set on return to point to the first character
+                   in @a str after those forming the parsed number
+    @param flags   Or'ed-together combination of HTS_PARSE_* flags
     @return  Converted value of the parsed number.
 
-    When @a end is NULL, a warning will be printed (if hts_verbose is 2
+    When @a strend is NULL, a warning will be printed (if hts_verbose is 2
     or more) if there are any trailing characters after the number.
 */
-long long hts_parse_decimal(const char *str, char **end);
+long long hts_parse_decimal(const char *str, char **strend, int flags);
 
 /// Parse a "CHR:START-END"-style region string
 /** @param str  String to be parsed
@@ -507,7 +532,7 @@ const char *hts_parse_reg(const char *str, int *beg, int *end);
     typedef hts_itr_t *hts_itr_query_func(const hts_idx_t *idx, int tid, int beg, int end, hts_readrec_func *readrec);
 
     hts_itr_t *hts_itr_querys(const hts_idx_t *idx, const char *reg, hts_name2id_f getid, void *hdr, hts_itr_query_func *itr_query, hts_readrec_func *readrec);
-    int hts_itr_next(BGZF *fp, hts_itr_t *iter, void *r, void *data);
+    int hts_itr_next(BGZF *fp, hts_itr_t *iter, void *r, void *data) HTS_RESULT_USED;
     const char **hts_idx_seqnames(const hts_idx_t *idx, int *n, hts_id2name_f getid, void *hdr); // free only the array, not the values
 
     /**
@@ -523,6 +548,37 @@ const char *hts_parse_reg(const char *str, int *beg, int *end);
     #define FT_BCF_GZ (FT_GZ|FT_BCF)
     #define FT_STDIN  (1<<3)
     int hts_file_type(const char *fname);
+
+
+/***************************
+ * Revised MAQ error model *
+ ***************************/
+
+struct errmod_t;
+typedef struct errmod_t errmod_t;
+
+errmod_t *errmod_init(double depcorr);
+void errmod_destroy(errmod_t *em);
+
+/*
+    n: number of bases
+    m: maximum base
+    bases[i]: qual:6, strand:1, base:4
+    q[i*m+j]: phred-scaled likelihood of (i,j)
+ */
+int errmod_cal(const errmod_t *em, int n, int m, uint16_t *bases, float *q);
+
+
+/*****************************************
+ * Probabilistic banded glocal alignment *
+ *****************************************/
+
+typedef struct probaln_par_t {
+    float d, e;
+    int bw;
+} probaln_par_t;
+
+int probaln_glocal(const uint8_t *ref, int l_ref, const uint8_t *query, int l_query, const uint8_t *iqual, const probaln_par_t *c, int *state, uint8_t *q);
 
 
     /**********************

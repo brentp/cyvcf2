@@ -1,6 +1,6 @@
 /*  hts.c -- format-neutral I/O, indexing, and iterator API functions.
 
-    Copyright (C) 2008, 2009, 2012-2015 Genome Research Ltd.
+    Copyright (C) 2008, 2009, 2012-2016 Genome Research Ltd.
     Copyright (C) 2012, 2013 Broad Institute.
 
     Author: Heng Li <lh3@sanger.ac.uk>
@@ -26,7 +26,6 @@ DEALINGS IN THE SOFTWARE.  */
 #include <config.h>
 
 #include <zlib.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -34,14 +33,18 @@ DEALINGS IN THE SOFTWARE.  */
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>
-#include "htslib/bgzf.h"
+
 #include "htslib/hts.h"
+#include "htslib/bgzf.h"
 #include "cram/cram.h"
 #include "htslib/hfile.h"
 #include "version.h"
 #include "hts_internal.h"
 
+#include "htslib/khash.h"
 #include "htslib/kseq.h"
+#include "htslib/ksort.h"
+
 #define KS_BGZF 1
 #if KS_BGZF
     // bgzf now supports gzip-compressed files, the gzFile branch can be removed
@@ -50,7 +53,6 @@ DEALINGS IN THE SOFTWARE.  */
     KSTREAM_INIT2(, gzFile, gzread, 16384)
 #endif
 
-#include "htslib/khash.h"
 KHASH_INIT2(s2i,, kh_cstr_t, int64_t, 1, kh_str_hash_func, kh_str_hash_equal)
 
 int hts_verbose = 3;
@@ -156,20 +158,23 @@ static size_t decompress_peek(hFILE *fp, unsigned char *dest, size_t destsize)
 static void
 parse_version(htsFormat *fmt, const unsigned char *u, const unsigned char *ulim)
 {
-    const char *str  = (const char *) u;
+    const char *s    = (const char *) u;
     const char *slim = (const char *) ulim;
-    const char *s;
+    short v;
 
     fmt->version.major = fmt->version.minor = -1;
 
-    for (s = str; s < slim; s++) if (!isdigit(*s)) break;
+    for (v = 0; s < slim && isdigit_c(*s); s++)
+        v = 10 * v + *s - '0';
+
     if (s < slim) {
-        fmt->version.major = atoi(str);
+        fmt->version.major = v;
         if (*s == '.') {
-            str = &s[1];
-            for (s = str; s < slim; s++) if (!isdigit(*s)) break;
+            s++;
+            for (v = 0; s < slim && isdigit_c(*s); s++)
+                v = 10 * v + *s - '0';
             if (s < slim)
-                fmt->version.minor = atoi(str);
+                fmt->version.minor = v;
         }
         else
             fmt->version.minor = 0;
@@ -400,7 +405,8 @@ htsFile *hts_open_format(const char *fn, const char *mode, const htsFormat *fmt)
     if (fp == NULL) goto error;
 
     if (fmt && fmt->specific)
-        hts_opt_apply(fp, fmt->specific);
+        if (hts_opt_apply(fp, fmt->specific) != 0)
+            goto error;
 
     return fp;
 
@@ -416,6 +422,26 @@ error:
 
 htsFile *hts_open(const char *fn, const char *mode) {
     return hts_open_format(fn, mode, NULL);
+}
+
+/*
+ * Splits str into a prefix, delimiter ('\0' or delim), and suffix, writing
+ * the prefix in lowercase into buf and returning a pointer to the suffix.
+ * On return, buf is always NUL-terminated; thus assumes that the "keyword"
+ * prefix should be one of several known values of maximum length buflen-2.
+ * (If delim is not found, returns a pointer to the '\0'.)
+ */
+static const char *
+scan_keyword(const char *str, char delim, char *buf, size_t buflen)
+{
+    size_t i = 0;
+    while (*str && *str != delim) {
+        if (i < buflen-1) buf[i++] = tolower_c(*str);
+        str++;
+    }
+
+    buf[i] = '\0';
+    return *str? str+1 : str;
 }
 
 /*
@@ -503,6 +529,14 @@ int hts_opt_add(hts_opt **opts, const char *c_arg) {
     else if (strcmp(o->arg, "required_fields") == 0 ||
              strcmp(o->arg, "REQUIRED_FIELDS") == 0)
         o->opt = CRAM_OPT_REQUIRED_FIELDS, o->val.i = strtol(val, NULL, 0);
+
+    else if (strcmp(o->arg, "lossy_names") == 0 ||
+             strcmp(o->arg, "LOSSY_NAMES") == 0)
+        o->opt = CRAM_OPT_LOSSY_NAMES, o->val.i = strtol(val, NULL, 0);
+
+    else if (strcmp(o->arg, "name_prefix") == 0 ||
+             strcmp(o->arg, "NAME_PREFIX") == 0)
+        o->opt = CRAM_OPT_PREFIX, o->val.s = val;
 
     else {
         fprintf(stderr, "Unknown option '%s'\n", o->arg);
@@ -604,35 +638,33 @@ int hts_parse_opt_list(htsFormat *fmt, const char *str) {
  *        -1 on failure.
  */
 int hts_parse_format(htsFormat *format, const char *str) {
-    const char *cp;
-
-    if (!(cp = strchr(str, ',')))
-        cp = str+strlen(str);
+    char fmt[8];
+    const char *cp = scan_keyword(str, ',', fmt, sizeof fmt);
 
     format->version.minor = 0; // unknown
     format->version.major = 0; // unknown
 
-    if (strncmp(str, "sam", cp-str) == 0) {
+    if (strcmp(fmt, "sam") == 0) {
         format->category          = sequence_data;
         format->format            = sam;
         format->compression       = no_compression;;
         format->compression_level = 0;
-    } else if (strncmp(str, "bam", cp-str) == 0) {
+    } else if (strcmp(fmt, "bam") == 0) {
         format->category          = sequence_data;
         format->format            = bam;
         format->compression       = bgzf;
         format->compression_level = -1;
-    } else if (strncmp(str, "cram", cp-str) == 0) {
+    } else if (strcmp(fmt, "cram") == 0) {
         format->category          = sequence_data;
         format->format            = cram;
         format->compression       = custom;
         format->compression_level = -1;
-    } else if (strncmp(str, "vcf", cp-str) == 0) {
+    } else if (strcmp(fmt, "vcf") == 0) {
         format->category          = variant_data;
         format->format            = vcf;
         format->compression       = no_compression;;
         format->compression_level = 0;
-    } else if (strncmp(str, "bcf", cp-str) == 0) {
+    } else if (strcmp(fmt, "bcf") == 0) {
         format->category          = variant_data;
         format->format            = bcf;
         format->compression       = bgzf;
@@ -663,7 +695,11 @@ static int hts_process_opts(htsFile *fp, const char *opts) {
     if (hts_parse_opt_list(&fmt, opts) != 0)
         return -1;
 
-    hts_opt_apply(fp, fmt.specific);
+    if (hts_opt_apply(fp, fmt.specific) != 0) {
+        hts_opt_free(fmt.specific);
+        return -1;
+    }
+
     hts_opt_free(fmt.specific);
 
     return 0;
@@ -888,10 +924,12 @@ int hts_set_opt(htsFile *fp, enum hts_fmt_option opt, ...) {
     return r;
 }
 
+BGZF *hts_get_bgzfp(htsFile *fp);
+
 int hts_set_threads(htsFile *fp, int n)
 {
     if (fp->format.compression == bgzf) {
-        return bgzf_mt(fp->fp.bgzf, n, 256);
+        return bgzf_mt(hts_get_bgzfp(fp), n, 256);
     } else if (fp->format.format == cram) {
         return hts_set_opt(fp, CRAM_OPT_NTHREADS, n);
     }
@@ -1076,6 +1114,17 @@ int hts_file_type(const char *fname)
     }
 }
 
+int hts_check_EOF(htsFile *fp)
+{
+    if (fp->format.compression == bgzf)
+        return bgzf_check_EOF(hts_get_bgzfp(fp));
+    else if (fp->format.format == cram)
+        return cram_check_EOF(fp->fp.cram);
+    else
+        return 3;
+}
+
+
 /****************
  *** Indexing ***
  ****************/
@@ -1088,7 +1137,6 @@ int hts_file_type(const char *fname)
 
 #define pair64_lt(a,b) ((a).u < (b).u)
 
-#include "htslib/ksort.h"
 KSORT_INIT(_off, hts_pair64_t, pair64_lt)
 
 typedef struct {
@@ -1097,7 +1145,6 @@ typedef struct {
     hts_pair64_t *list;
 } bins_t;
 
-#include "htslib/khash.h"
 KHASH_MAP_INIT_INT(bin, bins_t)
 typedef khash_t(bin) bidx_t;
 
@@ -1313,7 +1360,7 @@ int hts_idx_push(hts_idx_t *idx, int tid, int beg, int end, uint64_t offset, int
         idx->z.last_tid = tid;
         idx->z.last_bin = 0xffffffffu;
     } else if (tid >= 0 && idx->z.last_coor > beg) { // test if positions are out of order
-        if (hts_verbose >= 1) fprintf(stderr, "[E::%s] unsorted positions\n", __func__);
+        if (hts_verbose >= 1) fprintf(stderr, "[E::%s] unsorted positions on sequence #%d: %d followed by %d\n", __func__, tid+1, idx->z.last_coor+1, beg+1);
         return -1;
     }
     if ( tid>=0 )
@@ -1350,8 +1397,14 @@ void hts_idx_destroy(hts_idx_t *idx)
     khint_t k;
     int i;
     if (idx == 0) return;
+
     // For HTS_FMT_CRAI, idx actually points to a different type -- see sam.c
-    if (idx->fmt == HTS_FMT_CRAI) { free(idx); return; }
+    if (idx->fmt == HTS_FMT_CRAI) {
+        hts_cram_idx_t *cidx = (hts_cram_idx_t *) idx;
+        cram_index_free(cidx->cram);
+        free(cidx);
+        return;
+    }
 
     for (i = 0; i < idx->m; ++i) {
         bidx_t *bidx = idx->bidx[i];
@@ -1366,10 +1419,25 @@ void hts_idx_destroy(hts_idx_t *idx)
     free(idx);
 }
 
-static inline long idx_write(int is_bgzf, void *fp, const void *buf, long l)
+// The optimizer eliminates these ed_is_big() calls; still it would be good to
+// TODO Determine endianness at configure- or compile-time
+
+static inline ssize_t HTS_RESULT_USED idx_write_int32(BGZF *fp, int32_t x)
 {
-    if (is_bgzf) return bgzf_write((BGZF*)fp, buf, l);
-    else return (long)fwrite(buf, 1, l, (FILE*)fp);
+    if (ed_is_big()) x = ed_swap_4(x);
+    return bgzf_write(fp, &x, sizeof x);
+}
+
+static inline ssize_t HTS_RESULT_USED idx_write_uint32(BGZF *fp, uint32_t x)
+{
+    if (ed_is_big()) x = ed_swap_4(x);
+    return bgzf_write(fp, &x, sizeof x);
+}
+
+static inline ssize_t HTS_RESULT_USED idx_write_uint64(BGZF *fp, uint64_t x)
+{
+    if (ed_is_big()) x = ed_swap_8(x);
+    return bgzf_write(fp, &x, sizeof x);
 }
 
 static inline void swap_bins(bins_t *p)
@@ -1381,68 +1449,47 @@ static inline void swap_bins(bins_t *p)
     }
 }
 
-static void hts_idx_save_core(const hts_idx_t *idx, void *fp, int fmt)
+static int hts_idx_save_core(const hts_idx_t *idx, BGZF *fp, int fmt)
 {
-    int32_t i, size, is_be;
-    int is_bgzf = (fmt != HTS_FMT_BAI);
-    is_be = ed_is_big();
-    if (is_be) {
-        uint32_t x = idx->n;
-        idx_write(is_bgzf, fp, ed_swap_4p(&x), 4);
-    } else idx_write(is_bgzf, fp, &idx->n, 4);
-    if (fmt == HTS_FMT_TBI && idx->l_meta) idx_write(is_bgzf, fp, idx->meta, idx->l_meta);
+    int32_t i, j;
+
+    #define check(ret) if ((ret) < 0) return -1
+
+    check(idx_write_int32(fp, idx->n));
+    if (fmt == HTS_FMT_TBI && idx->l_meta)
+        check(bgzf_write(fp, idx->meta, idx->l_meta));
+
     for (i = 0; i < idx->n; ++i) {
         khint_t k;
         bidx_t *bidx = idx->bidx[i];
         lidx_t *lidx = &idx->lidx[i];
         // write binning index
-        size = bidx? kh_size(bidx) : 0;
-        if (is_be) { // big endian
-            uint32_t x = size;
-            idx_write(is_bgzf, fp, ed_swap_4p(&x), 4);
-        } else idx_write(is_bgzf, fp, &size, 4);
-        if (bidx == 0) goto write_lidx;
-        for (k = kh_begin(bidx); k != kh_end(bidx); ++k) {
-            bins_t *p;
-            if (!kh_exist(bidx, k)) continue;
-            p = &kh_value(bidx, k);
-            if (is_be) { // big endian
-                uint32_t x;
-                x = kh_key(bidx, k); idx_write(is_bgzf, fp, ed_swap_4p(&x), 4);
-                if (fmt == HTS_FMT_CSI) {
-                    uint64_t y = kh_val(bidx, k).loff;
-                    idx_write(is_bgzf, fp, ed_swap_4p(&y), 8);
+        check(idx_write_int32(fp, bidx? kh_size(bidx) : 0));
+        if (bidx)
+            for (k = kh_begin(bidx); k != kh_end(bidx); ++k)
+                if (kh_exist(bidx, k)) {
+                    bins_t *p = &kh_value(bidx, k);
+                    check(idx_write_uint32(fp, kh_key(bidx, k)));
+                    if (fmt == HTS_FMT_CSI) check(idx_write_uint64(fp, p->loff));
+                    //int j;for(j=0;j<p->n;++j)fprintf(stderr,"%d,%llx,%d,%llx:%llx\n",kh_key(bidx,k),kh_val(bidx, k).loff,j,p->list[j].u,p->list[j].v);
+                    check(idx_write_int32(fp, p->n));
+                    for (j = 0; j < p->n; ++j) {
+                        check(idx_write_uint64(fp, p->list[j].u));
+                        check(idx_write_uint64(fp, p->list[j].v));
+                    }
                 }
-                x = p->n; idx_write(is_bgzf, fp, ed_swap_4p(&x), 4);
-                swap_bins(p);
-                idx_write(is_bgzf, fp, p->list, 16 * p->n);
-                swap_bins(p);
-            } else {
-                idx_write(is_bgzf, fp, &kh_key(bidx, k), 4);
-                if (fmt == HTS_FMT_CSI) idx_write(is_bgzf, fp, &kh_val(bidx, k).loff, 8);
-                //int j;for(j=0;j<p->n;++j)fprintf(stderr,"%d,%llx,%d,%llx:%llx\n",kh_key(bidx,k),kh_val(bidx, k).loff,j,p->list[j].u,p->list[j].v);
-                idx_write(is_bgzf, fp, &p->n, 4);
-                idx_write(is_bgzf, fp, p->list, p->n << 4);
-            }
-        }
-write_lidx:
+
+        // write linear index
         if (fmt != HTS_FMT_CSI) {
-            if (is_be) {
-                int32_t x = lidx->n;
-                idx_write(is_bgzf, fp, ed_swap_4p(&x), 4);
-                for (x = 0; x < lidx->n; ++x) ed_swap_8p(&lidx->offset[x]);
-                idx_write(is_bgzf, fp, lidx->offset, lidx->n << 3);
-                for (x = 0; x < lidx->n; ++x) ed_swap_8p(&lidx->offset[x]);
-            } else {
-                idx_write(is_bgzf, fp, &lidx->n, 4);
-                idx_write(is_bgzf, fp, lidx->offset, lidx->n << 3);
-            }
+            check(idx_write_int32(fp, lidx->n));
+            for (j = 0; j < lidx->n; ++j)
+                check(idx_write_uint64(fp, lidx->offset[j]));
         }
     }
-    if (is_be) { // write the number of reads without coordinates
-        uint64_t x = idx->n_no_coor;
-        idx_write(is_bgzf, fp, &x, 8);
-    } else idx_write(is_bgzf, fp, &idx->n_no_coor, 8);
+
+    check(idx_write_uint64(fp, idx->n_no_coor));
+    return 0;
+    #undef check
 }
 
 int hts_idx_save(const hts_idx_t *idx, const char *fn, int fmt)
@@ -1468,39 +1515,35 @@ int hts_idx_save(const hts_idx_t *idx, const char *fn, int fmt)
 
 int hts_idx_save_as(const hts_idx_t *idx, const char *fn, const char *fnidx, int fmt)
 {
+    BGZF *fp;
+
+    #define check(ret) if ((ret) < 0) goto fail
+
     if (fnidx == NULL) return hts_idx_save(idx, fn, fmt);
 
+    fp = bgzf_open(fnidx, (fmt == HTS_FMT_BAI)? "wu" : "w");
+    if (fp == NULL) return -1;
+
     if (fmt == HTS_FMT_CSI) {
-        BGZF *fp;
-        uint32_t x[3];
-        int is_be, i;
-        is_be = ed_is_big();
-        fp = bgzf_open(fnidx, "w");
-        if (fp == NULL) return -1;
-        bgzf_write(fp, "CSI\1", 4);
-        x[0] = idx->min_shift; x[1] = idx->n_lvls; x[2] = idx->l_meta;
-        if (is_be) {
-            for (i = 0; i < 3; ++i)
-                bgzf_write(fp, ed_swap_4p(&x[i]), 4);
-        } else bgzf_write(fp, &x, 12);
-        if (idx->l_meta) bgzf_write(fp, idx->meta, idx->l_meta);
-        hts_idx_save_core(idx, fp, HTS_FMT_CSI);
-        bgzf_close(fp);
+        check(bgzf_write(fp, "CSI\1", 4));
+        check(idx_write_int32(fp, idx->min_shift));
+        check(idx_write_int32(fp, idx->n_lvls));
+        check(idx_write_uint32(fp, idx->l_meta));
+        if (idx->l_meta) check(bgzf_write(fp, idx->meta, idx->l_meta));
     } else if (fmt == HTS_FMT_TBI) {
-        BGZF *fp = bgzf_open(fnidx, "w");
-        if (fp == NULL) return -1;
-        bgzf_write(fp, "TBI\1", 4);
-        hts_idx_save_core(idx, fp, HTS_FMT_TBI);
-        bgzf_close(fp);
+        check(bgzf_write(fp, "TBI\1", 4));
     } else if (fmt == HTS_FMT_BAI) {
-        FILE *fp = fopen(fnidx, "w");
-        if (fp == NULL) return -1;
-        fwrite("BAI\1", 1, 4, fp);
-        hts_idx_save_core(idx, fp, HTS_FMT_BAI);
-        fclose(fp);
+        check(bgzf_write(fp, "BAI\1", 4));
     } else abort();
 
-    return 0;
+    check(hts_idx_save_core(idx, fp, fmt));
+
+    return bgzf_close(fp);
+    #undef check
+
+fail:
+    bgzf_close(fp);
+    return -1;
 }
 
 static int hts_idx_load_core(hts_idx_t *idx, BGZF *fp, int fmt)
@@ -1720,11 +1763,20 @@ hts_itr_t *hts_itr_query(const hts_idx_t *idx, int tid, int beg, int end, hts_re
             break;
 
         case HTS_IDX_NOCOOR:
-            if ( idx->n>0 )
-            {
-                bidx = idx->bidx[idx->n - 1];
+            /* No-coor reads sort after all of the mapped reads.  The position
+               is not stored in the index itself, so need to find the end
+               offset for the last mapped read.  A loop is needed here in
+               case references at the end of the file have no mapped reads,
+               or sequence ids are not ordered sequentially.
+               See issue samtools#568 and commits b2aab8, 60c22d and cc207d. */
+            for (i = 0; i < idx->n; i++) {
+                bidx = idx->bidx[i];
                 k = kh_get(bin, bidx, META_BIN(idx));
-                if (k != kh_end(bidx)) off0 = kh_val(bidx, k).list[0].v;
+                if (k != kh_end(bidx)) {
+                    if (off0==(uint64_t)-1 || off0 < kh_val(bidx, k).list[0].v) {
+                        off0 = kh_val(bidx, k).list[0].v;
+                    }
+                }
             }
             if ( off0==(uint64_t)-1 && idx->n_no_coor ) off0 = 0; // only no-coor reads in this bam
             break;
@@ -1819,31 +1871,31 @@ static inline long long push_digit(long long i, char c)
     return 10 * i + digit;
 }
 
-long long hts_parse_decimal(const char *str, char **end)
+long long hts_parse_decimal(const char *str, char **strend, int flags)
 {
     long long n = 0;
     int decimals = 0, e = 0, lost = 0;
     char sign = '+', esign = '+';
     const char *s;
 
-    while (isspace(*str)) str++;
+    while (isspace_c(*str)) str++;
     s = str;
 
     if (*s == '+' || *s == '-') sign = *s++;
     while (*s)
-        if (isdigit(*s)) n = push_digit(n, *s++);
-        else if (*s == ',') s++;
+        if (isdigit_c(*s)) n = push_digit(n, *s++);
+        else if (*s == ',' && (flags & HTS_PARSE_THOUSANDS_SEP)) s++;
         else break;
 
     if (*s == '.') {
         s++;
-        while (isdigit(*s)) decimals++, n = push_digit(n, *s++);
+        while (isdigit_c(*s)) decimals++, n = push_digit(n, *s++);
     }
 
     if (*s == 'E' || *s == 'e') {
         s++;
         if (*s == '+' || *s == '-') esign = *s++;
-        while (isdigit(*s)) e = push_digit(e, *s++);
+        while (isdigit_c(*s)) e = push_digit(e, *s++);
         if (esign == '-') e = -e;
     }
 
@@ -1855,7 +1907,7 @@ long long hts_parse_decimal(const char *str, char **end)
         fprintf(stderr, "[W::%s] discarding fractional part of %.*s\n",
                 __func__, (int)(s - str), str);
 
-    if (end) *end = (char *) s;
+    if (strend) *strend = (char *) s;
     else if (*s && hts_verbose >= 2)
         fprintf(stderr, "[W::%s] ignoring unknown characters after %.*s[%s]\n",
                 __func__, (int)(s - str), str, s);
@@ -1872,11 +1924,11 @@ const char *hts_parse_reg(const char *s, int *beg, int *end)
         return s + strlen(s);
     }
 
-    *beg = hts_parse_decimal(colon+1, &hyphen) - 1;
+    *beg = hts_parse_decimal(colon+1, &hyphen, HTS_PARSE_THOUSANDS_SEP) - 1;
     if (*beg < 0) *beg = 0;
 
     if (*hyphen == '\0') *end = INT_MAX;
-    else if (*hyphen == '-') *end = hts_parse_decimal(hyphen+1, NULL);
+    else if (*hyphen == '-') *end = hts_parse_decimal(hyphen+1, NULL, HTS_PARSE_THOUSANDS_SEP);
     else return NULL;
 
     if (*beg >= *end) return NULL;
@@ -1916,7 +1968,7 @@ int hts_itr_next(BGZF *fp, hts_itr_t *iter, void *r, void *data)
     if (iter == NULL || iter->finished) return -1;
     if (iter->read_rest) {
         if (iter->curr_off) { // seek to the start
-            bgzf_seek(fp, iter->curr_off, SEEK_SET);
+            if (bgzf_seek(fp, iter->curr_off, SEEK_SET) < 0) return -1;
             iter->curr_off = 0; // only seek once
         }
         ret = iter->readrec(fp, data, r, &tid, &beg, &end);
@@ -1931,7 +1983,7 @@ int hts_itr_next(BGZF *fp, hts_itr_t *iter, void *r, void *data)
         if (iter->curr_off == 0 || iter->curr_off >= iter->off[iter->i].v) { // then jump to the next chunk
             if (iter->i == iter->n_off - 1) { ret = -1; break; } // no more chunks
             if (iter->i < 0 || iter->off[iter->i].v != iter->off[iter->i+1].u) { // not adjacent chunks; then seek
-                bgzf_seek(fp, iter->off[iter->i+1].u, SEEK_SET);
+                if (bgzf_seek(fp, iter->off[iter->i+1].u, SEEK_SET) < 0) return -1;
                 iter->curr_off = bgzf_tell(fp);
             }
             ++iter->i;

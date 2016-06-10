@@ -1,5 +1,6 @@
-/* The MIT License
-
+/// @file htslib/bgzf.h
+/// Low-level routines for direct BGZF operations.
+/*
    Copyright (c) 2008 Broad Institute / Massachusetts Institute of Technology
                  2011, 2012 Attractive Chaos <attractor@live.co.uk>
    Copyright (C) 2009, 2013, 2014 Genome Research Ltd
@@ -33,6 +34,8 @@
 #include <stdio.h>
 #include <zlib.h>
 #include <sys/types.h>
+
+#include "hts_defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -89,7 +92,7 @@ typedef struct __kstring_t {
      * @param mode  mode matching /[rwag][u0-9]+/: 'r' for reading, 'w' for
      *              writing, 'a' for appending, 'g' for gzip rather than BGZF
      *              compression (with 'w' only), and digit specifies the zlib
-     *              compression level. 
+     *              compression level.
      *              Note that there is a distinction between 'u' and '0': the
      *              first yields plain uncompressed output whereas the latter
      *              outputs uncompressed data wrapped in the zlib format.
@@ -125,7 +128,7 @@ typedef struct __kstring_t {
      * @param length size of data to read
      * @return       number of bytes actually read; 0 on end-of-file and -1 on error
      */
-    ssize_t bgzf_read(BGZF *fp, void *data, size_t length);
+    ssize_t bgzf_read(BGZF *fp, void *data, size_t length) HTS_RESULT_USED;
 
     /**
      * Write _length_ bytes from _data_ to the file.  If no I/O errors occur,
@@ -136,7 +139,7 @@ typedef struct __kstring_t {
      * @param length size of data to write
      * @return       number of bytes written (i.e., _length_); negative on error
      */
-    ssize_t bgzf_write(BGZF *fp, const void *data, size_t length);
+    ssize_t bgzf_write(BGZF *fp, const void *data, size_t length) HTS_RESULT_USED;
 
     /**
      * Read up to _length_ bytes directly from the underlying stream without
@@ -148,7 +151,7 @@ typedef struct __kstring_t {
      * @param length number of raw bytes to read
      * @return       number of bytes actually read; 0 on end-of-file and -1 on error
      */
-    ssize_t bgzf_raw_read(BGZF *fp, void *data, size_t length);
+    ssize_t bgzf_raw_read(BGZF *fp, void *data, size_t length) HTS_RESULT_USED;
 
     /**
      * Write _length_ bytes directly to the underlying stream without
@@ -160,12 +163,15 @@ typedef struct __kstring_t {
      * @param length number of raw bytes to write
      * @return       number of bytes actually written; -1 on error
      */
-    ssize_t bgzf_raw_write(BGZF *fp, const void *data, size_t length);
+    ssize_t bgzf_raw_write(BGZF *fp, const void *data, size_t length) HTS_RESULT_USED;
 
     /**
      * Write the data in the buffer to the file.
+     *
+     * @param fp     BGZF file handle
+     * @return       0 on success and -1 on error
      */
-    int bgzf_flush(BGZF *fp);
+    int bgzf_flush(BGZF *fp) HTS_RESULT_USED;
 
     /**
      * Return a virtual file pointer to the current location in the file.
@@ -183,7 +189,7 @@ typedef struct __kstring_t {
      * @param whence must be SEEK_SET
      * @return       0 on success and -1 on error
      */
-    int64_t bgzf_seek(BGZF *fp, int64_t pos, int whence);
+    int64_t bgzf_seek(BGZF *fp, int64_t pos, int whence) HTS_RESULT_USED;
 
     /**
      * Check if the BGZF end-of-file (EOF) marker is present
@@ -220,7 +226,7 @@ typedef struct __kstring_t {
      * Flush the file if the remaining buffer size is smaller than _size_
      * @return      0 if flushing succeeded or was not needed; negative on error
      */
-    int bgzf_flush_try(BGZF *fp, ssize_t size);
+    int bgzf_flush_try(BGZF *fp, ssize_t size) HTS_RESULT_USED;
 
     /**
      * Read one byte from a BGZF file. It is faster than bgzf_read()
@@ -242,7 +248,7 @@ typedef struct __kstring_t {
     /**
      * Read the next BGZF block.
      */
-    int bgzf_read_block(BGZF *fp);
+    int bgzf_read_block(BGZF *fp) HTS_RESULT_USED;
 
     /**
      * Enable multi-threading (only effective on writing and when the
@@ -254,6 +260,18 @@ typedef struct __kstring_t {
      */
     int bgzf_mt(BGZF *fp, int n_threads, int n_sub_blks);
 
+    /**
+     * Compress a single BGZF block.
+     *
+     * @param dst    output buffer (must have size >= BGZF_MAX_BLOCK_SIZE)
+     * @param dlen   size of output buffer; updated on return to the number
+     *               of bytes actually written to dst
+     * @param src    buffer to be compressed
+     * @param slen   size of data to compress (must be <= BGZF_BLOCK_SIZE)
+     * @param level  compression level
+     * @return       0 on success and negative on error
+     */
+    int bgzf_compress(void *dst, size_t *dlen, const void *src, size_t slen, int level);
 
     /*******************
      * bgzidx routines *
@@ -268,7 +286,7 @@ typedef struct __kstring_t {
      *
      *  Returns 0 on success and -1 on error.
      */
-    int bgzf_useek(BGZF *fp, long uoffset, int where);
+    int bgzf_useek(BGZF *fp, long uoffset, int where) HTS_RESULT_USED;
 
     /**
      *  Position in uncompressed BGZF
@@ -308,7 +326,8 @@ typedef struct __kstring_t {
      *
      * Returns 0 on success and -1 on error.
      */
-    int bgzf_index_dump(BGZF *fp, const char *bname, const char *suffix);
+    int bgzf_index_dump(BGZF *fp,
+                        const char *bname, const char *suffix) HTS_RESULT_USED;
 
 #ifdef __cplusplus
 }

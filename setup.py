@@ -28,8 +28,9 @@ def get_version():
     except StopIteration:
           raise ValueError("version could not be located")
 
+excludes = ['irods', 'plugin']
 
-sources = [x for x in glob.glob('htslib/*.c') if not 'irods' in x] + glob.glob('htslib/cram/*.c')
+sources = [x for x in glob.glob('htslib/*.c') if not any(e in x for e in excludes)] + glob.glob('htslib/cram/*.c')
 # these have main()'s
 sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
 sources.append('cyvcf2/helpers.c')

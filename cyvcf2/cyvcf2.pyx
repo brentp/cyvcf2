@@ -29,25 +29,21 @@ def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1,
         sites=op.join(op.dirname(__file__), '1kg.sites')):
     from multiprocessing import Pool
     p = Pool(ncpus)
+    cdef np.ndarray aibs, an, ahets
 
-    aibs = ahets = n_samples = None
-    for (fname, n) in p.imap_unordered(_par_relatedness, [
-        (vcf_path, samples, min_depth, i, ncpus, each, sites) for i in range(ncpus)]):
+    for i, fname in enumerate(p.imap_unordered(_par_relatedness, [
+        (vcf_path, samples, min_depth, i, ncpus, each, sites) for i in range(ncpus)])):
 
         arrays = np.load(fname)
         os.unlink(fname)
-        vibs, vn, vhets, n_samples = arrays['ibs'], arrays['n'], arrays['hets'], n
-
-        if aibs is None:
-            aibs, an, ahets = vibs, vn, vhets
+        if i == 0:
+            aibs, an, ahets = arrays['ibs'], arrays['n'], arrays['hets']
         else:
-            aibs += vibs
-            an += vn
-            ahets += vhets
+            aibs += arrays['ibs']
+            an += arrays['n']
+            ahets += arrays['hets']
 
-    return VCF(vcf_path, samples=samples)._relatedness_finish(aibs[:n_samples, :n_samples],
-                                                              an[:n_samples, :n_samples],
-                                                              ahets[:n_samples])
+    return VCF(vcf_path, samples=samples)._relatedness_finish(aibs, an, ahets)
 
 
 def par_het(vcf_path, samples, ncpus, min_depth=8, percentiles=(10, 90),
@@ -88,13 +84,13 @@ def _par_relatedness(args):
     vcf_path, samples, min_depth, offset, ncpus, each, sites = args
     vcf = VCF(vcf_path, samples=samples, gts012=True)
     each = each * ncpus
-    vibs, vn, vhet, n_samples = vcf._site_relatedness(min_depth=min_depth, offset=offset, each=each, sites=sites)
+    vibs, vn, vhet = vcf._site_relatedness(min_depth=min_depth, offset=offset, each=each, sites=sites)
     # to get around limits of multiprocessing size of transmitted data, we save
     # the arrays to disk and return the file
     fname = tempfile.mktemp(suffix=".npz")
     atexit.register(os.unlink, fname)
     np.savez_compressed(fname, ibs=np.asarray(vibs), hets=np.asarray(vhet), n=np.asarray(vn))
-    return fname, n_samples
+    return fname
 
 cdef unicode xstr(s):
     if type(s) is unicode:
@@ -512,7 +508,7 @@ cdef class VCF(object):
     def site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
                          min_depth=5, each=1):
 
-        vibs, vn, vhet, n_samples = self._site_relatedness(sites=sites, min_depth=min_depth, each=each)
+        vibs, vn, vhet = self._site_relatedness(sites=sites, min_depth=min_depth, each=each)
         return self._relatedness_finish(vibs, vn, vhet)
 
 
@@ -543,7 +539,7 @@ cdef class VCF(object):
             gt_types = v.gt_types
             krelated(&gt_types[0], &ibs[0, 0], &n[0, 0], &hets[0], n_samples)
 
-        return ibs, n, hets, n_samples
+        return ibs, n, hets
 
     def relatedness(self, int n_variants=35000, int gap=30000, float min_af=0.04,
                     float max_af=0.8, float linkage_max=0.2, min_depth=8):

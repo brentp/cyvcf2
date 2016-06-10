@@ -644,7 +644,7 @@ cdef class VCF(object):
                 'rel': array('f'),
                 'hets_a': array('I'),
                 'hets_b': array('I'),
-               'ibs1': array('I'),
+               'shared_hets': array('I'),
                'ibs0': array('I'), 
                'ibs2': array('I'), 
                'n': array('I')}
@@ -668,7 +668,7 @@ cdef class VCF(object):
                 res['hets_b'].append(_hets[sk])
                 res['rel'].append(phi) # rel is 2*kinship
                 res['ibs0'].append(_ibs[sj, sk])
-                res['ibs1'].append(_ibs[sk, sj])
+                res['shared_hets'].append(_ibs[sk, sj])
                 res['ibs2'].append(_n[sk, sj])
                 res['n'].append(_n[sj, sk])
         return res

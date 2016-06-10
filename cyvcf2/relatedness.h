@@ -141,7 +141,7 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 // IBS0: (AA, aa) and (aa, AA)
 // IBS1: 1 HET, 1 HOM_{REF,ALT}
 // IBS2: opposite homozygotes
-int krelated(int *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t n_samples) {
+int krelated(int32_t *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t n_samples) {
 	int32_t j, k;
 	int n_used = 0;
 	int32_t gtj, gtk;

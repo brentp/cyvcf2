@@ -139,8 +139,8 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 //                             lower diag stores the ibs2.
 // hets is n_samples it counts the number of hets per sample.
 // IBS0: (AA, aa) and (aa, AA)
-// IBS1: 1 HET, 1 HOM_{REF,ALT}
-// IBS2: opposite homozygotes
+// IBS1: 1 HET, 1 HOM_{REF,ALT} : not calculated (shared-hets is used instead)
+// IBS2: samples are same (even unphased hets)
 int krelated(int32_t *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t n_samples) {
 	int32_t j, k;
 	int n_used = 0;
@@ -159,7 +159,7 @@ int krelated(int32_t *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t
 			gtk = gt_types[k];
 			n[j * n_samples + k]++;
 			if(is_het) {
-				// ibs1
+				// shared hets
 				ibs[k * n_samples + j] += (gtk == HET); // already know gtj is HET
 			} else {
 				// only need to check these if sample 1 isn't het.

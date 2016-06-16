@@ -25,8 +25,7 @@ if not hasattr(sys.modules[__name__], '__file__'):
 
 
 
-def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1,
-        sites=op.join(op.dirname(__file__), '1kg.sites')):
+def par_relatedness(vcf_path, samples, ncpus, sites, min_depth=5, each=1):
     from multiprocessing import Pool
     p = Pool(ncpus)
     cdef np.ndarray aibs, an, ahets
@@ -46,7 +45,7 @@ def par_relatedness(vcf_path, samples, ncpus, min_depth=5, each=1,
     return VCF(vcf_path, samples=samples)._relatedness_finish(aibs, an, ahets)
 
 
-def par_het(vcf_path, samples, ncpus, min_depth=8, percentiles=(10, 90),
+def par_het(vcf_path, samples, ncpus, qsites, min_depth=8, percentiles=(10, 90),
                   int each=1, int offset=0):
     from multiprocessing import Pool
     p = Pool(ncpus)
@@ -54,7 +53,7 @@ def par_het(vcf_path, samples, ncpus, min_depth=8, percentiles=(10, 90),
     any_counts, sum_counts, het_counts = 0, 0, 0
     all_gt_types, mean_depths, sites = [], [], []
     maf_lists = defaultdict(list)
-    for ret in p.imap_unordered(_par_het, [(vcf_path, samples, min_depth, i, ncpus, each) for i in range(ncpus)]):
+    for ret in p.imap_unordered(_par_het, [(vcf_path, samples, qsites, min_depth, i, ncpus, each) for i in range(ncpus)]):
         (mean_depths_, maf_lists_, het_counts_, sum_counts_,
                 all_gt_types_, sites_, any_counts_) = ret
         mean_depths.extend(mean_depths_)
@@ -74,10 +73,10 @@ def par_het(vcf_path, samples, ncpus, min_depth=8, percentiles=(10, 90),
 
 
 def _par_het(args):
-    vcf_path, samples, min_depth, offset, ncpus, each = args
+    vcf_path, samples, sites, min_depth, offset, ncpus, each = args
     each *= ncpus
     vcf = VCF(vcf_path, samples=samples, gts012=True)
-    return vcf.het_check(min_depth=min_depth, each=each, offset=offset, _finish=False)
+    return vcf.het_check(min_depth=min_depth, sites=sites, each=each, offset=offset, _finish=False)
 
 
 def _par_relatedness(args):
@@ -394,7 +393,7 @@ cdef class VCF(object):
         ax1.set_yscale('log', nonposy='clip')
         return fig
 
-    def gen_variants(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
+    def gen_variants(self, sites,
                     offset=0, each=1, call_rate=0.8):
     
         if sites is not None:
@@ -411,13 +410,22 @@ cdef class VCF(object):
         if sites:
             isites = isites[offset::each]
             def gen():
-                for i, (chrom, pos, ref, alt) in enumerate(isites):
+                ref, alt = None, None
+                j = 0
+                for i, osite in enumerate(isites):
+                    if len(osite) >= 4:
+                        chrom, pos, ref, alt = osite[:4]
+                    else:
+                        chrom, pos = osite[:2]
                     for v in self("%s:%s-%s" % (chrom, pos, pos)):
-                        if v.REF != ref: continue
                         if len(v.ALT) != 1: continue
-                        if v.ALT[0] != alt: continue
+                        if ref is not None:
+                            if v.REF != ref: continue
+                            if alt is not None:
+                                if v.ALT[0] != alt: continue
                         if v.call_rate < call_rate: continue
                         yield i, v
+                        j += 1
                         break
         else:
             def gen():
@@ -437,7 +445,8 @@ cdef class VCF(object):
         return gen
 
     def het_check(self, min_depth=8, percentiles=(10, 90), _finish=True,
-                  int each=1, int offset=0):
+                  int each=1, int offset=0,
+                  sites=None):
 
         cdef int i, k, n_samples = len(self.samples)
         cdef Variant v
@@ -448,18 +457,18 @@ cdef class VCF(object):
         cdef int any_counts = 0
 
         # keep the sites and gts that we used for PCA
-        sites, all_gt_types = [], []
+        used_sites, all_gt_types = [], []
 
         mean_depths = []
 
-        gen = self.gen_variants(each=each, offset=offset)
+        gen = self.gen_variants(sites, each=each, offset=offset)
         maf_lists = defaultdict(list)
         idxs = np.arange(n_samples)
         for i, v in gen():
             if v.CHROM in ('X', 'chrX'): break
             if v.aaf < 0.01: continue
             if v.call_rate < 0.5: continue
-            sites.append("%s:%d:%s:%s" % (v.CHROM, v.start + 1, v.REF, v.ALT[0]))
+            used_sites.append("%s:%d:%s:%s" % (v.CHROM, v.start + 1, v.REF, v.ALT[0]))
             alts = v.gt_alt_depths
             assert len(alts) == n_samples
             depths = (alts + v.gt_ref_depths).astype(np.int32)
@@ -477,15 +486,14 @@ cdef class VCF(object):
                 maf_lists[k].append(mafs[k])
             all_gt_types.append(np.array(gt_types, dtype=np.uint8))
 
-
         if _finish:
             mean_depths = np.array(mean_depths, dtype=np.int32).T
             return self._finish_het(mean_depths, maf_lists,
                                     percentiles,
                                     het_counts, sum_counts, all_gt_types,
-                                    sites, any_counts)
+                                    used_sites, any_counts)
         return (mean_depths, maf_lists, het_counts, sum_counts,
-                all_gt_types, sites, any_counts)
+                all_gt_types, used_sites, any_counts)
 
 
     def _finish_het(self, mean_depths, maf_lists, percentiles, het_counts,
@@ -505,14 +513,14 @@ cdef class VCF(object):
             return sample_ranges, sites, np.transpose(all_gt_types)
 
 
-    def site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
+    def site_relatedness(self, sites=None,
                          min_depth=5, each=1):
 
         vibs, vn, vhet = self._site_relatedness(sites=sites, min_depth=min_depth, each=each)
         return self._relatedness_finish(vibs, vn, vhet)
 
 
-    cdef _site_relatedness(self, sites=op.join(op.dirname(__file__), '1kg.sites'),
+    cdef _site_relatedness(self, sites=None,
             int min_depth=5, int each=1, int offset=0):
         """
         sites must be an file of format: chrom:pos1:ref:alt where

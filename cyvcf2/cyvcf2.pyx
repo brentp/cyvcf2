@@ -868,6 +868,8 @@ cdef class Variant(object):
                 nper = ndst / self.vcf.n_samples
                 self._ploidy = nper
                 self._gt_idxs = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples * nper)
+                if ndst == 0 or nper == 0:
+                    return []
                 for i in range(0, ndst, nper):
                     for k in range(i, i + nper):
                         a = self._gt_types[k]

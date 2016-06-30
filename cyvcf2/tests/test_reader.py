@@ -429,3 +429,11 @@ def test_issue12():
             v.format(f, int)
 
         v.format("RVF", float)
+
+def test_gt_bases_nondiploid():
+    """Ensure gt_bases works with more complex base representations.
+    """
+    vcf = VCF('{}/test_gt_bases.vcf.gz'.format(HERE))
+    expected = {0: ['C/C', 'C/C'], 1: ['C/T', 'C'], 2: ['C', 'C/T'], 3: ['C', 'C']}
+    for i, v in enumerate(vcf):
+        assert v.gt_bases.tolist() == expected[i], (v.gt_bases.tolist(), expected[i])

@@ -720,9 +720,11 @@ cdef class Variant(object):
                     if gt_types[j] == unknown:
                         a.append(".")
                     else:
-                        a.append(d[self._gt_idxs[i]] +
-                                 lookup[phased[j]] +
-                                 d[self._gt_idxs[i+1]])
+                        try:
+                            d[self._gt_idxs[i+1]]
+                            a.append(d[self._gt_idxs[i]] + lookup[phased[j]] + d[self._gt_idxs[i+1]])
+                        except IndexError:
+                            a.append(d[self._gt_idxs[i]])
                 elif n == 1:
                     a.append(d[self._gt_idxs[i]])
                 else:

@@ -718,7 +718,7 @@ cdef class Variant(object):
             for i in range(0, n * self.vcf.n_samples, n):
                 if n == 2:
                     if gt_types[j] == unknown:
-                        a.append(".")
+                        a.append("./.")
                     else:
                         try:
                             d[self._gt_idxs[i+1]]

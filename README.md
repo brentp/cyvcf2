@@ -1,7 +1,7 @@
 cyvcf2
 ======
 
-Fast parsing of VCF and BCF including region-queries.
+Fast python **(2 and 3)** parsing of VCF and BCF including region-queries.
 
 [![Build Status](https://travis-ci.org/brentp/cyvcf2.svg?branch=master)](https://travis-ci.org/brentp/cyvcf2)
 

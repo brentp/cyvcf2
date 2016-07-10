@@ -1,4 +1,4 @@
-#cython: profile=True
+#cython: profile=True, language_level=3
 import os
 import os.path as op
 import sys
@@ -196,7 +196,7 @@ cdef class VCF(object):
             while True:
                 b = bcf_init()
                 ret = bcf_itr_next(self.hts, itr, b)
-                if ret < 0: 
+                if ret < 0:
                     bcf_destroy(b)
                     break
                 yield newVariant(b, self)
@@ -268,6 +268,7 @@ cdef class VCF(object):
         cdef float pi
         cdef int[:] b
         cdef int[:] gts
+        cdef int idx0, idx1
         bins = np.zeros((len(sample_pairs), n_bins), dtype=np.int32)
         rls = np.zeros(len(sample_pairs), dtype=np.int32)
 
@@ -400,7 +401,7 @@ cdef class VCF(object):
 
     def gen_variants(self, sites,
                     offset=0, each=1, call_rate=0.8):
-    
+
         if sites is not None:
             if isinstance(sites, basestring):
                 isites = []
@@ -608,20 +609,20 @@ cdef class VCF(object):
         sys.stderr.write("tested: %d variants out of %d\n" % (nv, nvt))
         return self._relatedness_finish(ibs, n, hets)
 
-    cdef dict _relatedness_finish(self, 
+    cdef dict _relatedness_finish(self,
                                   int32_t[:, ::view.contiguous] _ibs,
                                   int32_t[:, ::view.contiguous] _n,
                                   int32_t[:] _hets):
         samples = self.samples
         cdef int sj, sk, ns = len(samples)
 
-        res = {'sample_a': [], 'sample_b': [], 
+        res = {'sample_a': [], 'sample_b': [],
                 'rel': array('f'),
                 'hets_a': array('I'),
                 'hets_b': array('I'),
                'shared_hets': array('I'),
-               'ibs0': array('I'), 
-               'ibs2': array('I'), 
+               'ibs0': array('I'),
+               'ibs2': array('I'),
                'n': array('I')}
 
         cdef float bot
@@ -739,7 +740,7 @@ cdef class Variant(object):
 
 
 
-    def relatedness(self, 
+    def relatedness(self,
                     int32_t[:, ::view.contiguous] ibs,
                     int32_t[:, ::view.contiguous] n,
                     int32_t[:] hets):
@@ -872,7 +873,7 @@ cdef class Variant(object):
                 self._gt_phased = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples)
                 ndst = 0
                 ngts = bcf_get_genotypes(self.vcf.hdr, self.b, &self._gt_types, &ndst)
-                nper = ndst / self.vcf.n_samples
+                nper = ndst // self.vcf.n_samples
                 self._ploidy = nper
                 self._gt_idxs = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples * nper)
                 if ndst == 0 or nper == 0:
@@ -926,7 +927,7 @@ cdef class Variant(object):
                         if self._gt_pls[i] < 0:
                             self._gt_pls[i] = imax
 
-                self._gt_nper = nret / self.vcf.n_samples
+                self._gt_nper = nret // self.vcf.n_samples
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples
             if self._gt_pls != NULL:
@@ -997,7 +998,7 @@ cdef class Variant(object):
                 # GATK
                 nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AD", &self._gt_ref_depths, &ndst)
                 if nret > 0:
-                    nper = nret / self.vcf.n_samples
+                    nper = nret // self.vcf.n_samples
                     if nper == 1:
                         stdlib.free(self._gt_ref_depths); self._gt_ref_depths = NULL
                         return -1 + np.zeros(self.vcf.n_samples, np.int32)
@@ -1038,7 +1039,7 @@ cdef class Variant(object):
                 # GATK
                 nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AD", &self._gt_alt_depths, &ndst)
                 if nret > 0:
-                    nper = nret / self.vcf.n_samples
+                    nper = nret // self.vcf.n_samples
                     if nper == 1:
                         stdlib.free(self._gt_alt_depths); self._gt_alt_depths = NULL
                         return (-1 + np.zeros(self.vcf.n_samples, np.int32))
@@ -1053,7 +1054,7 @@ cdef class Variant(object):
                 elif nret == -1:
                     # Freebayes
                     nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AO", &self._gt_alt_depths, &ndst)
-                    nper = nret / self.vcf.n_samples
+                    nper = nret // self.vcf.n_samples
                     if nret < 0:
                         stdlib.free(self._gt_alt_depths); self._gt_alt_depths = NULL
                         return -1 + np.zeros(self.vcf.n_samples, np.int32)

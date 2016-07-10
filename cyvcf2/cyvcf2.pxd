@@ -86,7 +86,7 @@ cdef extern from "htslib/vcf.h":
     const int bcf_int8_vector_end  = -127
     const int bcf_int16_vector_end  = -32767
     const int bcf_int32_vector_end  = -2147483647
-    
+
     const int bcf_int8_missing  = -127
     const int bcf_int16_missing  = -32767
     const int bcf_int32_missing  = -2147483647
@@ -100,7 +100,7 @@ cdef extern from "htslib/vcf.h":
         pass
 
     ctypedef struct bcf_fmt_t:
-        int n; # n 
+        int n; # n
 
     ctypedef struct bcf_info_t:
         int key;        # key: numeric tag id, the corresponding string is bcf_hdr_t::id[BCF_DT_ID][$key].key
@@ -118,7 +118,8 @@ cdef extern from "htslib/vcf.h":
         int m_fmt, m_info, m_id, m_als, m_allele, m_flt; # allocated size (high-water mark); do not change
         int n_flt;  # Number of FILTER fields
         int *flt;   # FILTER keys in the dictionary
-        char *id, *als;     # ID and REF+ALT block (\0-seperated)
+        char *id;      # ID block (\0-seperated)
+        char *als;     # REF+ALT block (\0-seperated)
         char **allele;      # allele[0] is the REF (allele[] pointers to the als block); all null terminated
         bcf_info_t *info;   # INFO
         bcf_fmt_t *fmt;     # FORMAT and individual sample
@@ -156,7 +157,8 @@ cdef extern from "htslib/vcf.h":
         char *key;      # The part before '=', i.e. FILTER/INFO/FORMAT/contig/fileformat etc.
         char *value;    # Set only for generic lines, NULL for FILTER/INFO, etc.
         int nkeys;              # Number of structured fields
-        char **keys, **vals;    # The key=value pairs
+        char **keys;    # The key=value pairs
+        char **vals;    # The key=value pairs
 
     ctypedef struct kstring_t:
         pass
@@ -168,7 +170,8 @@ cdef extern from "htslib/vcf.h":
         char **samples;
         bcf_hrec_t **hrec;
         int nhrec, dirty;
-        int ntransl, *transl[2]; # for bcf_translate()
+        int ntransl;    # for bcf_translate()
+        int *transl[2]; # for bcf_translate()
         int nsamples_ori;        # for bcf_hdr_set_samples()
         uint8_t *keep_samples;
         kstring_t mem;

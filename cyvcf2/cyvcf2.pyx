@@ -196,7 +196,7 @@ cdef class VCF(object):
             while True:
                 b = bcf_init()
                 ret = bcf_itr_next(self.hts, itr, b)
-                if ret < 0: 
+                if ret < 0:
                     bcf_destroy(b)
                     break
                 yield newVariant(b, self)
@@ -268,6 +268,7 @@ cdef class VCF(object):
         cdef float pi
         cdef int[:] b
         cdef int[:] gts
+        cdef int idx0, idx1
         bins = np.zeros((len(sample_pairs), n_bins), dtype=np.int32)
         rls = np.zeros(len(sample_pairs), dtype=np.int32)
 
@@ -400,7 +401,7 @@ cdef class VCF(object):
 
     def gen_variants(self, sites,
                     offset=0, each=1, call_rate=0.8):
-    
+
         if sites is not None:
             if isinstance(sites, basestring):
                 isites = []
@@ -608,20 +609,20 @@ cdef class VCF(object):
         sys.stderr.write("tested: %d variants out of %d\n" % (nv, nvt))
         return self._relatedness_finish(ibs, n, hets)
 
-    cdef dict _relatedness_finish(self, 
+    cdef dict _relatedness_finish(self,
                                   int32_t[:, ::view.contiguous] _ibs,
                                   int32_t[:, ::view.contiguous] _n,
                                   int32_t[:] _hets):
         samples = self.samples
         cdef int sj, sk, ns = len(samples)
 
-        res = {'sample_a': [], 'sample_b': [], 
+        res = {'sample_a': [], 'sample_b': [],
                 'rel': array('f'),
                 'hets_a': array('I'),
                 'hets_b': array('I'),
                'shared_hets': array('I'),
-               'ibs0': array('I'), 
-               'ibs2': array('I'), 
+               'ibs0': array('I'),
+               'ibs2': array('I'),
                'n': array('I')}
 
         cdef float bot
@@ -739,7 +740,7 @@ cdef class Variant(object):
 
 
 
-    def relatedness(self, 
+    def relatedness(self,
                     int32_t[:, ::view.contiguous] ibs,
                     int32_t[:, ::view.contiguous] n,
                     int32_t[:] hets):

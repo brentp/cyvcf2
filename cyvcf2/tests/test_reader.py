@@ -78,7 +78,7 @@ def test_region():
     end = 13783
     k = 0
     reg = '1:%d-%d' % (start, end)
-    for var in vcf(reg.encode()):
+    for var in vcf(reg):
         k += 1
         assert var.start <= end, var
         assert var.end >= start, var
@@ -155,8 +155,9 @@ def test_writer():
     v = VCF(VCF_PATH)
     f = tempfile.mktemp(suffix=".vcf")
     atexit.register(os.unlink, f)
+
     o = Writer(f, v)
-    rec = v.next()
+    rec = next(v)
     rec.INFO["AC"] = "3"
     rec.FILTER = ["LowQual"]
     o.write_record(rec)
@@ -170,7 +171,7 @@ def test_writer():
 
     o.close()
 
-    expected = ["LowQual", "LowQual;VQSRTrancheSNP99.90to100.00", None]
+    expected = ["LowQual".encode(), "LowQual;VQSRTrancheSNP99.90to100.00".encode(), None]
 
     for i, variant in enumerate(VCF(f)):
         assert variant.FILTER == expected[i], (variant.FILTER, expected[i])
@@ -185,14 +186,17 @@ def test_add_info_to_header():
     atexit.register(os.unlink, f)
     w = Writer(f, v)
     import sys
-    rec = v.next()
+    rec = next(v)
 
     rec.INFO["abcdefg"] = "XXX"
     w.write_record(rec)
     w.close()
 
     v = next(VCF(f))
-    assert v.INFO["abcdefg"] == "XXX", dict(v.INFO)
+    ret = v.INFO["abcdefg"]
+    if isinstance(ret, bytes):
+        ret = ret.decode()
+    assert ret == "XXX", (dict(v.INFO), v.INFO["abcdefg"])
 
 def test_add_flag():
     vcf = VCF(VCF_PATH)
@@ -203,7 +207,7 @@ def test_add_flag():
     f = tempfile.mktemp(suffix=".vcf")
     atexit.register(os.unlink, f)
     w = Writer(f, vcf)
-    rec = vcf.next()
+    rec = next(vcf)
 
     rec.INFO["myflag"] = True
     w.write_record(rec)
@@ -230,14 +234,18 @@ def test_add_filter_to_header():
     f = tempfile.mktemp(suffix=".vcf")
     atexit.register(os.unlink, f)
     w = Writer(f, v)
-    rec = v.next()
+    rec = next(v)
 
     rec.FILTER = ["abcdefg"]
     w.write_record(rec)
     w.close()
 
     v = next(VCF(f))
-    assert v.FILTER == "abcdefg", v.FILTER
+    ret = v.FILTER
+    if isinstance(ret, bytes):
+        ret = ret.decode()
+
+    assert ret == "abcdefg", v.FILTER
 
 
 def test_var_type():
@@ -410,7 +418,7 @@ def test_bcf():
 
 
     viter = vcf("1:69260-69438")
-    print >>sys.stderr, "\nOK\n"
+    sys.stderr.write("\nOK\n")
     sys.stderr.flush()
     l = list(viter)
     assert len(l) == 0, len(l)

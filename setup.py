@@ -6,11 +6,9 @@ import os
 import glob
 
 import sys
-if sys.version_info.major != 2:
-    sys.stderr.write("ERROR: cyvcf2 is only for python 2.7, you are running %d.%d\n", (sys.version_info.major, sys.version_info.minor))
-    sys.exit(1)
-if sys.version_info.minor != 7:
-    sys.stderr.write("ERROR: cyvcf2 is only for python 2.7, you are running %d.%d\n", (sys.version_info.major, sys.version_info.minor))
+
+if sys.version_info.major == 2 and sys.version_info.minor != 7:
+    sys.stderr.write("ERROR: cyvcf2 is only for python 2.7 or greater you are running %d.%d\n", (sys.version_info.major, sys.version_info.minor))
     sys.exit(1)
 
 def get_version():

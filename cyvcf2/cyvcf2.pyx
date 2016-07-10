@@ -13,6 +13,9 @@ from libc cimport stdlib
 cimport numpy as np
 np.seterr(invalid='ignore')
 np.import_array()
+import locale
+
+ENC = locale.getpreferredencoding()
 
 from cython cimport view
 
@@ -123,7 +126,7 @@ cdef class VCF(object):
     cdef bint lazy
 
     def add_to_header(self, line):
-        ret = bcf_hdr_append(self.hdr, line)
+        ret = bcf_hdr_append(self.hdr, to_bytes(line))
         if ret != 0:
             raise Exception("couldn't add '%s' to header")
         ret = bcf_hdr_sync(self.hdr)
@@ -141,8 +144,8 @@ cdef class VCF(object):
         return self.add_to_header("##FILTER=<ID={ID},Description=\"{Description}\">".format(**adict))
 
     def __init__(self, fname, mode="r", gts012=False, lazy=False, samples=None):
-        if fname == "-":
-            fname = "/dev/stdin"
+        if fname == b"-":
+            fname = b"/dev/stdin"
         if not op.exists(fname):
             raise Exception("bad path: %s" % fname)
         self.hts = hts_open(fname.encode(), mode.encode())
@@ -152,7 +155,7 @@ cdef class VCF(object):
             self.set_samples(samples)
         self.n_samples = bcf_hdr_nsamples(self.hdr)
         self.PASS = -1
-        self.fname = fname
+        self.fname = to_bytes(fname)
         self.gts012 = gts012
         self.lazy = lazy
 
@@ -185,7 +188,7 @@ cdef class VCF(object):
         cdef int ret
         cdef hts_itr_t *itr
 
-        itr = bcf_itr_querys(self.hidx, self.hdr, region)
+        itr = bcf_itr_querys(self.hidx, self.hdr, to_bytes(region))
         if itr == NULL:
             sys.stderr.write("no intervals found for %s at %s\n" % (self.fname, region))
             raise StopIteration
@@ -193,7 +196,7 @@ cdef class VCF(object):
             while True:
                 b = bcf_init()
                 ret = bcf_itr_next(self.hts, itr, b)
-                if ret < 0: 
+                if ret < 0:
                     bcf_destroy(b)
                     break
                 yield newVariant(b, self)
@@ -207,15 +210,17 @@ cdef class VCF(object):
             yield from self
             raise StopIteration
 
-        if self.fname.endswith(".bcf"):
+        if self.fname.decode(ENC).endswith('.bcf'):
             yield from self._bcf_region(region)
             raise StopIteration
 
         if self.idx == NULL:
-            if not (op.exists(str(self.fname + ".tbi")) or op.exists(str(self.fname + ".csi"))):
+            if not (op.exists(from_bytes(self.fname)+ ".tbi") or
+                    op.exists(from_bytes(self.fname) + ".csi")):
                 raise Exception("can't extract region without tabix or csi index for %s" % self.fname)
 
-            self.idx = tbx_index_load(self.fname)
+
+            self.idx = tbx_index_load(to_bytes(self.fname))
             assert self.idx != NULL, "error loading tabix index for %s" % self.fname
 
         cdef hts_itr_t *itr
@@ -223,7 +228,7 @@ cdef class VCF(object):
         cdef bcf1_t *b
         cdef int slen, ret
 
-        itr = tbx_itr_querys(self.idx, region)
+        itr = tbx_itr_querys(self.idx, to_bytes(region))
 
         if itr == NULL:
             sys.stderr.write("no intervals found for %s at %s\n" % (self.fname, region))
@@ -263,6 +268,7 @@ cdef class VCF(object):
         cdef float pi
         cdef int[:] b
         cdef int[:] gts
+        cdef int idx0, idx1
         bins = np.zeros((len(sample_pairs), n_bins), dtype=np.int32)
         rls = np.zeros(len(sample_pairs), dtype=np.int32)
 
@@ -395,7 +401,7 @@ cdef class VCF(object):
 
     def gen_variants(self, sites,
                     offset=0, each=1, call_rate=0.8):
-    
+
         if sites is not None:
             if isinstance(sites, basestring):
                 isites = []
@@ -603,20 +609,20 @@ cdef class VCF(object):
         sys.stderr.write("tested: %d variants out of %d\n" % (nv, nvt))
         return self._relatedness_finish(ibs, n, hets)
 
-    cdef dict _relatedness_finish(self, 
+    cdef dict _relatedness_finish(self,
                                   int32_t[:, ::view.contiguous] _ibs,
                                   int32_t[:, ::view.contiguous] _n,
                                   int32_t[:] _hets):
         samples = self.samples
         cdef int sj, sk, ns = len(samples)
 
-        res = {'sample_a': [], 'sample_b': [], 
+        res = {'sample_a': [], 'sample_b': [],
                 'rel': array('f'),
                 'hets_a': array('I'),
                 'hets_b': array('I'),
                'shared_hets': array('I'),
-               'ibs0': array('I'), 
-               'ibs2': array('I'), 
+               'ibs0': array('I'),
+               'ibs2': array('I'),
                'n': array('I')}
 
         cdef float bot
@@ -670,8 +676,7 @@ cdef class Variant(object):
         self._ploidy = -1
 
     def __repr__(self):
-        return "Variant(%s:%d %s/%s)" % (self.CHROM, self.POS, self.REF,
-                ",".join(self.ALT))
+        return "Variant(%s:%d %s/%s)" % (self.CHROM, self.POS, self.REF, b",".join(self.ALT))
 
     def __str__(self):
         cdef kstring_t s
@@ -735,7 +740,7 @@ cdef class Variant(object):
 
 
 
-    def relatedness(self, 
+    def relatedness(self,
                     int32_t[:, ::view.contiguous] ibs,
                     int32_t[:, ::view.contiguous] n,
                     int32_t[:] hets):
@@ -823,12 +828,13 @@ cdef class Variant(object):
                     n+=1
             return n
 
-    def format(self, tag, vtype=None):
+    def format(self, itag, vtype=None):
         """
         type is one of [int, float, str]
         TODO: get vtype from header
         returns None on error.
         """
+        cdef bytes tag = to_bytes(itag)
         cdef bcf_fmt_t *fmt = bcf_get_fmt(self.vcf.hdr, self.b, tag)
         cdef int n = 0, nret
         cdef void *buf = NULL;
@@ -1260,7 +1266,7 @@ cdef class Variant(object):
                     return v
             if n == 0:
                 return None
-            return ';'.join(bcf_hdr_int2id(self.vcf.hdr, BCF_DT_ID, self.b.d.flt[i]) for i in range(n))
+            return b';'.join(bcf_hdr_int2id(self.vcf.hdr, BCF_DT_ID, self.b.d.flt[i]) for i in range(n))
 
         def __set__(self, filters):
             if isinstance(filters, basestring):
@@ -1268,7 +1274,7 @@ cdef class Variant(object):
             cdef bcf_hdr_t *h = self.vcf.hdr
             cdef int *flt_ids = <int *>stdlib.malloc(sizeof(int) * len(filters))
             for i, fname in enumerate(filters):
-                flt_ids[i] = bcf_hdr_id2int(h, BCF_DT_ID, fname)
+                flt_ids[i] = bcf_hdr_id2int(h, BCF_DT_ID, to_bytes(fname))
             ret = bcf_update_filter(h, self.b, flt_ids, len(filters))
             stdlib.free(flt_ids)
             if ret != 0:
@@ -1338,16 +1344,16 @@ cdef class INFO(object):
     def __cinit__(INFO self):
         self._i = 0
 
-    def __setitem__(self, char *key, value):
+    def __setitem__(self, key, value):
         # only support strings for now.
         if value is True or value is False:
 
-            ret = bcf_update_info_flag(self.hdr, self.b, key, b"", int(value))
+            ret = bcf_update_info_flag(self.hdr, self.b, to_bytes(key), b"", int(value))
             if ret != 0:
                 raise Exception("not able to set flag", key, value, ret)
             return
 
-        ret = bcf_update_info_string(self.hdr, self.b, key, str(value))
+        ret = bcf_update_info_string(self.hdr, self.b, to_bytes(key), to_bytes(value))
         if ret != 0:
             raise Exception("not able to set: %s -> %s (%d)", key, value, ret)
 
@@ -1482,15 +1488,27 @@ cdef inline Variant newVariant(bcf1_t *b, VCF vcf):
     v.INFO = i
     return v
 
+cdef to_bytes(s, enc=ENC):
+    if not isinstance(s, bytes):
+        return s.encode(enc)
+    return s
+
+cdef from_bytes(s):
+    if isinstance(s, bytes):
+        return s.decode(ENC)
+    return s
+
+
 cdef class Writer(object):
     cdef htsFile *hts
     cdef bcf_hdr_t *hdr
-    cdef public str name
+    cdef public bytes name
     cdef bint header_written
 
     def __init__(self, fname, VCF tmpl):
-        self.name = fname
-        self.hts = hts_open(fname, "w")
+        self.name = to_bytes(fname)
+        self.hts = hts_open(self.name, "w")
+
         cdef bcf_hdr_t *h = tmpl.hdr
         cdef bcf_hdr_t *hdup = bcf_hdr_dup(h)
         self.hdr = hdup
@@ -1511,3 +1529,4 @@ cdef class Writer(object):
         bcf_hdr_destroy(self.hdr)
         self.hdr = NULL
         self.close()
+

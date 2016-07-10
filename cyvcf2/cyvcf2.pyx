@@ -1,4 +1,4 @@
-#cython: profile=True, language_level=3
+#cython: profile=True
 import os
 import os.path as op
 import sys
@@ -873,7 +873,7 @@ cdef class Variant(object):
                 self._gt_phased = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples)
                 ndst = 0
                 ngts = bcf_get_genotypes(self.vcf.hdr, self.b, &self._gt_types, &ndst)
-                nper = ndst // self.vcf.n_samples
+                nper = ndst / self.vcf.n_samples
                 self._ploidy = nper
                 self._gt_idxs = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples * nper)
                 if ndst == 0 or nper == 0:
@@ -927,7 +927,7 @@ cdef class Variant(object):
                         if self._gt_pls[i] < 0:
                             self._gt_pls[i] = imax
 
-                self._gt_nper = nret // self.vcf.n_samples
+                self._gt_nper = nret / self.vcf.n_samples
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples
             if self._gt_pls != NULL:
@@ -998,7 +998,7 @@ cdef class Variant(object):
                 # GATK
                 nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AD", &self._gt_ref_depths, &ndst)
                 if nret > 0:
-                    nper = nret // self.vcf.n_samples
+                    nper = nret / self.vcf.n_samples
                     if nper == 1:
                         stdlib.free(self._gt_ref_depths); self._gt_ref_depths = NULL
                         return -1 + np.zeros(self.vcf.n_samples, np.int32)
@@ -1039,7 +1039,7 @@ cdef class Variant(object):
                 # GATK
                 nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AD", &self._gt_alt_depths, &ndst)
                 if nret > 0:
-                    nper = nret // self.vcf.n_samples
+                    nper = nret / self.vcf.n_samples
                     if nper == 1:
                         stdlib.free(self._gt_alt_depths); self._gt_alt_depths = NULL
                         return (-1 + np.zeros(self.vcf.n_samples, np.int32))
@@ -1054,7 +1054,7 @@ cdef class Variant(object):
                 elif nret == -1:
                     # Freebayes
                     nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AO", &self._gt_alt_depths, &ndst)
-                    nper = nret // self.vcf.n_samples
+                    nper = nret / self.vcf.n_samples
                     if nret < 0:
                         stdlib.free(self._gt_alt_depths); self._gt_alt_depths = NULL
                         return -1 + np.zeros(self.vcf.n_samples, np.int32)

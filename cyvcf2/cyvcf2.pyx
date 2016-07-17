@@ -65,7 +65,8 @@ def par_het(vcf_path, samples, ncpus, qsites, min_depth=8, percentiles=(10, 90),
         all_gt_types.extend(all_gt_types_)
         sum_counts += sum_counts_ # an array
         het_counts += het_counts_ # an array
-        for k, li in maf_lists_.iteritems():
+        for k in maf_lists_:
+            li = maf_lists_[k]
             maf_lists[k].extend(li)
     mean_depths = np.array(mean_depths, dtype=np.int32).T
     vcf = VCF(vcf_path, samples=samples, gts012=True)
@@ -163,7 +164,7 @@ cdef class VCF(object):
         if samples is None:
             samples = "-".encode()
         if isinstance(samples, list):
-            samples = ",".join(samples).encode()
+            samples = to_bytes(",".join(samples))
 
         ret = bcf_hdr_set_samples(self.hdr, <const char *>samples, 0)
         assert ret >= 0, ("error setting samples", ret)
@@ -338,7 +339,7 @@ cdef class VCF(object):
     property samples:
         def __get__(self):
             cdef int i
-            return [self.hdr.samples[i] for i in range(self.n_samples)]
+            return [str(self.hdr.samples[i].decode('utf-8')) for i in range(self.n_samples)]
 
     property raw_header:
         def __get__(self):
@@ -676,7 +677,7 @@ cdef class Variant(object):
         self._ploidy = -1
 
     def __repr__(self):
-        return "Variant(%s:%d %s/%s)" % (self.CHROM, self.POS, self.REF, b",".join(self.ALT))
+        return "Variant(%s:%d %s/%s)" % (self.CHROM, self.POS, self.REF, ",".join(self.ALT))
 
     def __str__(self):
         cdef kstring_t s
@@ -1130,12 +1131,12 @@ cdef class Variant(object):
 
     property REF:
         def __get__(self):
-            return self.b.d.allele[0]
+            return self.b.d.allele[0].decode()
 
     property ALT:
         def __get__(self):
             cdef int i
-            return [self.b.d.allele[i] for i in range(1, self.b.n_allele)]
+            return [self.b.d.allele[i].decode() for i in range(1, self.b.n_allele)]
 
     property is_snp:
         def __get__(self):
@@ -1197,7 +1198,7 @@ cdef class Variant(object):
 
     property CHROM:
         def __get__(self):
-            return bcf_hdr_id2name(self.vcf.hdr, self.b.rid)
+            return bcf_hdr_id2name(self.vcf.hdr, self.b.rid).decode()
 
     property var_type:
         def __get__(self):
@@ -1415,7 +1416,7 @@ cdef class INFO(object):
             info = &(self.b.d.info[self._i])
             self._i += 1
         name = bcf_hdr_int2id(self.hdr, BCF_DT_ID, info.key)
-        return name, self._getval(info, name)
+        return name.decode(), self._getval(info, name)
 
 
 # this function is copied verbatim from pysam/cbcf.pyx
@@ -1432,7 +1433,7 @@ cdef bcf_array_to_object(void *data, int type, int n, int scalar=0):
 
     if type == BCF_BT_CHAR:
         datac = <char *>data
-        value = datac[:n] if datac[0] != bcf_str_missing else None
+        value = datac[:n].decode() if datac[0] != bcf_str_missing else None
     else:
         value = []
         if type == BCF_BT_INT8:

@@ -35,7 +35,7 @@ def test_ibd():
     vcf = VCF(VCF_PATH, gts012=True, samples=samples)
     res = vcf.ibd()
     assert len(res) == 3, (len(res))
-    arr = res[(b'101976-101976', b'100920-100920')]
+    arr = res[('101976-101976', '100920-100920')]
     assert len(arr) > 0
 
 def test_relatedness():
@@ -129,8 +129,8 @@ def test_info_dict():
     assert d != {}, d
     toks = _get_line_for(variant)
 
-    info = toks[7].split(b";")
-    keys = [x.split(b'=')[0] for x in info]
+    info = toks[7].split(";")
+    keys = [x.split('=')[0] for x in info]
     for k in keys:
         assert k in d, (k, info)
 
@@ -140,15 +140,15 @@ def test_attrs():
     v = VCF(VCF_PATH)
     variant = next(v)
     assert variant.POS == 10172
-    assert variant.CHROM == b"1"
+    assert variant.CHROM == "1"
     assert variant.ID is None, variant.ID
     assert variant.start == 10171
     assert variant.end == 10177, variant.end
     assert variant.FILTER is None
     assert variant.QUAL == 92.0
 
-    assert variant.REF == b"CCCTAA"
-    assert variant.ALT == [b"C"]
+    assert variant.REF == "CCCTAA"
+    assert variant.ALT == ["C"]
 
 def test_writer():
 
@@ -263,8 +263,9 @@ def _get_line_for(v):
     import gzip
 
     for i, line in enumerate(gzip.open(VCF_PATH), start=1):
-        if line[0] == b"#": continue
-        toks = line.strip().split(b"\t")
+        line = line.decode()
+        if line[0] == "#": continue
+        toks = line.strip().split("\t")
         if not (toks[0] == v.CHROM and int(toks[1]) == v.POS): continue
         if toks[3] != v.REF: continue
         if toks[4] not in v.ALT: continue
@@ -277,14 +278,14 @@ def _get_samples(v):
     import numpy as np
 
     def _get_gt(s):
-        if not b":" in s:
+        if not ":" in s:
             return 2
-        s = s.split(b":", 1)[0]
-        if s in (b"0/0", b"0|0"):
+        s = s.split(":", 1)[0]
+        if s in ("0/0", "0|0"):
             return 0
-        if s in (b"0/1", b"0|1", b"0/.", b"1/.", b"./1", b"1/."):
+        if s in ("0/1", "0|1", "0/.", "1/.", "./1", "1/."):
             return 1
-        if s in (b"1/1", b"1|1"):
+        if s in ("1/1", "1|1"):
             return 3
         return 2
     toks = _get_line_for(v)

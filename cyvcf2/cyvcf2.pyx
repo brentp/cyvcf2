@@ -516,6 +516,12 @@ cdef class VCF(object):
                 sample_ranges[sample]['sampled_sites'] = sum_counts[i]
                 sample_ranges[sample]['mean_depth'] = np.mean(mean_depths[i])
                 sample_ranges[sample]['median_depth'] = np.median(mean_depths[i])
+            # used for the peddy paper.
+            if os.environ.get('PEDDY_MAF_DUMP'):
+                path = os.environ['PEDDY_MAF_DUMP']
+                import cPickle
+                cPickle.dump({s: maf_lists[i] for i, s in enumerate(self.samples)}, open(path, 'wb', -1))
+
 
             return sample_ranges, sites, np.transpose(all_gt_types)
 

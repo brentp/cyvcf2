@@ -125,6 +125,7 @@ cdef class VCF(object):
     cdef bytes fname
     cdef bint gts012
     cdef bint lazy
+    cdef list _seqnames
 
     def add_to_header(self, line):
         ret = bcf_hdr_append(self.hdr, to_bytes(line))
@@ -159,6 +160,7 @@ cdef class VCF(object):
         self.fname = to_bytes(fname)
         self.gts012 = gts012
         self.lazy = lazy
+        self._seqnames = []
 
     def set_samples(self, samples):
         if samples is None:
@@ -346,6 +348,29 @@ cdef class VCF(object):
             cdef int hlen
             s = bcf_hdr_fmt_text(self.hdr, 0, &hlen)
             return s
+
+    property seqnames:
+        def __get__(self):
+            if len(self._seqnames) > 0: return self._seqnames
+            cdef char **cnames
+            cdef int i, n = 0
+            if self.fname.decode(ENC).endswith('.bcf'):
+                if self.hidx == NULL:
+                    self.hidx = bcf_index_load(self.fname)
+                if self.hidx != NULL:
+                    cnames = bcf_index_seqnames(self.hidx, self.hdr, &n)
+            else:
+                if self.idx == NULL and (op.exists(from_bytes(self.fname)+ ".tbi") or
+                        op.exists(from_bytes(self.fname) + ".csi")):
+                    self.idx = tbx_index_load(to_bytes(self.fname))
+                if self.idx !=NULL:
+                    cnames = tbx_seqnames(self.idx, &n)
+            if n == 0:
+                cnames = bcf_hdr_seqnames(self.hdr, &n)
+
+            self._seqnames = [cnames[i].decode() for i in range(n)]
+            stdlib.free(cnames)
+            return self._seqnames
 
     def plot_relatedness(self, riter):
         import pandas as pd

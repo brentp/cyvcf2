@@ -243,5 +243,10 @@ cdef extern from "htslib/vcf.h":
     #define bcf_update_info_flag(hdr,line,key,string,n)    bcf_update_info((hdr),(line),(key),(string),(n),BCF_HT_FLAG)
     #define bcf_update_info_string(hdr,line,key,string)    bcf_update_info((hdr),(line),(key),(string),1,BCF_HT_STR)
 
+    # free the array, not the values.
+    char **bcf_index_seqnames(hts_idx_t *idx, bcf_hdr_t *hdr, int *n);
+    char **tbx_seqnames(tbx_t *tbx, int *n)
+    char **bcf_hdr_seqnames(bcf_hdr_t *hdr, int *n);
+
 
 

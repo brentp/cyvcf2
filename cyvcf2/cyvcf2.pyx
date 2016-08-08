@@ -428,10 +428,15 @@ cdef class VCF(object):
     def gen_variants(self, sites,
                     offset=0, each=1, call_rate=0.8):
 
+        seqnames = set(self.seqnames)
+
         if sites is not None:
             if isinstance(sites, basestring):
                 isites = []
                 for i in (x.strip().split(":") for x in open(sites)):
+                    # handle 'chr' prefix on incoming.
+                    if not i[0] in seqnames and 'chr' + i[0] in seqnames:
+                        i[0] = 'chr' + i[0]
                     i[1] = int(i[1])
                     isites.append(i)
             else:

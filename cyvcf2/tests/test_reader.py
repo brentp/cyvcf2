@@ -247,6 +247,14 @@ def test_add_filter_to_header():
 
     assert ret == "abcdefg", v.FILTER
 
+def test_seqnames():
+    v = VCF(VCF_PATH)
+    assert v.seqnames == ['1'], v.seqnames
+
+    b = VCF('{}/test.snpeff.bcf'.format(HERE))
+    assert b.seqnames[0] == 'chr1', b.seqnames
+    assert b.seqnames[-1] == 'chrY', b.seqnames
+
 
 def test_var_type():
     v = VCF(VCF_PATH)

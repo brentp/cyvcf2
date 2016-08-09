@@ -1,4 +1,4 @@
-#cython: profile=True
+#cython: profile=False
 import os
 import os.path as op
 import sys

@@ -6,9 +6,6 @@ Fast python **(2 and 3)** parsing of VCF and BCF including region-queries.
 [![Build Status](https://travis-ci.org/brentp/cyvcf2.svg?branch=master)](https://travis-ci.org/brentp/cyvcf2)
 
 cyvcf2 is a cython wrapper around [htslib](https://github.com/samtools/htslib) built for fast parsing of [Variant Call Format](https://en.m.wikipedia.org/wiki/Variant_Call_Format) (VCF) files.
-It is targetted toward our use-case in [gemini](http://gemini.rtfd.org) but should also be of general utility.
-
-On a file with 189 samples that takes [cyvcf](https://github.com/arq5x/cyvcf) **21 seconds** to parse and extract all sample information, it takes `cyvcf2` **1.4 seconds**.
 
 Attributes like `variant.gt_ref_depths` return a numpy array directly so they are immediately ready for downstream use.
 **note** that the array is backed by the underlying C data, so, once `variant` goes out of scope. The array will contain nonsense.
@@ -23,21 +20,30 @@ The example below shows much of the use of cyvcf2.
 from cyvcf2 import VCF
 
 for variant in VCF('some.vcf.gz'): # or VCF('some.bcf')
+	variant.REF, variant.ALT # e.g. REF='A', ALT=['C', 'T']
 
-	variant.gt_types # numpy array
-	variant.gt_ref_depths, variant.gt_alt_depths # numpy arrays
-	variant.gt_phases, variant.gt_quals # numpy arrays
-	variant.gt_bases # numpy array
+
 	variant.CHROM, variant.start, variant.end, variant.ID, \
-				variant.REF, variant.ALT, variant.FILTER, variant.QUAL
+				variant.FILTER, variant.QUAL
+
+	# numpy arrays of specific things we pull from the sample fields.
+	# gt_types is array of 0,1,2,3==HOM_REF, HET, UNKNOWN, HOM_ALT
+	variant.gt_types, variant.gt_ref_depths, variant.gt_alt_depths # numpy arrays
+	variant.gt_phases, variant.gt_quals, variant.gt_bases # numpy array
+
+
+	## INFO Field.
+	## extract from the info field by it's name:
 	variant.INFO.get('DP') # int
 	variant.INFO.get('FS') # float
 	variant.INFO.get('AC') # float
-    a = variant.gt_phred_ll_homref # numpy array
-    b = variant.gt_phred_ll_het # numpy array
-    c = variant.gt_phred_ll_homalt # numpy array
 
+	# convert back to a string.
 	str(variant)
+
+
+	## sample info...
+
 	# Get a numpy array of the depth per sample:
     dp = variant.format('DP', int)
     # or of any other format field:

@@ -113,8 +113,17 @@ cdef unicode xstr(s):
 def r_(int[::view.contiguous] a_gts, int[::view.contiguous] b_gts, float f, int32_t n_samples):
     return r_unphased(&a_gts[0], &b_gts[0], f, n_samples)
 
+cdef set_constants(VCF v):
+    v.HOM_REF = 0
+    v.HET = 1
+    if v.gts012:
+        v.HOM_ALT = 2
+        v.UNKNOWN = 3
+    else:
+        v.UNKNOWN = 2
+        v.HOM_ALT = 3
 
-cdef class VCF(object):
+cdef class VCF:
 
     cdef htsFile *hts
     cdef const bcf_hdr_t *hdr
@@ -126,6 +135,29 @@ cdef class VCF(object):
     cdef bint gts012
     cdef bint lazy
     cdef list _seqnames
+
+    cdef readonly int HOM_REF
+    cdef readonly int HET
+    cdef readonly int HOM_ALT
+    cdef readonly int UNKNOWN
+
+    def __init__(self, fname, mode="r", gts012=False, lazy=False, samples=None):
+        if fname == b"-":
+            fname = b"/dev/stdin"
+        if not op.exists(fname):
+            raise Exception("bad path: %s" % fname)
+        self.hts = hts_open(fname.encode(), mode.encode())
+        cdef bcf_hdr_t *hdr
+        hdr = self.hdr = bcf_hdr_read(self.hts)
+        if samples is not None:
+            self.set_samples(samples)
+        self.n_samples = bcf_hdr_nsamples(self.hdr)
+        self.PASS = -1
+        self.fname = to_bytes(fname)
+        self.gts012 = gts012
+        self.lazy = lazy
+        self._seqnames = []
+        set_constants(self)
 
     def add_to_header(self, line):
         ret = bcf_hdr_append(self.hdr, to_bytes(line))
@@ -144,23 +176,6 @@ cdef class VCF(object):
 
     def add_filter_to_header(self, adict):
         return self.add_to_header("##FILTER=<ID={ID},Description=\"{Description}\">".format(**adict))
-
-    def __init__(self, fname, mode="r", gts012=False, lazy=False, samples=None):
-        if fname == b"-":
-            fname = b"/dev/stdin"
-        if not op.exists(fname):
-            raise Exception("bad path: %s" % fname)
-        self.hts = hts_open(fname.encode(), mode.encode())
-        cdef bcf_hdr_t *hdr
-        hdr = self.hdr = bcf_hdr_read(self.hts)
-        if samples is not None:
-            self.set_samples(samples)
-        self.n_samples = bcf_hdr_nsamples(self.hdr)
-        self.PASS = -1
-        self.fname = to_bytes(fname)
-        self.gts012 = gts012
-        self.lazy = lazy
-        self._seqnames = []
 
     def set_samples(self, samples):
         if samples is None:

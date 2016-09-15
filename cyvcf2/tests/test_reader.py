@@ -225,6 +225,20 @@ def test_add_flag():
     assert_raises(KeyError, v.INFO.__getitem__, "myflag")
 
 
+def test_constants():
+    v = VCF(VCF_PATH)
+    assert v.HOM_REF == 0
+    assert v.HET == 1
+    assert v.UNKNOWN == 2
+    assert v.HOM_ALT == 3
+
+    v = VCF(VCF_PATH, gts012=True)
+    assert v.HOM_REF == 0
+    assert v.HET == 1
+    assert v.HOM_ALT == 2
+    assert v.UNKNOWN == 3
+
+
 def test_add_filter_to_header():
     v = VCF(VCF_PATH)
     # NOTE that we have to add the filter to the header of the reader,

@@ -1,10 +1,10 @@
 #include <stdint.h>
 #include <math.h>
 
-#define HOM_REF 0
-#define HET 1
-#define HOM_ALT 2
-#define UNKNOWN 3
+#define _HOM_REF 0
+#define _HET 1
+#define _HOM_ALT 2
+#define _UNKNOWN 3
 
 // internal calculate of alternate allele frequency.
 inline float aaf(int *gt_types, int32_t n_samples){
@@ -12,7 +12,7 @@ inline float aaf(int *gt_types, int32_t n_samples){
 	int i, n_called = 0;
 
 	for (i = 0; i < n_samples; i++){
-		if(gt_types[i] == UNKNOWN){
+		if(gt_types[i] == _UNKNOWN){
 			continue;
 		}
 		af += gt_types[i];
@@ -38,13 +38,13 @@ int pow2(uint32_t v) {
 // run_length.
 int ibd(int agt, int bgt, int run_length, float pi, int *bins, int32_t n_bins) {
 	if(agt == bgt) {
-		if (agt != UNKNOWN) {
+		if (agt != _UNKNOWN) {
 			run_length++;
 		}
 		return run_length;
 	}
 	// skip unknown.
-	if (agt == UNKNOWN || bgt == UNKNOWN) {
+	if (agt == _UNKNOWN || bgt == _UNKNOWN) {
 		return run_length;
 	}
 
@@ -62,7 +62,7 @@ int ibd(int agt, int bgt, int run_length, float pi, int *bins, int32_t n_bins) {
 	return run_length;
 }
 
-// related takes an array of genotypes (0=HOM_REF, 1=HET, 2=HOMALT, 3=UNKNOWN) and updates asum and N
+// related takes an array of genotypes (0=_HOM_REF, 1=_HET, 2=HOMALT, 3=_UNKNOWN) and updates asum and N
 // which are used to calculate relatedness between samples j, k as asum[j, k] / N[j, k].
 // The result value should be ~1 for self and idential twins, ~0.5 for sibs and parent off-spring.
 // This should be called on few hundred to a few thousand variants that are
@@ -84,13 +84,13 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 
 	for(j=0; j <n_samples; j++){
 		// skip unknown
-		if(gt_types[j] == UNKNOWN){
+		if(gt_types[j] == _UNKNOWN){
 			continue;
 		}
 		gtj = gt_types[j];
 		n_used++;
 		for(k=j; k<n_samples; k++){
-			if(gt_types[k] == UNKNOWN){
+			if(gt_types[k] == _UNKNOWN){
 				continue;
 			}
 			uidx = j + k * n_samples;
@@ -98,7 +98,7 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 			gtk = gt_types[k];
 			if(j != k){
 				numer = (gtj - 2.0 * pi) * (gtk - 2.0 * pi);
-				ibs0[idx] += (gtj != HET && gtk != HET && gtj != gtk);
+				ibs0[idx] += (gtj != _HET && gtk != _HET && gtj != gtk);
 			} else {
 				numer = (gtj * gtj) - (1.0 + 2.0 * pi) * gtj + 2.0 * pi * pi;
 				// add 1 for self.
@@ -106,13 +106,13 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 			}
 			val = numer / denom;
 
-			// likely IBD2* of concordant HETs.
+			// likely IBD2* of concordant _HETs.
 			// we don't know the phasing but we just use the prob.
-			if (gtj == gtk && gtj != HOM_REF && val > 2.5) {
+			if (gtj == gtk && gtj != _HOM_REF && val > 2.5) {
 				// ibs2*
 				ibs2[uidx]+=1;
 			} else if (val > 2.5) {
-				ibs2[idx] += (gtj == gtk && gtk != HET);
+				ibs2[idx] += (gtj == gtk && gtk != _HET);
 			}
 
 			// heuristic to avoid too-large values
@@ -139,28 +139,28 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 //                             lower diag stores the ibs2.
 // hets is n_samples it counts the number of hets per sample.
 // IBS0: (AA, aa) and (aa, AA)
-// IBS1: 1 HET, 1 HOM_{REF,ALT} : not calculated (shared-hets is used instead)
+// IBS1: 1 _HET, 1 HOM_{REF,ALT} : not calculated (shared-hets is used instead)
 // IBS2: samples are same (even unphased hets)
 int krelated(int32_t *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t n_samples) {
 	int32_t j, k;
 	int n_used = 0;
 	int32_t gtj, gtk;
 	int is_het = 0;
-	hets[n_samples - 1] += (gt_types[n_samples -1] == HET);
+	hets[n_samples - 1] += (gt_types[n_samples -1] == _HET);
 
 	for(j=0; j<n_samples-1; j++){
-		if(gt_types[j] == UNKNOWN){ continue; }
+		if(gt_types[j] == _UNKNOWN){ continue; }
 		gtj = gt_types[j];
-		is_het = (gtj == HET);
+		is_het = (gtj == _HET);
 		hets[j] += is_het;
 		n_used++;
 		for(k=j+1; k<n_samples; k++){
-			if(gt_types[k] == UNKNOWN){ continue; }
+			if(gt_types[k] == _UNKNOWN){ continue; }
 			gtk = gt_types[k];
 			n[j * n_samples + k]++;
 			if(is_het) {
 				// shared hets
-				ibs[k * n_samples + j] += (gtk == HET); // already know gtj is HET
+				ibs[k * n_samples + j] += (gtk == _HET); // already know gtj is _HET
 			} else {
 				// only need to check these if sample 1 isn't het.
 				// ibs0
@@ -183,9 +183,9 @@ float r_unphased(int *a_gts, int *b_gts, float f, int32_t n_samples) {
 
     for(i=0; i<n_samples; i++) {
         a = a_gts[i];
-		if (a == UNKNOWN) continue;
+		if (a == _UNKNOWN) continue;
         b = b_gts[i];
-		if (b == UNKNOWN) continue;
+		if (b == _UNKNOWN) continue;
 
         n += 1;
         suma += a;

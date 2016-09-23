@@ -1,3 +1,4 @@
+from __future__ import print_function
 from cyvcf2 import VCF, Variant, Writer
 import os.path
 from nose.tools import assert_raises
@@ -29,6 +30,15 @@ def test_type():
             assert v.var_type == 'indel'
         else:
             print(v.var_type, v.REF, v.ALT)
+
+def test_format_str():
+    vcf = VCF(os.path.join(HERE, "test-format-string.vcf"))
+
+    f = next(vcf).format("RULE", str)
+    assert list(f) == ['F', 'G']
+    f = next(vcf).format("RULE", str)
+    assert list(f) == ['F2,F3,F4', 'G2,G3,G4']
+
 
 def test_ibd():
     samples = ['101976-101976', '100920-100920', '100231-100231']
@@ -460,6 +470,8 @@ def test_issue12():
             v.format(f, int)
 
         v.format("RVF", float)
+
+    v.format("RULE", str)
 
 def test_gt_bases_nondiploid():
     """Ensure gt_bases works with more complex base representations.

@@ -1,0 +1,8 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##INFO=<ID=SOMATIC_CALL,Number=R,Type=Integer,Description="Boolean value for a somatic call for each allele.">
+##FORMAT=<ID=ADP_ALL,Number=R,Type=Integer,Description="Number of all unique observations for each allele, inc. both low- and high-confidence.">
+##FORMAT=<ID=RULE,Number=A,Type=String,Description="Text field">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	Tumor	Normal
+7	55086956	.	C	G	0	.	.	ADP_ALL:RULE	6728,1:F	22,1:G
+7	55086957	.	T	A,C,G	0	.	.	ADP_ALL:RULE	6768,2,2,1:F2,F3,F4	1,2,3,4:G2,G3,G4

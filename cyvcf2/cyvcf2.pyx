@@ -1,4 +1,5 @@
 #cython: profile=False
+from __future__ import print_function
 import os
 import os.path as op
 import sys
@@ -905,15 +906,24 @@ cdef class Variant(object):
         if nret < 0:
             return None
 
+        cdef char **dst
+        cdef int i
         cdef np.npy_intp shape[2]
         shape[0] = <np.npy_intp> self.vcf.n_samples
         shape[1] = fmt.n # values per sample
-        v = np.PyArray_SimpleNewFromData(2, shape, typenum, buf)
-        ret = np.array(v)
+
         if vtype == str:
-            stdlib.free(&buf[0])
+            dst = <char **>buf
+            v = [dst[i] for i in range(self.vcf.n_samples)]
+            xret = np.array(v, dtype=str)
+            stdlib.free(dst[0])
+            stdlib.free(dst)
+            return xret
+
+        iv = np.PyArray_SimpleNewFromData(2, shape, typenum, buf)
+        iret = np.array(iv)
         stdlib.free(buf)
-        return ret
+        return iret
 
     property gt_types:
         def __get__(self):

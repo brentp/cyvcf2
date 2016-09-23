@@ -136,6 +136,8 @@ cdef class VCF:
     cdef bint gts012
     cdef bint lazy
     cdef list _seqnames
+    # holds a lookup of format field -> type.
+    cdef dict format_types
 
     cdef readonly int HOM_REF
     cdef readonly int HET
@@ -159,6 +161,14 @@ cdef class VCF:
         self.lazy = lazy
         self._seqnames = []
         set_constants(self)
+        self.format_types = {}
+
+    cdef str get_type(self, fmt):
+        if not fmt in self.format_types:
+            s = self[fmt]
+            self.format_types[fmt] = s["Type"]
+
+        return self.format_types[fmt]
 
     def add_to_header(self, line):
         ret = bcf_hdr_append(self.hdr, to_bytes(line))
@@ -308,9 +318,11 @@ cdef class VCF:
         cdef bcf_hrec_t *b = bcf_hdr_get_hrec(self.hdr, BCF_HL_INFO, b"ID", key, NULL);
         cdef int i
         if b == NULL:
+            b = bcf_hdr_get_hrec(self.hdr, BCF_HL_FMT, b"ID", key, NULL);
+        if b == NULL:
             b = bcf_hdr_get_hrec(self.hdr, BCF_HL_GEN, key, NULL, NULL);
             if b == NULL:
-                raise KeyError
+                raise KeyError(key)
             d = {b.key: b.value}
         else:
             d =  {b.keys[i]: b.vals[i] for i in range(b.nkeys)}
@@ -884,21 +896,24 @@ cdef class Variant(object):
     def format(self, itag, vtype=None):
         """
         type is one of [int, float, str]
-        TODO: get vtype from header
-        returns None on error.
+        returns None if the key isn't found.
         """
+        if vtype is None:
+            vtype = self.vcf.get_type(itag)
+
         cdef bytes tag = to_bytes(itag)
         cdef bcf_fmt_t *fmt = bcf_get_fmt(self.vcf.hdr, self.b, tag)
         cdef int n = 0, nret
         cdef void *buf = NULL;
         cdef int typenum = 0
-        if vtype == int:
+        if vtype == "Integer" or vtype == int:
             nret = bcf_get_format_int32(self.vcf.hdr, self.b, tag, <int **>&buf, &n)
             typenum = np.NPY_INT32
-        elif vtype == float:
+        elif vtype == "Float" or vtype == float:
             nret = bcf_get_format_float(self.vcf.hdr, self.b, tag, <float **>&buf, &n)
             typenum = np.NPY_FLOAT32
-        elif vtype == str:
+        elif vtype == "String" or vtype == str or vtype == "Character":
+            vtype = str
             nret = bcf_get_format_string(self.vcf.hdr, self.b, tag, <char ***>&buf, &n)
             typenum = np.NPY_STRING
         else:

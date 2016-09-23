@@ -1,5 +1,6 @@
 from __future__ import print_function
 from cyvcf2 import VCF, Variant, Writer
+import numpy as np
 import os.path
 from nose.tools import assert_raises
 import tempfile
@@ -34,9 +35,9 @@ def test_type():
 def test_format_str():
     vcf = VCF(os.path.join(HERE, "test-format-string.vcf"))
 
-    f = next(vcf).format("RULE", str)
+    f = next(vcf).format("RULE")
     assert list(f) == ['F', 'G']
-    f = next(vcf).format("RULE", str)
+    f = next(vcf).format("RULE")
     assert list(f) == ['F2,F3,F4', 'G2,G3,G4']
 
 
@@ -467,11 +468,14 @@ def test_issue12():
     vcf = VCF('{}/bug.vcf.gz'.format(HERE))
     for v in vcf:
         for f in fields:
-            v.format(f, int)
+            vals = v.format(f)
+            if vals is not None:
+                assert vals.dtype in (np.int32, np.float32), (f, vals.dtype)
 
-        v.format("RVF", float)
+        vals = v.format("RVF")
+        assert vals.dtype in (np.float32, np.float64)
 
-    v.format("RULE", str)
+    assert_raises(KeyError, v.format, "RULE")
 
 def test_gt_bases_nondiploid():
     """Ensure gt_bases works with more complex base representations.

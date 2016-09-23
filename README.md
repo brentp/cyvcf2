@@ -45,9 +45,9 @@ for variant in VCF('some.vcf.gz'): # or VCF('some.bcf')
 	## sample info...
 
 	# Get a numpy array of the depth per sample:
-    dp = variant.format('DP', int)
+    dp = variant.format('DP')
     # or of any other format field:
-    sb = variant.format('SB', float)
+    sb = variant.format('SB')
     assert sb.shape == (n_samples, 4) # 4-values per
 
 # to do a region-query:

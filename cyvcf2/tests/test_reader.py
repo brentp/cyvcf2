@@ -327,9 +327,9 @@ def _get_samples(v):
 
 def test_header_info():
     v = VCF(VCF_PATH)
-    csq = v[b'CSQ']
-    assert csq[b'ID'] == b"CSQ"
-    assert b"Description" in csq
+    csq = v['CSQ']
+    assert csq['ID'] == "CSQ"
+    assert "Description" in csq
 
 
     assert_raises(KeyError, v.__getitem__, b'XXXXX')
@@ -337,9 +337,9 @@ def test_header_info():
 def test_snpeff_header():
     v = VCF(VCF_PATH2)
 
-    f = v[b'SnpEffVersion']
+    f = v['SnpEffVersion']
     assert f != {}, f
-    assert b'SnpEffVersion' in f
+    assert 'SnpEffVersion' in f
 
 #def test_info_update():
 #    vcf = VCF(VCF_PATH)

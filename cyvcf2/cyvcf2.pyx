@@ -163,12 +163,13 @@ cdef class VCF:
         set_constants(self)
         self.format_types = {}
 
-    cdef str get_type(self, fmt):
+    cdef get_type(self, fmt):
+        fmt = from_bytes(fmt)
         if not fmt in self.format_types:
             s = self[fmt]
             self.format_types[fmt] = s["Type"]
 
-        return self.format_types[fmt]
+        return from_bytes(self.format_types[fmt])
 
     def add_to_header(self, line):
         ret = bcf_hdr_append(self.hdr, to_bytes(line))
@@ -314,7 +315,8 @@ cdef class VCF:
         return {sample_pairs[i]: bins[i, :] for i in range(len(sample_pairs))}
 
     # pull something out of the HEADER, e.g. CSQ
-    def __getitem__(self, char *key):
+    def __getitem__(self, key):
+        key = to_bytes(key)
         cdef bcf_hrec_t *b = bcf_hdr_get_hrec(self.hdr, BCF_HL_INFO, b"ID", key, NULL);
         cdef int i
         if b == NULL:
@@ -323,9 +325,9 @@ cdef class VCF:
             b = bcf_hdr_get_hrec(self.hdr, BCF_HL_GEN, key, NULL, NULL);
             if b == NULL:
                 raise KeyError(key)
-            d = {b.key: b.value}
+            d = {from_bytes(b.key): from_bytes(b.value)}
         else:
-            d =  {b.keys[i]: b.vals[i] for i in range(b.nkeys)}
+            d =  {from_bytes(b.keys[i]): from_bytes(b.vals[i]) for i in range(b.nkeys)}
         #bcf_hrec_destroy(b)
         return d
 

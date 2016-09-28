@@ -331,7 +331,7 @@ cdef class VCF:
         #bcf_hrec_destroy(b)
         return d
 
-    def __contains__(self, char *key):
+    def __contains__(self, key):
         try:
             self[key]
             return True
@@ -377,7 +377,7 @@ cdef class VCF:
         def __get__(self):
             cdef int hlen
             s = bcf_hdr_fmt_text(self.hdr, 0, &hlen)
-            return s
+            return from_bytes(s)
 
     property seqnames:
         def __get__(self):
@@ -781,11 +781,11 @@ cdef class Variant(object):
             cdef int i, n = self.ploidy, j=0, k
             cdef char **alleles = self.b.d.allele
             #cdef dict d = {i:alleles[i] for i in range(self.b.n_allele)}
-            cdef list d = [alleles[i] for i in range(self.b.n_allele)]
+            cdef list d = [from_bytes(alleles[i]) for i in range(self.b.n_allele)]
             d.append(".") # -1 gives .
             cdef list a = []
             cdef list phased = list(self.gt_phases)
-            cdef char **lookup = ["/", "|"]
+            cdef list lookup = ["/", "|"]
             cdef int unknown = 3 if self.vcf.gts012 else 2
             for i in range(0, n * self.vcf.n_samples, n):
                 if n == 2:
@@ -1463,19 +1463,19 @@ cdef class INFO(object):
             v = info.vptr[:info.vptr_len]
             if len(v) > 0 and v[0] == 0x7:
                 return None
-            return v
+            return from_bytes(v)
 
         return bcf_array_to_object(info.vptr, info.type, info.len)
 
     def __getitem__(self, okey):
-        okey = str(okey).encode()
+        okey = to_bytes(okey)
         cdef char *key = okey
         cdef bcf_info_t *info = bcf_get_info(self.hdr, self.b, key)
         if info == NULL:
             raise KeyError(key)
         return self._getval(info, key)
 
-    def get(self, char *key, default=None):
+    def get(self, key, default=None):
         try:
             return self.__getitem__(key)
         except KeyError:

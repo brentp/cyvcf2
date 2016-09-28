@@ -359,9 +359,9 @@ def test_gt_types():
 
 def test_raw_header():
     v = VCF(VCF_PATH)
-    h = v.raw_header.strip().split(b"\n")
+    h = v.raw_header.strip().split("\n")
     s = h[0]
-    assert s == b"##fileformat=VCFv4.1", s
+    assert s == "##fileformat=VCFv4.1", s
     assert len(h) == 185, len(h)
 
 

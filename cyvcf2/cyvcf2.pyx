@@ -194,6 +194,8 @@ cdef class VCF:
             samples = "-".encode()
         if isinstance(samples, list):
             samples = to_bytes(",".join(samples))
+        else:
+            samples = to_bytes(samples)
 
         ret = bcf_hdr_set_samples(self.hdr, <const char *>samples, 0)
         assert ret >= 0, ("error setting samples", ret)
@@ -1592,6 +1594,8 @@ cdef class Writer(object):
         cdef bcf_hdr_t *hdup = bcf_hdr_dup(h)
         self.hdr = hdup
         self.header_written = False
+        samples = to_bytes(",".join(tmpl.samples))
+        bcf_hdr_set_samples(self.hdr, samples, 0)
 
     def write_record(self, Variant var):
         if not self.header_written:

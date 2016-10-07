@@ -145,11 +145,12 @@ cdef class VCF:
     cdef readonly int UNKNOWN
 
     def __init__(self, fname, mode="r", gts012=False, lazy=False, samples=None):
-        if fname == b"-":
+        if fname == b"-" or fname == "-":
             fname = b"/dev/stdin"
         if not op.exists(fname):
             raise Exception("bad path: %s" % fname)
-        self.hts = hts_open(fname.encode(), mode.encode())
+        fname, mode = to_bytes(fname), to_bytes(mode)
+        self.hts = hts_open(fname, mode)
         cdef bcf_hdr_t *hdr
         hdr = self.hdr = bcf_hdr_read(self.hts)
         if samples is not None:
@@ -751,8 +752,10 @@ cdef class Variant(object):
         cdef kstring_t s
         s.s, s.l, s.m = NULL, 0, 0
         vcf_format(self.vcf.hdr, self.b, &s)
-        st = ks_release(&s)
-        return st.decode()
+        try:
+            return s.s[:s.l].decode()
+        finally:
+            stdlib.free(s.s)
 
     def __dealloc__(self):
         if self.b is not NULL:

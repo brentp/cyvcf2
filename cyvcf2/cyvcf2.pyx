@@ -151,6 +151,11 @@ cdef class VCF:
             raise Exception("bad path: %s" % fname)
         fname, mode = to_bytes(fname), to_bytes(mode)
         self.hts = hts_open(fname, mode)
+        if self.hts == NULL:
+            raise IOError("Error opening %s" % fname)
+        if self.hts.format.format != vcf and self.hts.format.format != bcf:
+            raise IOError("%s if not valid bcf or vcf" % fname)
+
         cdef bcf_hdr_t *hdr
         hdr = self.hdr = bcf_hdr_read(self.hts)
         if samples is not None:

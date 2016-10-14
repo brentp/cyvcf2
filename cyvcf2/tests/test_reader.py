@@ -161,6 +161,11 @@ def test_attrs():
     assert variant.REF == "CCCTAA"
     assert variant.ALT == ["C"]
 
+def test_empty():
+    p = os.path.join(HERE, "empty.vcf")
+    assert os.path.exists(p)
+    assert_raises(IOError, VCF, p)
+
 def test_writer():
 
     v = VCF(VCF_PATH)

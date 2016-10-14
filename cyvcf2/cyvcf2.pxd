@@ -24,8 +24,30 @@ cdef extern from "htslib/kstring.h":
     inline char *ks_release(kstring_t *s)
 
 cdef extern from "htslib/hts.h":
-    ctypedef struct htsFile:
+    ctypedef struct hFILE:
         pass
+
+    cdef union ufp:
+        hFILE *hfile;
+
+    cdef enum htsExactFormat:
+        unknown_format,
+        binary_format, text_format,
+        sam, bam, bai, cram, crai, vcf, bcf, csi, gzi, tbi, bed
+
+    ctypedef struct htsFormat:
+        htsExactFormat format
+    
+    ctypedef struct htsFile:
+        ufp fp
+        htsFormat format
+
+
+
+
+
+    int hts_detect_format(hFILE *fp, htsFormat *fmt);
+
 
     htsFile *hts_open(char *fn, char *mode);
 

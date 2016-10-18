@@ -1,7 +1,5 @@
 from setuptools import setup
 from setuptools import Extension
-import numpy as np
-from Cython.Distutils import build_ext
 import os
 import glob
 
@@ -33,6 +31,27 @@ sources = [x for x in glob.glob('htslib/*.c') if not any(e in x for e in exclude
 sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
 sources.append('cyvcf2/helpers.c')
 
+install_requires = []
+try:
+    import numpy as np
+except ImportError:
+    install_requires.append("numpy")
+
+try:
+    from Cython.Distutils import build_ext
+except ImportError:
+    install_requires.append("cython>=0.22.1")
+
+if not install_requires:
+    cmdclass = {'build_ext': build_ext}
+    extension = [Extension("cyvcf2.cyvcf2",
+                           ["cyvcf2/cyvcf2.pyx"] + sources,
+                           libraries=['z'],
+                           include_dirs=['htslib', 'cyvcf2', np.get_include()])]
+else:
+    cmdclass = {}
+    extension = []
+
 setup(
     name="cyvcf2",
     description="fast vcf parsing with cython + htslib",
@@ -42,16 +61,12 @@ setup(
     author="Brent Pedersen",
     author_email="bpederse@gmail.com",
     version=get_version(),
-    cmdclass={'build_ext': build_ext},
-    ext_modules=[
-        Extension("cyvcf2.cyvcf2", ["cyvcf2/cyvcf2.pyx"] + sources,
-                  libraries=['z'],
-                  include_dirs=['htslib', 'cyvcf2', np.get_include()])
-        ],
+    cmdclass=cmdclass,
+    ext_modules=extension,
     packages=['cyvcf2', 'cyvcf2.tests'],
     test_suite='nose.collector',
     tests_require='nose',
-    install_requires=['cython>=0.22.1', 'numpy'],
+    install_requires=install_requires,
     include_package_data=True,
     zip_safe=False,
 )

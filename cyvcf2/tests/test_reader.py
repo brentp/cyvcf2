@@ -166,6 +166,11 @@ def test_empty():
     assert os.path.exists(p)
     assert_raises(IOError, VCF, p)
 
+def test_format_field():
+    vcf = VCF(VCF_PATH)
+    for v in vcf:
+        assert isinstance(v.FORMAT, list)
+
 def test_writer():
 
     v = VCF(VCF_PATH)

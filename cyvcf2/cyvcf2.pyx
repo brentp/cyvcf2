@@ -905,6 +905,18 @@ cdef class Variant(object):
                     n+=1
             return n
 
+    property FORMAT:
+        def __get__(self):
+            cdef int i
+            cdef bcf_fmt_t fmt
+            cdef char *key
+            keys = []
+            for i in range(self.b.n_fmt):
+                fmt = self.b.d.fmt[i];
+                key = bcf_hdr_int2id(self.vcf.hdr, BCF_DT_ID, fmt.id)
+                keys.append(key)
+            return keys
+
     def format(self, itag, vtype=None):
         """
         type is one of [int, float, str]

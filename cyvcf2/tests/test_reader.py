@@ -133,6 +133,9 @@ def test_next():
     variant = next(v)
     assert isinstance(variant, Variant)
 
+def test_variant():
+    assert_raises(TypeError, Variant)
+
 def test_info_dict():
     v = VCF(VCF_PATH)
     variant = next(v)

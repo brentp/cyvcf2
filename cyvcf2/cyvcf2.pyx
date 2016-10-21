@@ -743,6 +743,9 @@ cdef class Variant(object):
 
     cdef readonly int POS
 
+    def __init__(self, *args, **kwargs):
+        raise TypeError("Variant object cannot be instantiated directly.")
+
     def __cinit__(self):
         self.b = NULL
         self._gt_types = NULL

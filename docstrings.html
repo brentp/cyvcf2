@@ -1,0 +1,514 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>cyvcf2 API &mdash; cyvcf2 0.6.5 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.6.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="cyvcf2 0.6.5 documentation" href="index.html" />
+    <link rel="prev" title="Welcome to cyvcf2’s documentation!" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="cyvcf2-api">
+<h1>cyvcf2 API<a class="headerlink" href="#cyvcf2-api" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="cyvcf2.cyvcf2.VCF">
+<em class="property">class </em><code class="descclassname">cyvcf2.cyvcf2.</code><code class="descname">VCF</code><span class="sig-paren">(</span><em>fname</em>, <em>mode='r'</em>, <em>gts012=False</em>, <em>lazy=False</em>, <em>samples=None</em>, <em>threads=None</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF" title="Permalink to this definition">¶</a></dt>
+<dd><p>VCF class holds methods to iterate over and query a VCF.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fname</strong> (<em>str</em>) &#8211; path to file</li>
+<li><strong>gts012</strong> (<em>bool</em>) &#8211; if True, then gt_types will be 0=HOM_REF, 1=HET, 2=HOM_ALT, 3=UNKNOWN. If False, 3, 2 are flipped.</li>
+<li><strong>lazy</strong> (<em>bool</em>) &#8211; if True, then don&#8217;t unpack (parse) the underlying record until needed.</li>
+<li><strong>samples</strong> (<em>list</em>) &#8211; list of samples to extract from full set in file.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">VCF object for iterating and querying.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="cyvcf2.cyvcf2.VCF.add_filter_to_header">
+<code class="descname">add_filter_to_header</code><span class="sig-paren">(</span><em>self</em>, <em>adict</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.add_filter_to_header" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a FILTER line to the VCF header.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>adict</strong> (<em>dict</em>) &#8211; dict containing keys for ID, Description.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyvcf2.cyvcf2.VCF.add_format_to_header">
+<code class="descname">add_format_to_header</code><span class="sig-paren">(</span><em>self</em>, <em>adict</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.add_format_to_header" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a FORMAT line to the VCF header.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>adict</strong> (<em>dict</em>) &#8211; dict containing keys for ID, Number, Type, Description.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyvcf2.cyvcf2.VCF.add_info_to_header">
+<code class="descname">add_info_to_header</code><span class="sig-paren">(</span><em>self</em>, <em>adict</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.add_info_to_header" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a INFO line to the VCF header.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>adict</strong> (<em>dict</em>) &#8211; dict containing keys for ID, Number, Type, Description.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyvcf2.cyvcf2.VCF.add_to_header">
+<code class="descname">add_to_header</code><span class="sig-paren">(</span><em>self</em>, <em>line</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.add_to_header" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new line to the VCF header.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>line</strong> (<em>str</em>) &#8211; full vcf header line.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.VCF.contains">
+<code class="descname">contains</code><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.contains" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if the given ID is in the header.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyvcf2.cyvcf2.VCF.gen_variants">
+<code class="descname">gen_variants</code><span class="sig-paren">(</span><em>self</em>, <em>sites</em>, <em>offset=0</em>, <em>each=1</em>, <em>call_rate=0.8</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.gen_variants" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cyvcf2.cyvcf2.VCF.header_iter">
+<code class="descname">header_iter</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.header_iter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterate over fields in the HEADER</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.VCF.raw_header">
+<code class="descname">raw_header</code><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.raw_header" title="Permalink to this definition">¶</a></dt>
+<dd><p>string of the raw header from the VCF</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyvcf2.cyvcf2.VCF.relatedness">
+<code class="descname">relatedness</code><span class="sig-paren">(</span><em>self</em>, <em>int n_variants=35000</em>, <em>int gap=30000</em>, <em>float min_af=0.04</em>, <em>float max_af=0.8</em>, <em>float linkage_max=0.2</em>, <em>min_depth=8</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.relatedness" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.VCF.samples">
+<code class="descname">samples</code><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.samples" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of samples pulled from the VCF.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.VCF.seqnames">
+<code class="descname">seqnames</code><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.seqnames" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of chromosomes in the VCF</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyvcf2.cyvcf2.VCF.set_samples">
+<code class="descname">set_samples</code><span class="sig-paren">(</span><em>self</em>, <em>samples</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.set_samples" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the samples to be pulled from the VCF; this must be called before any iteration.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>samples</strong> (<em>list</em>) &#8211; list of samples to extract.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cyvcf2.cyvcf2.Variant">
+<em class="property">class </em><code class="descclassname">cyvcf2.cyvcf2.</code><code class="descname">Variant</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Variant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Variant represents a single VCF Record.</p>
+<p>It is created internally by iterating over a VCF.</p>
+<dl class="attribute">
+<dt id="Variant.INFO">
+<code class="descname">INFO</code><a class="headerlink" href="#Variant.INFO" title="Permalink to this definition">¶</a></dt>
+<dd><p><cite>INFO</cite> &#8211; a dictionary-like field that provides access to the VCF INFO field.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.ALT">
+<code class="descname">ALT</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.ALT" title="Permalink to this definition">¶</a></dt>
+<dd><p>the list of alternate alleles.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.CHROM">
+<code class="descname">CHROM</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.CHROM" title="Permalink to this definition">¶</a></dt>
+<dd><p>chromosome of the variant.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.FILTER">
+<code class="descname">FILTER</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.FILTER" title="Permalink to this definition">¶</a></dt>
+<dd><p>the value of FILTER from the VCF field.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.FORMAT">
+<code class="descname">FORMAT</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.FORMAT" title="Permalink to this definition">¶</a></dt>
+<dd><p>VCF FORMAT field for this variant.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.ID">
+<code class="descname">ID</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.ID" title="Permalink to this definition">¶</a></dt>
+<dd><p>the value of ID from the VCF field.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.QUAL">
+<code class="descname">QUAL</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.QUAL" title="Permalink to this definition">¶</a></dt>
+<dd><p>the float value of QUAL from the VCF field.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.REF">
+<code class="descname">REF</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.REF" title="Permalink to this definition">¶</a></dt>
+<dd><p>the reference allele.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.aaf">
+<code class="descname">aaf</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.aaf" title="Permalink to this definition">¶</a></dt>
+<dd><p>alternate allele frequency across samples in this VCF.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.call_rate">
+<code class="descname">call_rate</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.call_rate" title="Permalink to this definition">¶</a></dt>
+<dd><p>proprtion of samples that were not UKNOWN.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.end">
+<code class="descname">end</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.end" title="Permalink to this definition">¶</a></dt>
+<dd><p>end of the variant. the INFO field is parsed for SVs.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyvcf2.cyvcf2.Variant.format">
+<code class="descname">format</code><span class="sig-paren">(</span><em>self</em>, <em>field</em>, <em>vtype=None</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.format" title="Permalink to this definition">¶</a></dt>
+<dd><p>format returns a numpy array for the requested field.</p>
+<p>The numpy array shape will match the requested field. E.g. if the fields
+has number=3, then the shape will be (n_samples, 3).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>field</strong> (<em>str</em>) &#8211; FORMAT field to get the values.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">numpy array.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.gt_alt_depths">
+<code class="descname">gt_alt_depths</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_alt_depths" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the count of alternate reads as a numpy array.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.gt_bases">
+<code class="descname">gt_bases</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_bases" title="Permalink to this definition">¶</a></dt>
+<dd><p>numpy array indicating the alleles in each sample.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.gt_depths">
+<code class="descname">gt_depths</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_depths" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the read-depth for each sample as a numpy array.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.gt_phases">
+<code class="descname">gt_phases</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_phases" title="Permalink to this definition">¶</a></dt>
+<dd><p>get a boolean indicating wether each sample is phased as a numpy array.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.gt_phred_ll_het">
+<code class="descname">gt_phred_ll_het</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_phred_ll_het" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the PL of het for each sample as a numpy array.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.gt_phred_ll_homalt">
+<code class="descname">gt_phred_ll_homalt</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_phred_ll_homalt" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the PL of hom_alt for each sample as a numpy array.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.gt_phred_ll_homref">
+<code class="descname">gt_phred_ll_homref</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_phred_ll_homref" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the PL of Hom ref for each sample as a numpy array.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.gt_quals">
+<code class="descname">gt_quals</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_quals" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the GQ for each sample as a numpy array.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.gt_ref_depths">
+<code class="descname">gt_ref_depths</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_ref_depths" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the count of reference reads as a numpy array.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.gt_types">
+<code class="descname">gt_types</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>gt_types returns a numpy array indicating the type of each sample.</p>
+<p>HOM_REF=0, HET=1. For <cite>gts012=True</cite> HOM_ALT=2, UKNOWN=3</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.is_deletion">
+<code class="descname">is_deletion</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.is_deletion" title="Permalink to this definition">¶</a></dt>
+<dd><p>boolean indicating if the variant is a deletion.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.is_indel">
+<code class="descname">is_indel</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.is_indel" title="Permalink to this definition">¶</a></dt>
+<dd><p>boolean indicating if the variant is an indel.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.is_snp">
+<code class="descname">is_snp</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.is_snp" title="Permalink to this definition">¶</a></dt>
+<dd><p>boolean indicating if the variant is a SNP.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.is_sv">
+<code class="descname">is_sv</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.is_sv" title="Permalink to this definition">¶</a></dt>
+<dd><p>boolean indicating if the variant is an SV.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.is_transition">
+<code class="descname">is_transition</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.is_transition" title="Permalink to this definition">¶</a></dt>
+<dd><p>boolean indicating if the variant is a transition.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.num_called">
+<code class="descname">num_called</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.num_called" title="Permalink to this definition">¶</a></dt>
+<dd><p>number of samples that were not UKNOWN.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.num_het">
+<code class="descname">num_het</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.num_het" title="Permalink to this definition">¶</a></dt>
+<dd><p>number heterozygous samples at this variant.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.num_hom_alt">
+<code class="descname">num_hom_alt</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.num_hom_alt" title="Permalink to this definition">¶</a></dt>
+<dd><p>number homozygous alternate samples at this variant.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.num_hom_ref">
+<code class="descname">num_hom_ref</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.num_hom_ref" title="Permalink to this definition">¶</a></dt>
+<dd><p>number homozygous reference samples at this variant.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.num_unknown">
+<code class="descname">num_unknown</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.num_unknown" title="Permalink to this definition">¶</a></dt>
+<dd><p>number unknown samples at this variant.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.ploidy">
+<code class="descname">ploidy</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.ploidy" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the ploidy of each sample for the given record.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.start">
+<code class="descname">start</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>0-based start of the variant.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Variant.var_type">
+<code class="descname">var_type</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.var_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>type of variant (snp/indel/sv)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cyvcf2.cyvcf2.Writer">
+<em class="property">class </em><code class="descclassname">cyvcf2.cyvcf2.</code><code class="descname">Writer</code><span class="sig-paren">(</span><em>fname</em>, <em>VCF tmpl</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Writer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writer class makes a VCF Writer.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fname</strong> (<em>str</em>) &#8211; path to file</li>
+<li><strong>tmpl</strong> (<a class="reference internal" href="#cyvcf2.cyvcf2.VCF" title="cyvcf2.cyvcf2.VCF"><em>VCF</em></a>) &#8211; a template to use to create the output header.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">VCF object for iterating and querying.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="cyvcf2.cyvcf2.Writer.close">
+<code class="descname">close</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Writer.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>close the file.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyvcf2.cyvcf2.Writer.name">
+<code class="descname">name</code><a class="headerlink" href="#cyvcf2.cyvcf2.Writer.name" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>name</em> &#8211; bytes</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyvcf2.cyvcf2.Writer.write_record">
+<code class="descname">write_record</code><span class="sig-paren">(</span><em>self</em>, <em>Variant var</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Writer.write_record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write the variant to the writer.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cyvcf2.cyvcf2.INFO">
+<em class="property">class </em><code class="descclassname">cyvcf2.cyvcf2.</code><code class="descname">INFO</code><a class="headerlink" href="#cyvcf2.cyvcf2.INFO" title="Permalink to this definition">¶</a></dt>
+<dd><p>INFO is create internally by accessing <cite>Variant.INFO</cite></p>
+<p>is acts like a dictionary where keys are expected to be in the INFO field of the Variant
+and values are typed according to what is specified in the VCF header</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to cyvcf2&#8217;s documentation!</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/docstrings.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Brent Pedersen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+      |
+      <a href="_sources/docstrings.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

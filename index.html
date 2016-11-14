@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Welcome to cyvcf2’s documentation! &mdash; cyvcf2 0.6.5 documentation</title>
+    <title>cyvcf2 &mdash; cyvcf2 0.6.5 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -39,22 +39,74 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="welcome-to-cyvcf2-s-documentation">
-<h1>Welcome to cyvcf2&#8217;s documentation!<a class="headerlink" href="#welcome-to-cyvcf2-s-documentation" title="Permalink to this headline">¶</a></h1>
-<p>Contents:</p>
+  <div class="section" id="cyvcf2">
+<h1>cyvcf2<a class="headerlink" href="#cyvcf2" title="Permalink to this headline">¶</a></h1>
+<p>cyvcf2 is a fast VCF parser for python released under the MIT license.
+It is a <cite>cython</cite> wrapper for <a class="reference external" href="https://github.com/samtools/htslib/">htslib</a> developed in
+the <a class="reference external" href="http://quinlanlab.org/">Quinlan lab</a>.</p>
+<p>See the <a class="reference internal" href="docstrings.html#api"><span class="std std-ref">cyvcf2 API</span></a> for detailed documentation, but the most common usage is summarized in the snippet below:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">cyvcf2</span> <span class="kn">import</span> <span class="n">VCF</span>
+
+<span class="k">for</span> <span class="n">variant</span> <span class="ow">in</span> <span class="n">VCF</span><span class="p">(</span><span class="s1">&#39;some.vcf.gz&#39;</span><span class="p">):</span> <span class="c1"># or VCF(&#39;some.bcf&#39;)</span>
+    <span class="n">variant</span><span class="o">.</span><span class="n">REF</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">ALT</span> <span class="c1"># e.g. REF=&#39;A&#39;, ALT=[&#39;C&#39;, &#39;T&#39;]</span>
+
+    <span class="n">variant</span><span class="o">.</span><span class="n">CHROM</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">end</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">ID</span><span class="p">,</span> \
+                <span class="n">variant</span><span class="o">.</span><span class="n">FILTER</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">QUAL</span>
+
+    <span class="c1"># numpy arrays of specific things we pull from the sample fields.</span>
+    <span class="c1"># gt_types is array of 0,1,2,3==HOM_REF, HET, UNKNOWN, HOM_ALT</span>
+    <span class="n">variant</span><span class="o">.</span><span class="n">gt_types</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">gt_ref_depths</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">gt_alt_depths</span> <span class="c1"># numpy arrays</span>
+    <span class="n">variant</span><span class="o">.</span><span class="n">gt_phases</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">gt_quals</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">gt_bases</span> <span class="c1"># numpy array</span>
+
+
+    <span class="c1">## INFO Field.</span>
+    <span class="c1">## extract from the info field by it&#39;s name:</span>
+    <span class="n">variant</span><span class="o">.</span><span class="n">INFO</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;DP&#39;</span><span class="p">)</span> <span class="c1"># int</span>
+    <span class="n">variant</span><span class="o">.</span><span class="n">INFO</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;FS&#39;</span><span class="p">)</span> <span class="c1"># float</span>
+    <span class="n">variant</span><span class="o">.</span><span class="n">INFO</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;AC&#39;</span><span class="p">)</span> <span class="c1"># float</span>
+
+    <span class="c1"># convert back to a string.</span>
+    <span class="nb">str</span><span class="p">(</span><span class="n">variant</span><span class="p">)</span>
+
+
+    <span class="c1">## per-sample info...</span>
+    <span class="c1"># Get a numpy array of the depth per sample:</span>
+    <span class="n">dp</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;DP&#39;</span><span class="p">)</span>
+    <span class="c1"># or of any other format field:</span>
+    <span class="n">sb</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;SB&#39;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">sb</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span> <span class="c1"># 4-values per</span>
+
+<span class="c1"># to do a region-query:</span>
+
+<span class="n">vcf</span> <span class="o">=</span> <span class="n">VCF</span><span class="p">(</span><span class="s1">&#39;some.vcf.gz&#39;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vcf</span><span class="p">(</span><span class="s1">&#39;11:435345-556565&#39;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">INFO</span><span class="p">[</span><span class="s2">&quot;AF&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.1</span><span class="p">:</span> <span class="k">continue</span>
+    <span class="k">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>pip install cyvcf2
+</pre></div>
+</div>
+<p>or via bioconda.</p>
+</div>
+<div class="section" id="testing">
+<h1>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h1>
+<p>Tests can be run with:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>python setup.py <span class="nb">test</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="see-also">
+<h1>See Also<a class="headerlink" href="#see-also" title="Permalink to this headline">¶</a></h1>
+<p>Pysam also [has a cython wrapper to htslib](<a class="reference external" href="https://github.com/pysam-developers/pysam/blob/master/pysam/cbcf.pyx">https://github.com/pysam-developers/pysam/blob/master/pysam/cbcf.pyx</a>) and one block of code here is taken directly from that library. But, the optimizations that we want for gemini are very specific so we have chosen to create a separate project.</p>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="docstrings.html">cyvcf2 API</a></li>
 </ul>
 </div>
-</div>
-<div class="section" id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
-<ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
-<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
-<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
-</ul>
 </div>
 
 
@@ -65,8 +117,10 @@
         <div class="sphinxsidebarwrapper">
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">Welcome to cyvcf2&#8217;s documentation!</a></li>
-<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+<li><a class="reference internal" href="#">cyvcf2</a></li>
+<li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#testing">Testing</a></li>
+<li><a class="reference internal" href="#see-also">See Also</a></li>
 </ul>
 <div class="relations">
 <h3>Related Topics</h3>

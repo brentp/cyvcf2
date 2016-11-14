@@ -1,6 +1,10 @@
 cyvcf2
 ======
 
+<!-- ghp-import -p docs/build/html/ -->
+[![Docs](https://img.shields.io/badge/docs-latest-blue.svg)](http://brentp.github.io/cyvcf2/)
+
+
 Fast python **(2 and 3)** parsing of VCF and BCF including region-queries.
 
 [![Build Status](https://travis-ci.org/brentp/cyvcf2.svg?branch=master)](https://travis-ci.org/brentp/cyvcf2)

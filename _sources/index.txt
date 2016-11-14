@@ -6,7 +6,7 @@
 cyvcf2
 ======
 
-cyvcf2 is a fast VCF parser for python released under the MIT license.
+cyvcf2 is a fast VCF parser for python (2 and 3) released under the MIT license.
 It is a `cython` wrapper for `htslib <https://github.com/samtools/htslib/>`_ developed in 
 the `Quinlan lab <http://quinlanlab.org/>`_.
 

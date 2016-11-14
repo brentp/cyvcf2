@@ -10,3 +10,6 @@ htslib/.gitignore
 *.o
 *.pico
 libhts.a
+_build
+_static
+_templates

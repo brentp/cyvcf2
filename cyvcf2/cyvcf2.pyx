@@ -1,4 +1,5 @@
 #cython: profile=False
+#cython: embedsignature=True
 from __future__ import print_function
 import os
 import os.path as op
@@ -125,6 +126,25 @@ cdef set_constants(VCF v):
         v.HOM_ALT = 3
 
 cdef class VCF:
+    """
+    VCF class holds methods to iterate over and query a VCF.
+
+    Parameters
+    ----------
+    fname: str
+        path to file
+    gts012: bool
+        if True, then gt_types will be 0=HOM_REF, 1=HET, 2=HOM_ALT, 3=UNKNOWN. If False, 3, 2 are flipped.
+    lazy: bool
+        if True, then don't unpack (parse) the underlying record until needed.
+    samples: list
+        list of samples to extract from full set in file.
+    
+
+    Returns
+    -------
+    VCF object for iterating and querying.
+    """
 
     cdef htsFile *hts
     cdef const bcf_hdr_t *hdr
@@ -139,12 +159,16 @@ cdef class VCF:
     # holds a lookup of format field -> type.
     cdef dict format_types
 
+    #: The constant used to indicate the the genotype is HOM_REF.
     cdef readonly int HOM_REF
+    #: The constant used to indicate the the genotype is HET.
     cdef readonly int HET
+    #: The constant used to indicate the the genotype is HOM_ALT.
     cdef readonly int HOM_ALT
+    #: The constant used to indicate the the genotype is UNKNOWN.
     cdef readonly int UNKNOWN
 
-    def __init__(self, fname, mode="r", gts012=False, lazy=False, samples=None):
+    def __init__(self, fname, mode="r", gts012=False, lazy=False, samples=None, threads=None):
         if fname == b"-" or fname == "-":
             fname = b"/dev/stdin"
         if not op.exists(fname):
@@ -168,6 +192,13 @@ cdef class VCF:
         self._seqnames = []
         set_constants(self)
         self.format_types = {}
+        if threads is not None:
+            self.set_threads(threads)
+
+    def set_threads(self, int n):
+        v = hts_set_threads(self.hts, n)
+        if v < 0:
+            raise Exception("error setting number of threads: %d" % v)
 
     cdef get_type(self, fmt):
         fmt = from_bytes(fmt)
@@ -178,6 +209,13 @@ cdef class VCF:
         return from_bytes(self.format_types[fmt])
 
     def add_to_header(self, line):
+        """Add a new line to the VCF header.
+
+        Parameters
+        ----------
+        line: str
+            full vcf header line.
+        """
         ret = bcf_hdr_append(self.hdr, to_bytes(line))
         if ret != 0:
             raise Exception("couldn't add '%s' to header")
@@ -187,15 +225,43 @@ cdef class VCF:
         return ret
 
     def add_info_to_header(self, adict):
+        """Add a INFO line to the VCF header.
+
+        Parameters
+        ----------
+        adict: dict
+            dict containing keys for ID, Number, Type, Description.
+        """
         return self.add_to_header("##INFO=<ID={ID},Number={Number},Type={Type},Description=\"{Description}\">".format(**adict))
 
     def add_format_to_header(self, adict):
+        """Add a FORMAT line to the VCF header.
+
+        Parameters
+        ----------
+        adict: dict
+            dict containing keys for ID, Number, Type, Description.
+        """
         return self.add_to_header("##FORMAT=<ID={ID},Number={Number},Type={Type},Description=\"{Description}\">".format(**adict))
 
     def add_filter_to_header(self, adict):
+        """Add a FILTER line to the VCF header.
+
+        Parameters
+        ----------
+        adict: dict
+            dict containing keys for ID, Description.
+        """
         return self.add_to_header("##FILTER=<ID={ID},Description=\"{Description}\">".format(**adict))
 
     def set_samples(self, samples):
+        """Set the samples to be pulled from the VCF; this must be called before any iteration.
+
+        Parameters
+        ----------
+        samples: list
+            list of samples to extract.
+        """
         if samples is None:
             samples = "-".encode()
         if isinstance(samples, list):
@@ -211,6 +277,19 @@ cdef class VCF:
                 sys.stderr.write("warning: not all samples in PED found in VCF\n")
 
     def update(self, id, type, number, description):
+        """Update the header with an INFO field of the given parameters.
+
+        Parameters
+        ----------
+        id: str
+            ID
+        type: str
+            valid VCF type
+        number: str
+             valid VCF number
+        description: str
+             description of added line.
+        """
         ret = bcf_hdr_append(self.hdr, "##INFO=<ID={id},Number={number},Type={type},Description=\"{description}\">".format(id=id, type=type, number=number, description=description))
         if ret != 0:
             raise Exception("unable to update to header: %d", ret)
@@ -244,6 +323,18 @@ cdef class VCF:
 
 
     def __call__(VCF self, region=None):
+        """
+        Extract the region from the VCF.
+
+        Parameters
+        ----------
+        region: str
+           region string like chr1:1234-34566 or 'chr7
+
+        Returns
+        -------
+        An Iterator over the requested region.
+        """
         if not region:
             yield from self
             raise StopIteration
@@ -287,6 +378,9 @@ cdef class VCF:
             hts_itr_destroy(itr)
 
     def header_iter(self):
+        """
+        Iterate over fields in the HEADER
+        """
         cdef int i
         for i in range(self.hdr.nhrec):
             yield newHREC(self.hdr.hrec[i], self.hdr)
@@ -324,6 +418,17 @@ cdef class VCF:
 
     # pull something out of the HEADER, e.g. CSQ
     def __getitem__(self, key):
+        """Extract a field from the VCF header by id.
+
+        Parameters
+        ----------
+        key: str
+           ID to pull from the header.
+        Returns
+        -------
+        rec: dict
+            dictionary containing header information.
+        """
         key = to_bytes(key)
         cdef bcf_hrec_t *b = bcf_hdr_get_hrec(self.hdr, BCF_HL_INFO, b"ID", key, NULL);
         cdef int i
@@ -340,6 +445,7 @@ cdef class VCF:
         return d
 
     def __contains__(self, key):
+        """Check if the given ID is in the header."""
         try:
             self[key]
             return True
@@ -377,17 +483,20 @@ cdef class VCF:
         raise StopIteration
 
     property samples:
+        "list of samples pulled from the VCF."
         def __get__(self):
             cdef int i
             return [str(self.hdr.samples[i].decode('utf-8')) for i in range(self.n_samples)]
 
     property raw_header:
+        "string of the raw header from the VCF"
         def __get__(self):
             cdef int hlen
             s = bcf_hdr_fmt_text(self.hdr, 0, &hlen)
             return from_bytes(s)
 
     property seqnames:
+        "list of chromosomes in the VCF"
         def __get__(self):
             if len(self._seqnames) > 0: return self._seqnames
             cdef char **cnames
@@ -709,8 +818,9 @@ cdef class VCF:
                 sample_k = samples[sk]
 
                 # calculate relatedness. we use the geometric mean.
-                bot = math.exp(0.5 * (math.log(1 + _hets[sk]) + math.log(1 + _hets[sj])))
-                #bot = (_hets[sk] + _hets[sj])
+                #bot = math.exp(0.5 * (math.log(1 + _hets[sk]) + math.log(1 + _hets[sj])))
+                #bot = (_hets[sk] + _hets[sj])/2.0
+                bot = min(_hets[sk], _hets[sj])
                 phi = (_ibs[sk, sj] - 2.0 * _ibs[sj, sk]) / (bot)
 
                 res['sample_a'].append(sample_j)
@@ -725,6 +835,18 @@ cdef class VCF:
         return res
 
 cdef class Variant(object):
+    """
+    Variant represents a single VCF Record.
+
+    It is created internally by iterating over a VCF.
+
+    Attributes
+    ----------
+
+    INFO: `INFO`
+       a dictionary-like field that provides access to the VCF INFO field.
+
+    """
     cdef bcf1_t *b
     cdef VCF vcf
     cdef int *_gt_types
@@ -789,6 +911,7 @@ cdef class Variant(object):
             stdlib.free(self._gt_gls)
 
     property gt_bases:
+        "numpy array indicating the alleles in each sample."
         def __get__(self):
             cdef np.ndarray gt_types = self.gt_types
             cdef int i, n = self.ploidy, j=0, k
@@ -831,6 +954,7 @@ cdef class Variant(object):
         return krelated(<int32_t *>self._gt_types, &ibs[0, 0], &n[0, 0], &hets[0], self.vcf.n_samples)
 
     property num_called:
+        "number of samples that were not UKNOWN."
         def __get__(self):
             if self._gt_types == NULL:
                 self.gt_types
@@ -846,11 +970,13 @@ cdef class Variant(object):
             return n
 
     property call_rate:
+        "proprtion of samples that were not UKNOWN."
         def __get__(self):
             if self.vcf.n_samples > 0:
                 return float(self.num_called) / self.vcf.n_samples
 
     property aaf:
+        "alternate allele frequency across samples in this VCF."
         def __get__(self):
             num_chroms = 2.0 * self.num_called
             if num_chroms == 0.0:
@@ -864,6 +990,7 @@ cdef class Variant(object):
             return (num_chroms / (num_chroms - 1.0)) * 2 * p * (1 - p)
 
     property num_hom_ref:
+        "number homozygous reference samples at this variant."
         def __get__(self):
             if self._gt_types == NULL:
                 self.gt_types
@@ -874,6 +1001,7 @@ cdef class Variant(object):
             return n
 
     property num_het:
+        "number heterozygous samples at this variant."
         def __get__(self):
             if self._gt_types == NULL:
                 self.gt_types
@@ -884,6 +1012,7 @@ cdef class Variant(object):
             return n
 
     property num_hom_alt:
+        "number homozygous alternate samples at this variant."
         def __get__(self):
             if self._gt_types == NULL:
                 self.gt_types
@@ -899,6 +1028,7 @@ cdef class Variant(object):
             return n
 
     property num_unknown:
+        "number unknown samples at this variant."
         def __get__(self):
             if self._gt_types == NULL:
                 self.gt_types
@@ -909,6 +1039,7 @@ cdef class Variant(object):
             return n
 
     property FORMAT:
+        "VCF FORMAT field for this variant."
         def __get__(self):
             cdef int i
             cdef bcf_fmt_t fmt
@@ -920,15 +1051,25 @@ cdef class Variant(object):
                 keys.append(key)
             return keys
 
-    def format(self, itag, vtype=None):
-        """
-        type is one of [int, float, str]
-        returns None if the key isn't found.
+    def format(self, field, vtype=None):
+        """format returns a numpy array for the requested field.
+
+        The numpy array shape will match the requested field. E.g. if the fields
+        has number=3, then the shape will be (n_samples, 3).
+
+        Parameters
+        ----------
+        field: str
+            FORMAT field to get the values.
+
+        Returns
+        -------
+        numpy array.
         """
         if vtype is None:
-            vtype = self.vcf.get_type(itag)
+            vtype = self.vcf.get_type(field)
 
-        cdef bytes tag = to_bytes(itag)
+        cdef bytes tag = to_bytes(field)
         cdef bcf_fmt_t *fmt = bcf_get_fmt(self.vcf.hdr, self.b, tag)
         cdef int n = 0, nret
         cdef void *buf = NULL;
@@ -968,6 +1109,10 @@ cdef class Variant(object):
         return iret
 
     property gt_types:
+        """gt_types returns a numpy array indicating the type of each sample.
+
+        HOM_REF=0, HET=1. For `gts012=True` HOM_ALT=2, UKNOWN=3
+        """
         def __get__(self):
             cdef int ndst, ngts, n, i, nper, j = 0, k = 0
             cdef int a
@@ -1002,12 +1147,14 @@ cdef class Variant(object):
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_types)
 
     property ploidy:
+        """get the ploidy of each sample for the given record."""
         def __get__(self):
             if self._ploidy == -1:
                 self.gt_types
             return self._ploidy
 
     property gt_phred_ll_homref:
+        """get the PL of Hom ref for each sample as a numpy array."""
         def __get__(self):
             if self.vcf.n_samples == 0:
                 return []
@@ -1045,6 +1192,7 @@ cdef class Variant(object):
                 return gls
 
     property gt_phred_ll_het:
+        """get the PL of het for each sample as a numpy array."""
         def __get__(self):
             if self.vcf.n_samples == 0:
                 return []
@@ -1070,6 +1218,7 @@ cdef class Variant(object):
                 return gls
 
     property gt_phred_ll_homalt:
+        """get the PL of hom_alt for each sample as a numpy array."""
         def __get__(self):
             if self.vcf.n_samples == 0:
                 return []
@@ -1093,6 +1242,7 @@ cdef class Variant(object):
                 return gls
 
     property gt_ref_depths:
+        """get the count of reference reads as a numpy array."""
         def __get__(self):
             cdef int ndst, nret = 0, n, i, j = 0, nper = 0
             if self.vcf.n_samples == 0:
@@ -1134,6 +1284,7 @@ cdef class Variant(object):
 
 
     property gt_alt_depths:
+        """get the count of alternate reads as a numpy array."""
         def __get__(self):
             cdef int ndst, nret = 0, n, i, j = 0, k = 0, nper = 0
             if self.vcf.n_samples == 0:
@@ -1181,6 +1332,7 @@ cdef class Variant(object):
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_alt_depths)
 
     property gt_quals:
+        """get the GQ for each sample as a numpy array."""
         def __get__(self):
             if self.vcf.n_samples == 0:
                 return []
@@ -1206,6 +1358,7 @@ cdef class Variant(object):
             return a
 
     property gt_depths:
+        """get the read-depth for each sample as a numpy array."""
         def __get__(self):
             if self.vcf.n_samples == 0:
                 return []
@@ -1222,6 +1375,7 @@ cdef class Variant(object):
             return depth
 
     property gt_phases:
+        """get a boolean indicating wether each sample is phased as a numpy array."""
         def __get__(self):
             # run for side-effect
             if self._gt_phased == NULL:
@@ -1233,15 +1387,18 @@ cdef class Variant(object):
 
 
     property REF:
+        "the reference allele."
         def __get__(self):
             return self.b.d.allele[0].decode()
 
     property ALT:
+        "the list of alternate alleles."
         def __get__(self):
             cdef int i
             return [self.b.d.allele[i].decode() for i in range(1, self.b.n_allele)]
 
     property is_snp:
+        "boolean indicating if the variant is a SNP."
         def __get__(self):
             cdef int i
             if len(self.b.d.allele[0]) > 1: return False
@@ -1251,6 +1408,7 @@ cdef class Variant(object):
             return True
 
     property is_indel:
+        "boolean indicating if the variant is an indel."
         def __get__(self):
             cdef int i
             is_sv = self.is_sv
@@ -1268,6 +1426,7 @@ cdef class Variant(object):
             return False
 
     property is_transition:
+        "boolean indicating if the variant is a transition."
         def __get__(self):
             if len(self.ALT) > 1: return False
 
@@ -1283,6 +1442,7 @@ cdef class Variant(object):
             return False
 
     property is_deletion:
+        "boolean indicating if the variant is a deletion."
         def __get__(self):
             if len(self.ALT) > 1: return False
 
@@ -1296,14 +1456,17 @@ cdef class Variant(object):
             return False
 
     property is_sv:
+        "boolean indicating if the variant is an SV."
         def __get__(self):
             return self.INFO.get(b'SVTYPE') is not None
 
     property CHROM:
+        "chromosome of the variant."
         def __get__(self):
             return bcf_hdr_id2name(self.vcf.hdr, self.b.rid).decode()
 
     property var_type:
+        "type of variant (snp/indel/sv)"
         def __get__(self):
            if self.is_snp:
                return "snp"
@@ -1341,20 +1504,24 @@ cdef class Variant(object):
             return self.ALT[0].strip('<>')
 
     property start:
+        "0-based start of the variant."
         def __get__(self):
             return self.b.pos
 
     property end:
+        "end of the variant. the INFO field is parsed for SVs."
         def __get__(self):
             return self.b.pos + self.b.rlen
 
     property ID:
+        "the value of ID from the VCF field."
         def __get__(self):
             cdef char *id = self.b.d.id
             if id == b".": return None
             return id
 
     property FILTER:
+        "the value of FILTER from the VCF field."
         def __get__(self):
             cdef int i
             cdef int n = self.b.d.n_flt
@@ -1385,6 +1552,7 @@ cdef class Variant(object):
                 raise Exception("not able to set filter: %s", filters)
 
     property QUAL:
+        "the float value of QUAL from the VCF field."
         def __get__(self):
             cdef float q = self.b.qual
             if bcf_float_is_missing(q):
@@ -1441,6 +1609,12 @@ cdef class HREC(object):
         return str(self.info())
 
 cdef class INFO(object):
+    """
+    INFO is create internally by accessing `Variant.INFO`
+
+    is acts like a dictionary where keys are expected to be in the INFO field of the Variant
+    and values are typed according to what is specified in the VCF header
+    """
     cdef bcf_hdr_t *hdr
     cdef bcf1_t *b
     cdef int _i
@@ -1604,6 +1778,20 @@ cdef from_bytes(s):
 
 
 cdef class Writer(object):
+    """
+    Writer class makes a VCF Writer.
+
+    Parameters
+    ----------
+    fname: str
+        path to file
+    tmpl: VCF
+        a template to use to create the output header.
+
+    Returns
+    -------
+    VCF object for iterating and querying.
+    """
     cdef htsFile *hts
     cdef bcf_hdr_t *hdr
     cdef public bytes name
@@ -1621,12 +1809,14 @@ cdef class Writer(object):
         bcf_hdr_set_samples(self.hdr, samples, 0)
 
     def write_record(self, Variant var):
+        "Write the variant to the writer."
         if not self.header_written:
             bcf_hdr_write(self.hts, self.hdr)
             self.header_written = True
         return bcf_write(self.hts, self.hdr, var.b)
 
     def close(self):
+        "close the file."
         if self.hts != NULL:
             hts_close(self.hts)
             self.hts = NULL

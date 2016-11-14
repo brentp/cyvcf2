@@ -27,6 +27,9 @@ cdef extern from "htslib/hts.h":
     ctypedef struct hFILE:
         pass
 
+    int hts_set_threads(htsFile *fp, int n);
+
+
     cdef union ufp:
         hFILE *hfile;
 
@@ -42,12 +45,7 @@ cdef extern from "htslib/hts.h":
         ufp fp
         htsFormat format
 
-
-
-
-
     int hts_detect_format(hFILE *fp, htsFormat *fmt);
-
 
     htsFile *hts_open(char *fn, char *mode);
 

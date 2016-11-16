@@ -96,6 +96,8 @@ cdef extern from "htslib/vcf.h":
     const int BCF_BT_FLOAT  = 5
     const int BCF_BT_CHAR   = 7
 
+    const int BCF_HT_FLAG = 0
+
     const int bcf_str_missing = 0x07
     const int bcf_str_vector_end = 0
 
@@ -226,6 +228,7 @@ cdef extern from "htslib/vcf.h":
     const char *bcf_hdr_id2name(const bcf_hdr_t *hdr, int rid);
     const char *bcf_hdr_int2id(const bcf_hdr_t *hdr, int type, int int_id)
     int bcf_hdr_id2int(const bcf_hdr_t *hdr, int type, const char *id);
+    int bcf_hdr_id2type(bcf_hdr_t * hdr,int type, int int_id)
 
     int bcf_unpack(bcf1_t *b, int which) nogil;
 

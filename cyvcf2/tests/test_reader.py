@@ -222,6 +222,11 @@ def test_add_info_to_header():
         ret = ret.decode()
     assert ret == "XXX", (dict(v.INFO), v.INFO["abcdefg"])
 
+def test_read_flag():
+    vcf = VCF(VCF_PATH)
+    for v in vcf:
+        "in_exac_flag" in str(v) == v.INFO['in_exac_flag']
+
 def test_add_flag():
     vcf = VCF(VCF_PATH)
     vcf.add_info_to_header({'ID': 'myflag', 'Description': 'myflag',
@@ -238,7 +243,7 @@ def test_add_flag():
     w.close()
 
     v = next(VCF(f))
-    assert v.INFO["myflag"] is None, dict(v.INFO)
+    assert v.INFO["myflag"] is True, dict(v.INFO)
 
     f = tempfile.mktemp(suffix=".vcf")
     atexit.register(os.unlink, f)

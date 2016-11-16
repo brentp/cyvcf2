@@ -1664,6 +1664,10 @@ cdef class INFO(object):
                 return None
             return from_bytes(v)
 
+        # FLAG.
+        if info.len == 0:
+            return bcf_hdr_id2type(self.hdr, BCF_HL_INFO, info.key) == BCF_HT_FLAG
+
         return bcf_array_to_object(info.vptr, info.type, info.len)
 
     def __getitem__(self, okey):

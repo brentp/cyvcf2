@@ -1777,7 +1777,10 @@ cdef to_bytes(s, enc=ENC):
 
 cdef from_bytes(s):
     if isinstance(s, bytes):
-        return s.decode(ENC)
+        try:
+            return s.decode(ENC)
+        except UnicodeDecodeError:
+            return s.decode('utf8')
     return s
 
 

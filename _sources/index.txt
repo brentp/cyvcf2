@@ -52,6 +52,41 @@ See the :ref:`api` for detailed documentation, but the most common usage is summ
         if v.INFO["AF"] > 0.1: continue
         print(str(v))
 
+        # single sample of 0|1 in vcf becomes [[0, 1, True]]
+        # 2 samples of 0/0 and 1|1 would be [[0, 0, False], [1, 1, True]]
+        print v.genotypes 
+
+Modifying Existing Records
+==========================
+
+`cyvcf2` is optimized for fast reading and extraction from existing files.
+However, it also offers some means of modifying existing VCFs. Here, wrapper
+show an example of how to annotate variants with the genes that they overlap.
+
+
+.. code-block:: python
+
+    from cyvcf2 import VCF, Writer
+    vcf = VCF(VCF_PATH)
+    # adjust the header to contain the new field
+    # the keys 'ID', 'Description', 'Type', and 'Number' are required.
+    vcf.add_info_to_header({'ID': 'gene', 'Description': 'overlapping gene',
+        'Type':'Character', 'Number': '1'})
+
+    # create a new vcf Writer using the input vcf as a template.
+    w = Writer(f, vcf)
+
+    for v in vcf:
+        # The get_gene_intersections function is not shown.
+        # This could be any operation to find intersections
+        # or any manipulation required by the user.
+        genes = get_gene_intersections(v)
+        if genes is not None:
+            v.INFO["gene"] = ",".join(genes)
+        w.write_record(v)
+
+    w.close(); vcf.close()
+
 
 Installation
 ============

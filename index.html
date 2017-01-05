@@ -82,6 +82,38 @@ the <a class="reference external" href="http://quinlanlab.org/">Quinlan lab</a>.
 <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vcf</span><span class="p">(</span><span class="s1">&#39;11:435345-556565&#39;</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">INFO</span><span class="p">[</span><span class="s2">&quot;AF&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.1</span><span class="p">:</span> <span class="k">continue</span>
     <span class="k">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+
+    <span class="c1"># single sample of 0|1 in vcf becomes [[0, 1, True]]</span>
+    <span class="c1"># 2 samples of 0/0 and 1|1 would be [[0, 0, False], [1, 1, True]]</span>
+    <span class="k">print</span> <span class="n">v</span><span class="o">.</span><span class="n">genotypes</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="modifying-existing-records">
+<h1>Modifying Existing Records<a class="headerlink" href="#modifying-existing-records" title="Permalink to this headline">¶</a></h1>
+<p><cite>cyvcf2</cite> is optimized for fast reading and extraction from existing files.
+However, it also offers some means of modifying existing VCFs. Here, wrapper
+show an example of how to annotate variants with the genes that they overlap.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">cyvcf2</span> <span class="kn">import</span> <span class="n">VCF</span><span class="p">,</span> <span class="n">Writer</span>
+<span class="n">vcf</span> <span class="o">=</span> <span class="n">VCF</span><span class="p">(</span><span class="n">VCF_PATH</span><span class="p">)</span>
+<span class="c1"># adjust the header to contain the new field</span>
+<span class="c1"># the keys &#39;ID&#39;, &#39;Description&#39;, &#39;Type&#39;, and &#39;Number&#39; are required.</span>
+<span class="n">vcf</span><span class="o">.</span><span class="n">add_info_to_header</span><span class="p">({</span><span class="s1">&#39;ID&#39;</span><span class="p">:</span> <span class="s1">&#39;gene&#39;</span><span class="p">,</span> <span class="s1">&#39;Description&#39;</span><span class="p">:</span> <span class="s1">&#39;overlapping gene&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Type&#39;</span><span class="p">:</span><span class="s1">&#39;Character&#39;</span><span class="p">,</span> <span class="s1">&#39;Number&#39;</span><span class="p">:</span> <span class="s1">&#39;1&#39;</span><span class="p">})</span>
+
+<span class="c1"># create a new vcf Writer using the input vcf as a template.</span>
+<span class="n">w</span> <span class="o">=</span> <span class="n">Writer</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">vcf</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vcf</span><span class="p">:</span>
+    <span class="c1"># The get_gene_intersections function is not shown.</span>
+    <span class="c1"># This could be any operation to find intersections</span>
+    <span class="c1"># or any manipulation required by the user.</span>
+    <span class="n">genes</span> <span class="o">=</span> <span class="n">get_gene_intersections</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">genes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">v</span><span class="o">.</span><span class="n">INFO</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">write_record</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+<span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">();</span> <span class="n">vcf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -118,6 +150,7 @@ the <a class="reference external" href="http://quinlanlab.org/">Quinlan lab</a>.
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">cyvcf2</a></li>
+<li><a class="reference internal" href="#modifying-existing-records">Modifying Existing Records</a></li>
 <li><a class="reference internal" href="#installation">Installation</a></li>
 <li><a class="reference internal" href="#testing">Testing</a></li>
 <li><a class="reference internal" href="#see-also">See Also</a></li>

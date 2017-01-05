@@ -52,6 +52,10 @@ See the :ref:`api` for detailed documentation, but the most common usage is summ
         if v.INFO["AF"] > 0.1: continue
         print(str(v))
 
+        # single sample of 0|1 in vcf becomes [[0, 1, True]]
+        # 2 samples of 0/0 and 1|1 would be [[0, 0, False], [1, 1, True]]
+        print v.genotypes 
+
 
 Installation
 ============

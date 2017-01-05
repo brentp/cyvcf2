@@ -112,7 +112,7 @@ cdef unicode xstr(s):
     else:
         raise TypeError(...)
 
-def r_(int[::view.contiguous] a_gts, int[::view.contiguous] b_gts, float f, int32_t n_samples):
+def r_(int32_t[::view.contiguous] a_gts, int32_t[::view.contiguous] b_gts, float f, int32_t n_samples):
     return r_unphased(&a_gts[0], &b_gts[0], f, n_samples)
 
 cdef set_constants(VCF v):
@@ -745,7 +745,7 @@ cdef class VCF:
         cdef Variant v
 
         cdef int last = -gap, nv = 0, nvt=0
-        cdef int *last_gts = NULL
+        cdef int32_t *last_gts = NULL
         samples = self.samples
         cdef int n_samples = len(samples)
         cdef float aaf = 0.0
@@ -849,7 +849,7 @@ cdef class Variant(object):
     """
     cdef bcf1_t *b
     cdef VCF vcf
-    cdef int *_gt_types
+    cdef int32_t *_gt_types
     cdef int *_gt_ref_depths
     cdef int *_gt_alt_depths
     cdef void *fmt_buffer
@@ -862,6 +862,7 @@ cdef class Variant(object):
     cdef float *_gt_gls
     cdef readonly INFO INFO
     cdef int _ploidy
+    cdef list _genotypes
 
     cdef readonly int POS
 
@@ -1108,19 +1109,55 @@ cdef class Variant(object):
         stdlib.free(buf)
         return iret
 
+    property genotypes:
+        """genotypes returns a list for each sample Indicating the allele and phasing.
+
+        e.g. [0, 1, True] corresponds to 0|1
+        while [1, 2, False] corresponds to 1|2
+        """
+        def __get__(self):
+
+            if self.vcf.n_samples == 0: return None
+            if self._genotypes is not None:
+              return self._genotypes
+            cdef int32_t *gts = NULL
+            cdef int i, j, nret, off = 0, ndst = 0, k = 0
+            cdef int n_samples = self.vcf.n_samples
+            #self._genotypes = []
+            nret = bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst)
+            if nret < 0:
+                raise Exception("error parsing genotypes")
+            nret /= n_samples
+            self._genotypes = [[] for _ in range(n_samples)]
+
+            for i in range(n_samples):
+              k = i * nret
+              for j in range(nret):
+                  if bcf_gt_is_missing(gts[k + j]):
+                      self._genotypes[i].append(-1)
+                      break
+                  if gts[k + j] == bcf_int32_vector_end:
+                      break
+                  self._genotypes[i].append(bcf_gt_allele(gts[k + j]))
+              self._genotypes[i].append(
+                    bool(bcf_gt_is_phased(gts[k+1])))
+
+            stdlib.free(gts)
+            return self._genotypes
+
+
     property gt_types:
         """gt_types returns a numpy array indicating the type of each sample.
 
         HOM_REF=0, HET=1. For `gts012=True` HOM_ALT=2, UKNOWN=3
         """
         def __get__(self):
-            cdef int ndst, ngts, n, i, nper, j = 0, k = 0
+            cdef int ndst = 0, ngts, n, i, nper, j = 0, k = 0
             cdef int a
             if self.vcf.n_samples == 0:
                 return []
             if self._gt_types == NULL:
                 self._gt_phased = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples)
-                ndst = 0
                 ngts = bcf_get_genotypes(self.vcf.hdr, self.b, &self._gt_types, &ndst)
                 nper = ndst / self.vcf.n_samples
                 self._ploidy = nper

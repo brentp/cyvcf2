@@ -1,6 +1,6 @@
 #include <htslib/vcf.h>
 
-int as_gts(int *gts, int num_samples, int ploidy) {
+int as_gts(int32_t *gts, int num_samples, int ploidy) {
     int j = 0, i, k;
 	int missing;
     for (i = 0; i < ploidy * num_samples; i += ploidy){
@@ -52,7 +52,7 @@ int as_gts(int *gts, int num_samples, int ploidy) {
     return j;
 }
 
-int as_gts012(int *gts, int num_samples, int ploidy) {
+int as_gts012(int32_t *gts, int num_samples, int ploidy) {
     int j = 0, i, k;
 	int missing;
     for (i = 0; i < ploidy * num_samples; i += ploidy){

@@ -174,7 +174,7 @@ int krelated(int32_t *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t
 	return n_used;
 }
 
-float r_unphased(int *a_gts, int *b_gts, float f, int32_t n_samples) {
+float r_unphased(int32_t *a_gts, int32_t *b_gts, float f, int32_t n_samples) {
 	// http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2710162/pdf/GEN1823839.pdf
 	// https://github.com/alanrogers/covld/blob/master/estimate_ld.c
     float vA, vB, vAB, cov, nsqr;

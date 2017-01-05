@@ -6,14 +6,14 @@ np.import_array()
 cdef extern from "relatedness.h":
     int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0,
                 int32_t *ibs2, int32_t n_samples)
-    float r_unphased(int *a_gts, int *b_gts, float f, int32_t n_samples)
+    float r_unphased(int32_t *a_gts, int32_t *b_gts, float f, int32_t n_samples)
     int ibd(int agt, int bgt, int run_length, float pi, int *bins, int32_t n_bins)
 
     int krelated(int32_t *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t n_samples)
 
 cdef extern from "helpers.h":
-    int as_gts(int *gts, int num_samples, int ploidy);
-    int as_gts012(int *gts, int num_samples, int ploidy);
+    int as_gts(int32_t *gts, int num_samples, int ploidy);
+    int as_gts012(int32_t *gts, int num_samples, int ploidy);
 
 cdef extern from "htslib/kstring.h":
 
@@ -109,10 +109,9 @@ cdef extern from "htslib/vcf.h":
     const int bcf_int16_vector_end  = -32767
     const int bcf_int32_vector_end  = -2147483647
 
-    const int bcf_int8_missing  = -127
-    const int bcf_int16_missing  = -32767
-    const int bcf_int32_missing  = -2147483647
-
+    const int bcf_int8_missing  = INT8_MIN 
+    const int bcf_int16_missing  = INT16_MIN 
+    const int32_t bcf_int32_missing  = INT32_MIN
 
     ctypedef union uv1:
         int32_t i; # integer value
@@ -235,7 +234,7 @@ cdef extern from "htslib/vcf.h":
 
     bcf_fmt_t *bcf_get_fmt(const bcf_hdr_t *hdr, bcf1_t *line, const char *key);
 
-    int bcf_get_genotypes(const bcf_hdr_t *hdr, bcf1_t *line, int **dst, int *ndst);
+    int bcf_get_genotypes(const bcf_hdr_t *hdr, bcf1_t *line, int32_t **dst, int *ndst);
     int bcf_get_format_int32(const bcf_hdr_t *hdr, bcf1_t *line, char * tag, int **dst, int *ndst);
     int bcf_get_format_float(const bcf_hdr_t *hdr, bcf1_t *line, char * tag, float **dst, int *ndst)
     int bcf_get_format_string(const bcf_hdr_t *hdr, bcf1_t *line, const char *tag, char ***dst, int *ndst);

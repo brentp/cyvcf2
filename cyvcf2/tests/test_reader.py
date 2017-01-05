@@ -502,3 +502,25 @@ def test_gt_bases_nondiploid():
     expected = {0: ['C/C', 'C/C'], 1: ['C/T', 'C'], 2: ['C', 'C/T'], 3: ['C', 'C']}
     for i, v in enumerate(vcf):
         assert v.gt_bases.tolist() == expected[i], (v.gt_bases.tolist(), expected[i])
+
+def test_access_gts():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    """
+7	55086956	.	C	G	0	.	.	GT:ADP_ALL:RULE	0/0:6728,1:F	1|1:22,1:G
+7	55086957	.	T	A,C,G	0	.	.	GT:ADP_ALL:RULE	1/2:6768,2,2,1:F2,F3,F4	2|3:1,2,3,4:G2,G3,G4
+7	55086958	.	T	G	0	.	.	GT:ADP_ALL:RULE	0/1/.:6768,2,2,1:F2,F3,F4	0:1,2,3,4:G2,G3,G4
+7	55086959	.	T	G,T	0	.	.	GT:ADP_ALL:RULE	.	0|2:1,2,3,4:G2,G3,G4
+    """
+
+    v = next(vcf)
+    gts = v.genotypes
+    assert gts == [[0, 0, False], [1, 1, True]], gts
+
+    v = next(vcf)
+    assert v.genotypes == [[1, 2, False], [2, 3, True]], v.genotypes
+
+    v = next(vcf)
+    assert v.genotypes == [[0, 1, -1, False], [0, True]], v.genotypes
+
+    v = next(vcf)
+    assert v.genotypes == [[-1, True], [0, 2, True]], v.genotypes

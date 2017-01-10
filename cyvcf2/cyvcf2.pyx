@@ -1155,7 +1155,7 @@ cdef class Variant(object):
             cdef int ndst = 0, ngts, n, i, nper, j = 0, k = 0
             cdef int a
             if self.vcf.n_samples == 0:
-                return []
+                return np.array([])
             if self._gt_types == NULL:
                 self._gt_phased = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples)
                 ngts = bcf_get_genotypes(self.vcf.hdr, self.b, &self._gt_types, &ndst)
@@ -1163,7 +1163,7 @@ cdef class Variant(object):
                 self._ploidy = nper
                 self._gt_idxs = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples * nper)
                 if ndst == 0 or nper == 0:
-                    return []
+                    return np.array([])
                 for i in range(0, ndst, nper):
                     for k in range(i, i + nper):
                         a = self._gt_types[k]

@@ -83,3 +83,9 @@ See Also
 ========
 
 Pysam also [has a cython wrapper to htslib](https://github.com/pysam-developers/pysam/blob/master/pysam/cbcf.pyx) and one block of code here is taken directly from that library. But, the optimizations that we want for gemini are very specific so we have chosen to create a separate project.
+
+Performance
+===========
+
+For the performance comparison in the paper, we used [thousand genomes chromosome 22](ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chr22.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz)
+With the full comparison runner [here](https://github.com/brentp/cyvcf2/blob/master/scripts/compare.sh).

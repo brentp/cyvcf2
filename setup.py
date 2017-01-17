@@ -31,13 +31,22 @@ sources = [x for x in glob.glob('htslib/*.c') if not any(e in x for e in exclude
 sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
 sources.append('cyvcf2/helpers.c')
 
-import numpy as np
-from Cython.Distutils import build_ext
-cmdclass = {'build_ext': build_ext}
-extension = [Extension("cyvcf2.cyvcf2",
-                        ["cyvcf2/cyvcf2.pyx"] + sources,
-                        libraries=['z'],
-                        include_dirs=['htslib', 'cyvcf2', np.get_include()])]
+# When pip calls setup.py egg_info to get metadata, do not import
+# any of the dependencies
+if '--help' in sys.argv[1:] or \
+        sys.argv[1] in ('--help-commands', 'egg_info', 'clean', '--version'):
+    cmdclass = {}
+    extension = []
+else:
+    import numpy as np
+    from Cython.Distutils import build_ext
+    cmdclass = {'build_ext': build_ext}
+    extension = [Extension("cyvcf2.cyvcf2",
+                            ["cyvcf2/cyvcf2.pyx"] + sources,
+                            libraries=['z'],
+                            include_dirs=['htslib', 'cyvcf2', np.get_include()])]
+
+requires = ['cython>=0.22.1', 'numpy']
 
 setup(
     name="cyvcf2",
@@ -53,7 +62,8 @@ setup(
     packages=['cyvcf2', 'cyvcf2.tests'],
     test_suite='nose.collector',
     tests_require='nose',
-    install_requires=['cython>=0.22.1', 'numpy'],
+    install_requires=requires,
+    setup_requires=requires,
     include_package_data=True,
     zip_safe=False,
 )

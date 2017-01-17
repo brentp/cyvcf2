@@ -31,26 +31,13 @@ sources = [x for x in glob.glob('htslib/*.c') if not any(e in x for e in exclude
 sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
 sources.append('cyvcf2/helpers.c')
 
-install_requires = []
-try:
-    import numpy as np
-except ImportError:
-    install_requires.append("numpy")
-
-try:
-    from Cython.Distutils import build_ext
-except ImportError:
-    install_requires.append("cython>=0.22.1")
-
-if not install_requires:
-    cmdclass = {'build_ext': build_ext}
-    extension = [Extension("cyvcf2.cyvcf2",
-                           ["cyvcf2/cyvcf2.pyx"] + sources,
-                           libraries=['z'],
-                           include_dirs=['htslib', 'cyvcf2', np.get_include()])]
-else:
-    cmdclass = {}
-    extension = []
+import numpy as np
+from Cython.Distutils import build_ext
+cmdclass = {'build_ext': build_ext}
+extension = [Extension("cyvcf2.cyvcf2",
+                        ["cyvcf2/cyvcf2.pyx"] + sources,
+                        libraries=['z'],
+                        include_dirs=['htslib', 'cyvcf2', np.get_include()])]
 
 setup(
     name="cyvcf2",
@@ -66,7 +53,7 @@ setup(
     packages=['cyvcf2', 'cyvcf2.tests'],
     test_suite='nose.collector',
     tests_require='nose',
-    install_requires=install_requires,
+    install_requires=['cython>=0.22.1', 'numpy'],
     include_package_data=True,
     zip_safe=False,
 )

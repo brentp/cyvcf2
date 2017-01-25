@@ -1051,7 +1051,7 @@ cdef class Variant(object):
             for i in range(self.b.n_fmt):
                 fmt = self.b.d.fmt[i];
                 key = bcf_hdr_int2id(self.vcf.hdr, BCF_DT_ID, fmt.id)
-                keys.append(key)
+                keys.append(from_bytes(key))
             return keys
 
     def format(self, field, vtype=None):
@@ -1188,10 +1188,10 @@ cdef class Variant(object):
         cdef int ret
         if np.issubdtype(data.dtype, np.int):
             aint = data.astype(np.int32).reshape((size,))
-            ret = bcf_update_format_int32(self.vcf.hdr, self.b, <char *>name, &aint[0], size)
+            ret = bcf_update_format_int32(self.vcf.hdr, self.b, to_bytes(name), &aint[0], size)
         elif np.issubdtype(data.dtype, np.float):
             afloat = data.astype(np.float32).reshape((size,))
-            ret = bcf_update_format_float(self.vcf.hdr, self.b, <char *>name, &afloat[0], size)
+            ret = bcf_update_format_float(self.vcf.hdr, self.b, to_bytes(name), &afloat[0], size)
         else:
             raise Exception("format: currently only float and int numpy arrays are supported. got %s", data.dtype)
         if ret < 0:

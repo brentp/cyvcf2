@@ -503,33 +503,39 @@ def test_gt_bases_nondiploid():
     for i, v in enumerate(vcf):
         assert v.gt_bases.tolist() == expected[i], (v.gt_bases.tolist(), expected[i])
 
+def fmap(fn, a):
+    return list(map(fn, a))
+
+def allclose(a, b):
+    return np.allclose(np.array(a, dtype=float), np.array(b, dtype=float))
+
 def test_set_format_float():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     assert vcf.add_format_to_header(dict(ID="PS", Number=1, Type="Float", Description="PS example")) == 0
     v = next(vcf)
     v.set_format("PS", np.array([0.555, 1.111], dtype=np.float))
-    assert np.allclose(map(float, get_gt_str(v, "PS")), [0.555, 1.111])
+    assert allclose(fmap(float, get_gt_str(v, "PS")), np.array([0.555, 1.111]))
 
     v.set_format("PS", np.array([8.555, 11.111], dtype=np.float64))
-    assert np.allclose(map(float, get_gt_str(v, "PS")), [8.555, 11.111])
+    assert allclose(fmap(float, get_gt_str(v, "PS")), [8.555, 11.111])
 
     v.set_format("PS", np.array([9998.555, 99911.111], dtype=np.float32))
-    obs = map(float, get_gt_str(v, "PS"))
-    assert np.allclose(obs, [9998.555, 99911.111]), obs
+    obs = fmap(float, get_gt_str(v, "PS"))
+    assert allclose(obs, [9998.555, 99911.111]), obs
 
 def test_set_format_int():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     assert vcf.add_format_to_header(dict(ID="PI", Number=1, Type="Integer", Description="Int example")) == 0
     v = next(vcf)
     v.set_format("PI", np.array([5, 1], dtype=np.int))
-    assert np.allclose(map(float, get_gt_str(v, "PI")), [5, 1])
+    assert allclose(fmap(float, get_gt_str(v, "PI")), [5, 1])
 
     v.set_format("PI", np.array([855, 11], dtype=np.int64))
-    assert np.allclose(map(float, get_gt_str(v, "PI")), [855, 11])
+    assert allclose(fmap(float, get_gt_str(v, "PI")), [855, 11])
 
     v.set_format("PI", np.array([9998, 99911], dtype=np.int32))
-    obs = map(float, get_gt_str(v, "PI"))
-    assert np.allclose(obs, [9998, 99911]), obs
+    obs = fmap(float, get_gt_str(v, "PI"))
+    assert allclose(obs, [9998, 99911]), obs
 
 def test_set_format_int3():
     "test that we can handle multiple (in this case 3) values per sample"

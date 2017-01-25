@@ -249,6 +249,17 @@ cdef extern from "htslib/vcf.h":
     int bcf_update_info(const bcf_hdr_t *hdr, bcf1_t *line, const char *key, const void *values, int n, int type);
     int bcf_update_filter(const bcf_hdr_t *hdr, bcf1_t *line, int *flt_ids, int n);
 
+    int bcf_update_format(const bcf_hdr_t *hdr, bcf1_t *line, const char *key, const void *values, int n, int type);
+
+
+    ## genotypes
+    inline void bcf_gt2alleles(int igt, int *a, int *b);
+    int bcf_update_genotypes(const bcf_hdr_t *hdr, bcf1_t *line, const void *values, int n);
+    # idx is 0 for ref, 1... for alts...
+    int bcf_gt_phased(int idx);
+    int bcf_gt_unphased(int idx);
+
+
 
     int bcf_add_id(const bcf_hdr_t *hdr, bcf1_t *line, const char *id);
     int bcf_update_id(const bcf_hdr_t *hdr, bcf1_t *line, const char *id);

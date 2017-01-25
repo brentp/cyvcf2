@@ -503,6 +503,28 @@ def test_gt_bases_nondiploid():
     for i, v in enumerate(vcf):
         assert v.gt_bases.tolist() == expected[i], (v.gt_bases.tolist(), expected[i])
 
+def test_set_gts():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    v = next(vcf)
+
+    v.genotypes = [[1, 1, True], [0, 0, False]]
+    assert get_gt_str(v) == ["1|1", "0/0"]
+
+    v.genotypes = [[-1, 1, False], [-1, 0, False]]
+    assert get_gt_str(v) == ["./1", "./0"]
+
+    v.genotypes = [[-1, -1, False], [0, 0, True]]
+    assert get_gt_str(v) == ["./.", "0|0"]
+
+    v.genotypes = [[2, 2, True], [0, 2, True]]
+    assert get_gt_str(v) == ["2|2", "0|2"]
+
+
+
+
+def get_gt_str(variant):
+    return [x.split(":")[0] for x in str(variant).split("\t")[9:]]
+
 def test_access_gts():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     """

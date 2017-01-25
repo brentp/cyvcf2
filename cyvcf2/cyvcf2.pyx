@@ -1145,6 +1145,25 @@ cdef class Variant(object):
             stdlib.free(gts)
             return self._genotypes
 
+        def __set__(self, gts):
+            cdef int n_samples = self.vcf.n_samples
+            if len(gts) != n_samples:
+                raise Exception("genotypes: must set with a number of gts equal the number of samples in the vcf")
+
+            cdef int * cgts = <int *>stdlib.malloc(sizeof(int) * 2 * n_samples)
+            cdef int i
+            #XXXX
+            self._genotypes = None
+            for i in range(n_samples):
+                if gts[i][-1]:
+                    cgts[2*i] = bcf_gt_phased(gts[i][0])
+                    cgts[2*i+1] = bcf_gt_phased(gts[i][1])
+                else:
+                    cgts[2*i] = bcf_gt_unphased(gts[i][0])
+                    cgts[2*i+1] = bcf_gt_unphased(gts[i][1])
+
+            bcf_update_genotypes(self.vcf.hdr, self.b, cgts, n_samples * 2)
+            stdlib.free(cgts)
 
     property gt_types:
         """gt_types returns a numpy array indicating the type of each sample.

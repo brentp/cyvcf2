@@ -174,6 +174,11 @@ cdef extern from "htslib/vcf.h":
     const int BCF_HL_STR  = 4 # structured header line TAG=<A=..,B=..>
     const int BCF_HL_GEN  = 5 # generic header line
 
+    const int BCF_HT_FLAG = 0 # header type
+    const int BCF_HT_INT  = 1
+    const int BCF_HT_REAL = 2
+    const int BCF_HT_STR  = 3
+
     ctypedef struct bcf_hrec_t:
         int type;       # One of the BCF_HL_* type
         char *key;      # The part before '=', i.e. FILTER/INFO/FORMAT/contig/fileformat etc.
@@ -249,7 +254,7 @@ cdef extern from "htslib/vcf.h":
     int bcf_update_info(const bcf_hdr_t *hdr, bcf1_t *line, const char *key, const void *values, int n, int type);
     int bcf_update_filter(const bcf_hdr_t *hdr, bcf1_t *line, int *flt_ids, int n);
 
-    int bcf_update_format(const bcf_hdr_t *hdr, bcf1_t *line, const char *key, const void *values, int n, int type);
+
 
 
     ## genotypes
@@ -259,6 +264,10 @@ cdef extern from "htslib/vcf.h":
     int bcf_gt_phased(int idx);
     int bcf_gt_unphased(int idx);
 
+    # sample/format fields
+    int bcf_update_format(const bcf_hdr_t *hdr, bcf1_t *line, const char *key, const void *values, int n, int type);
+    int bcf_update_format_int32(const bcf_hdr_t * hdr, bcf1_t * line, const char * key, const void * values, int n)
+    int bcf_update_format_float(const bcf_hdr_t * hdr, bcf1_t * line, const char * key, const void * values, int n)
 
 
     int bcf_add_id(const bcf_hdr_t *hdr, bcf1_t *line, const char *id);

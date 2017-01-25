@@ -10,6 +10,8 @@ import tempfile
 import numpy as np
 from array import array
 import math
+import ctypes
+
 
 from libc cimport stdlib
 cimport numpy as np
@@ -1162,8 +1164,38 @@ cdef class Variant(object):
                     cgts[2*i] = bcf_gt_unphased(gts[i][0])
                     cgts[2*i+1] = bcf_gt_unphased(gts[i][1])
 
-            bcf_update_genotypes(self.vcf.hdr, self.b, cgts, n_samples * 2)
+            ret = bcf_update_genotypes(self.vcf.hdr, self.b, cgts, n_samples * 2)
+            if ret < 0:
+                raise Exception("error setting genotypes with: %s" % gts)
             stdlib.free(cgts)
+
+    def set_format(self, name, np.ndarray data not None):
+        """
+        set the format field given by name..
+        data must be a numpy array of type float or int
+        """
+        cdef int n_samples = self.vcf.n_samples
+        if len(data) % n_samples != 0:
+            raise Exception("format: len(data) must be a multiple of number of samples in vcf.")
+
+        cdef np.ndarray[np.float32_t, mode="c"] afloat
+        cdef np.ndarray[np.int32_t, mode="c"] aint
+
+        cdef int size = data.shape[0]
+        if len((<object>data).shape) > 1:
+            size *= data.shape[1]
+
+        cdef int ret
+        if np.issubdtype(data.dtype, np.int):
+            aint = data.astype(np.int32).reshape((size,))
+            ret = bcf_update_format_int32(self.vcf.hdr, self.b, <char *>name, &aint[0], size)
+        elif np.issubdtype(data.dtype, np.float):
+            afloat = data.astype(np.float32).reshape((size,))
+            ret = bcf_update_format_float(self.vcf.hdr, self.b, <char *>name, &afloat[0], size)
+        else:
+            raise Exception("format: currently only float and int numpy arrays are supported. got %s", data.dtype)
+        if ret < 0:
+            raise Exception("error setting format with: %s" % data[:100])
 
     property gt_types:
         """gt_types returns a numpy array indicating the type of each sample.

@@ -12,6 +12,7 @@ HERE = os.path.dirname(__file__)
 VCF_PATH = os.path.join(HERE, "test.vcf.gz")
 VCF_PATH2 = os.path.join(HERE, "test.snpeff.vcf")
 VCF_PHASE_PATH = os.path.join(HERE, "test.comp_het.3.vcf")
+VCF_ALTFREQ_PATH = os.path.join(HERE, "test_gt_alt_freqs.vcf")
 
 try:
     basestring
@@ -72,6 +73,33 @@ def test_pls():
     assert v.gt_phred_ll_homref[1] == imax, v.gt_phred_ll_homref[1]
     assert v.gt_phred_ll_het[1] == imax, v.gt_phred_ll_het[1]
     assert v.gt_phred_ll_homalt[1] == imax, v.gt_phred_ll_homalt[1]
+
+def test_gt_alt_freqs():
+    vcf = VCF(VCF_ALTFREQ_PATH)
+    
+    v = next(vcf)
+    assert v.gt_alt_freqs[0] == 0.2
+    assert v.gt_alt_freqs[1] == 1.0
+
+    v = next(vcf)
+    assert v.gt_alt_freqs[0] == 0.5
+    assert v.gt_alt_freqs[1] == 0.9
+
+    v = next(vcf)
+    assert v.gt_alt_freqs[0] == 0.0
+    assert v.gt_alt_freqs[1] == 0.0
+
+    v = next(vcf)
+    assert v.gt_alt_freqs[0] == 0.0
+    assert v.gt_alt_freqs[1] == 1.0
+
+    v = next(vcf)
+    assert v.gt_alt_freqs[0] == 0.0
+    assert v.gt_alt_freqs[1] == 0.0
+
+    v = next(vcf)
+    assert v.gt_alt_freqs[0] == -1
+    assert v.gt_alt_freqs[1] == -1
 
 def test_str():
     vcf = VCF(VCF_PATH, lazy=True)

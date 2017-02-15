@@ -854,6 +854,7 @@ cdef class Variant(object):
     cdef int32_t *_gt_types
     cdef int *_gt_ref_depths
     cdef int *_gt_alt_depths
+    cdef float *_gt_alt_freqs
     cdef void *fmt_buffer
     cdef int *_gt_phased
     cdef float *_gt_quals
@@ -900,6 +901,8 @@ cdef class Variant(object):
             stdlib.free(self._gt_ref_depths)
         if self._gt_alt_depths != NULL:
             stdlib.free(self._gt_alt_depths)
+        if self._gt_alt_freqs != NULL:
+            stdlib.free(self._gt_alt_freqs)
         if self._gt_phased != NULL:
             stdlib.free(self._gt_phased)
         if self._gt_quals != NULL:
@@ -1418,6 +1421,35 @@ cdef class Variant(object):
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_alt_depths)
+
+    property gt_alt_freqs:
+        """get the freq of alternate reads as a numpy array."""
+        def __get__(self):
+            if self.vcf.n_samples == 0:
+                return []
+            t = np.array(self.gt_depths, np.float)
+            a = np.array(self.gt_alt_depths, np.float)
+            
+            # for which samples are the alt or total depths unknown?
+            tU = t < 0
+            aU = a < 0
+            # for which samples is the total depth 0?
+            t0 = t == 0
+
+            ## initialize
+            alt_freq = t.astype(float)
+
+            # default
+            alt_freq[t0] = 0
+            alt_freq[aU] = 0
+            alt_freq[tU] = -1
+
+            # compute the alt_freq when not unknown and no div0 error 
+            clean = ~tU & ~aU & ~t0
+            alt_freq[clean] = (a[clean] / t[clean])
+
+            return alt_freq        
+
 
     property gt_quals:
         """get the GQ for each sample as a numpy array."""

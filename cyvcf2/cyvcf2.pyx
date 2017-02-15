@@ -1427,8 +1427,8 @@ cdef class Variant(object):
         def __get__(self):
             if self.vcf.n_samples == 0:
                 return []
-            t = np.array(self.gt_depths, np.int32)
-            a = np.array(self.gt_alt_depths, np.int32)
+            t = np.array(self.gt_depths, np.float)
+            a = np.array(self.gt_alt_depths, np.float)
             
             # for which samples are the alt or total depths unknown?
             tU = t < 0
@@ -1444,8 +1444,9 @@ cdef class Variant(object):
             alt_freq[aU] = 0
             alt_freq[tU] = -1
 
+            # compute the alt_freq when not unknown and no div0 error 
             clean = ~tU & ~aU & ~t0
-            alt_freq[clean] = (a[clean].astype(float) / t[clean].astype(float))
+            alt_freq[clean] = (a[clean] / t[clean])
 
             return alt_freq        
 

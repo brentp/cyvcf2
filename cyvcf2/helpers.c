@@ -97,6 +97,9 @@ int as_gts012(int32_t *gts, int num_samples, int ploidy) {
         }
         else if((a  != b)) {
             gts[j] = 1; //  HET
+        }
+        else if ((a == b)) {
+            gts[j] = 2; //  HOM_ALT
         } else {
             gts[j] = 3; // unknown
         }

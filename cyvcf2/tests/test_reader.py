@@ -618,3 +618,16 @@ def test_access_gts():
 
     v = next(vcf)
     assert v.genotypes == [[-1, True], [0, 2, True]], v.genotypes
+
+def test_alt_homozygous_gt():
+    vcf = VCF(os.path.join(HERE, "test-multiallelic-homozygous-alt.vcf.gz"))
+    assert vcf is not None
+    v = next(vcf)
+    assert v
+    assert v.gt_bases[0] == '<*:DEL>/<*:DEL>'
+
+    vcf = VCF(os.path.join(HERE, "test-multiallelic-homozygous-alt.vcf.gz"), gts012=True)
+    assert vcf is not None
+    v = next(vcf)
+    assert v
+    assert v.gt_bases[0] == '<*:DEL>/<*:DEL>'

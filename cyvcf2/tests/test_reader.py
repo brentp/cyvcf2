@@ -223,7 +223,7 @@ def test_writer():
 
     o.close()
 
-    expected = ["LowQual".encode(), "LowQual;VQSRTrancheSNP99.90to100.00".encode(), None]
+    expected = ["LowQual", "LowQual;VQSRTrancheSNP99.90to100.00", None]
 
     for i, variant in enumerate(VCF(f)):
         assert variant.FILTER == expected[i], (variant.FILTER, expected[i])
@@ -592,6 +592,13 @@ def test_set_gts():
 
     v.genotypes = [[2, 2, True], [0, 2, True]]
     assert get_gt_str(v) == ["2|2", "0|2"]
+
+def test_filter_id():
+    vcf = VCF(os.path.join(HERE, "test-hemi.vcf"))
+    v = next(vcf)
+    assert v.ID == "ID1"
+    assert v.FILTER == "FAIL"
+
 
 def get_gt_str(variant, key="GT"):
     idx = variant.FORMAT.index(key)

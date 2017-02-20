@@ -1638,7 +1638,7 @@ cdef class Variant(object):
         def __get__(self):
             cdef char *id = self.b.d.id
             if id == b".": return None
-            return id
+            return from_bytes(id)
 
     property FILTER:
         "the value of FILTER from the VCF field."
@@ -1654,10 +1654,10 @@ cdef class Variant(object):
                     if v == b"PASS":
                         self.vcf.PASS = self.b.d.flt[0]
                         return None
-                    return v
+                    return from_bytes(v)
             if n == 0:
                 return None
-            return b';'.join(bcf_hdr_int2id(self.vcf.hdr, BCF_DT_ID, self.b.d.flt[i]) for i in range(n))
+            return from_bytes(b';'.join(bcf_hdr_int2id(self.vcf.hdr, BCF_DT_ID, self.b.d.flt[i]) for i in range(n)))
 
         def __set__(self, filters):
             if isinstance(filters, basestring):

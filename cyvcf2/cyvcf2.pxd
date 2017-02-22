@@ -269,7 +269,6 @@ cdef extern from "htslib/vcf.h":
     int bcf_update_format_int32(const bcf_hdr_t * hdr, bcf1_t * line, const char * key, const void * values, int n)
     int bcf_update_format_float(const bcf_hdr_t * hdr, bcf1_t * line, const char * key, const void * values, int n)
 
-
     int bcf_add_id(const bcf_hdr_t *hdr, bcf1_t *line, const char *id);
     int bcf_update_id(const bcf_hdr_t *hdr, bcf1_t *line, const char *id);
     int bcf_hdr_append(bcf_hdr_t * hdr, char *);

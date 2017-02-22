@@ -1734,6 +1734,8 @@ cdef class INFO(object):
 
     is acts like a dictionary where keys are expected to be in the INFO field of the Variant
     and values are typed according to what is specified in the VCF header
+
+    Items can be deleted with del v.INFO[key] and accessed with v.INFO[key] or v.INFO.get(key)
     """
     cdef bcf_hdr_t *hdr
     cdef bcf1_t *b
@@ -1741,6 +1743,17 @@ cdef class INFO(object):
 
     def __cinit__(INFO self):
         self._i = 0
+
+    def __delitem__(self, okey):
+        okey = to_bytes(okey)
+        cdef char *key = okey
+        cdef bcf_info_t *info = bcf_get_info(self.hdr, self.b, key)
+        if info == NULL:
+            raise KeyError(key)
+        cdef int htype = bcf_hdr_id2type(self.hdr, BCF_HL_INFO, info.key)
+        cdef int ret = bcf_update_info(self.hdr, self.b, key,NULL,0,htype)
+        if ret != 0:
+            raise Exception("error deleting %s" % key)
 
     def __setitem__(self, key, value):
         # only support strings for now.

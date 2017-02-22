@@ -593,6 +593,15 @@ def test_set_gts():
     v.genotypes = [[2, 2, True], [0, 2, True]]
     assert get_gt_str(v) == ["2|2", "0|2"]
 
+def test_info_del():
+    vcf = VCF(os.path.join(HERE, "test-hemi.vcf"))
+    v = next(vcf)
+    d = str(v)
+    assert ";DP=" in d
+    del v.INFO["DP"]
+    d = str(v)
+    assert not ";DP=" in d
+
 def test_filter_id():
     vcf = VCF(os.path.join(HERE, "test-hemi.vcf"))
     v = next(vcf)

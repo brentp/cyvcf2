@@ -815,6 +815,8 @@ cdef class VCF:
 
         for sj in range(ns):
             sample_j = samples[sj]
+            if _hets[sj] == 0:
+                print("peddy: no hets found for sample %s\n" % sample_j, file=sys.stderr)
             for sk in range(sj, ns):
                 if sj == sk: continue
                 sample_k = samples[sk]
@@ -823,6 +825,12 @@ cdef class VCF:
                 #bot = math.exp(0.5 * (math.log(1 + _hets[sk]) + math.log(1 + _hets[sj])))
                 #bot = (_hets[sk] + _hets[sj])/2.0
                 bot = min(_hets[sk], _hets[sj])
+                if bot == 0:
+                    bot = max(_hets[sk], _hets[sj])
+                    if bot == 0:
+                        # set to negative value if we are unable to calculate it.
+                        bot = -1
+
                 phi = (_ibs[sk, sj] - 2.0 * _ibs[sj, sk]) / (bot)
 
                 res['sample_a'].append(sample_j)

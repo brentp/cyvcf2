@@ -4,6 +4,8 @@ cyvcf2
 <!-- ghp-import -p docs/build/html/ -->
 [![Docs](https://img.shields.io/badge/docs-latest-blue.svg)](http://brentp.github.io/cyvcf2/)
 
+If you use cyvcf2, please cite the [paper](https://academic.oup.com/bioinformatics/article/2971439/cyvcf2)
+
 
 Fast python **(2 and 3)** parsing of VCF and BCF including region-queries.
 

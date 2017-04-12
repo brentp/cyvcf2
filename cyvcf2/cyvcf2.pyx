@@ -141,7 +141,7 @@ cdef class VCF:
         if True, then don't unpack (parse) the underlying record until needed.
     samples: list
         list of samples to extract from full set in file.
-    
+
 
     Returns
     -------
@@ -456,14 +456,16 @@ cdef class VCF:
 
     contains = __contains__
 
-
-    def __dealloc__(self):
-        if self.hdr != NULL:
-            bcf_hdr_destroy(self.hdr)
-            self.hdr = NULL
+    def close(self):
         if self.hts != NULL:
             hts_close(self.hts)
             self.hts = NULL
+
+    def __dealloc__(self):
+        if self.hts != NULL and self.hdr != NULL:
+            bcf_hdr_destroy(self.hdr)
+            self.hdr = NULL
+        self.close()
         if self.idx != NULL:
             tbx_destroy(self.idx)
         if self.hidx != NULL:
@@ -1925,7 +1927,7 @@ cdef from_bytes(s):
     return s
 
 
-cdef class Writer(object):
+cdef class Writer(VCF):
     """
     Writer class makes a VCF Writer.
 
@@ -1940,37 +1942,37 @@ cdef class Writer(object):
     -------
     VCF object for iterating and querying.
     """
-    cdef htsFile *hts
-    cdef bcf_hdr_t *hdr
+    #cdef htsFile *hts
+    #cdef bcf_hdr_t *hdr
     cdef public bytes name
     cdef bint header_written
+    cdef const bcf_hdr_t *ohdr
 
-    def __init__(self, fname, VCF tmpl):
+    def __init__(Writer self, fname, VCF tmpl):
         self.name = to_bytes(fname)
         self.hts = hts_open(self.name, "w")
+        if self.hts == NULL:
+            raise Exception("error opening file: %s" % self.name)
 
-        cdef bcf_hdr_t *h = tmpl.hdr
-        cdef bcf_hdr_t *hdup = bcf_hdr_dup(h)
-        self.hdr = hdup
+        bcf_hdr_sync(tmpl.hdr)
+        self.ohdr = tmpl.hdr
+        self.hdr = bcf_hdr_dup(tmpl.hdr)
+        bcf_hdr_sync(self.hdr)
         self.header_written = False
-        samples = to_bytes(",".join(tmpl.samples))
-        bcf_hdr_set_samples(self.hdr, samples, 0)
 
-    def write_record(self, Variant var):
+    def write_record(Writer self, Variant var):
         "Write the variant to the writer."
+        cdef bcf_hrec_t *h
         if not self.header_written:
             bcf_hdr_write(self.hts, self.hdr)
             self.header_written = True
+        if var.b.errcode == BCF_ERR_CTG_UNDEF:
+            h = bcf_hdr_id2hrec(self.ohdr, BCF_DT_CTG, 0, var.b.rid)
+            if h == NULL:
+                raise Exception("contig %d unknown and not found in header" % var.b.rid)
+            if bcf_hdr_add_hrec(self.hdr, h) < 0:
+                raise Exception("error adding contig %d to header" % var.b.rid)
+            bcf_hdr_sync(self.hdr)
+        elif var.b.errcode != 0:
+            raise Exception("variant to be written has errorcode: %d" % var.b.errcode)
         return bcf_write(self.hts, self.hdr, var.b)
-
-    def close(self):
-        "close the file."
-        if self.hts != NULL:
-            hts_close(self.hts)
-            self.hts = NULL
-
-    def __dealloc__(self):
-        bcf_hdr_destroy(self.hdr)
-        self.hdr = NULL
-        self.close()
-

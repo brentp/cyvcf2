@@ -84,9 +84,12 @@ cdef extern from "htslib/vcf.h":
 
 
     const int BCF_DT_ID = 0;
+    const int BCF_DT_CTG = 1
     const int BCF_DT_SAMPLE = 2;
 
     uint32_t bcf_float_missing = 0x7F800001;
+
+    const int BCF_ERR_CTG_UNDEF = 1
 
 
     const int BCF_BT_NULL   = 0
@@ -224,6 +227,8 @@ cdef extern from "htslib/vcf.h":
 
     bcf_hrec_t *bcf_hdr_get_hrec(const bcf_hdr_t *hdr, int type, const char *key, const char *value, const char *str_class);
     void bcf_hrec_destroy(bcf_hrec_t *)
+    bcf_hrec_t *bcf_hdr_id2hrec(const bcf_hdr_t *hdr, int type, int idx, int rid);
+    int bcf_hdr_add_hrec(bcf_hdr_t *hdr, bcf_hrec_t *hrec);
 
     int hts_close(htsFile *fp);
 
@@ -289,6 +294,3 @@ cdef extern from "htslib/vcf.h":
     char **bcf_index_seqnames(hts_idx_t *idx, bcf_hdr_t *hdr, int *n);
     char **tbx_seqnames(tbx_t *tbx, int *n)
     char **bcf_hdr_seqnames(bcf_hdr_t *hdr, int *n);
-
-
-

@@ -647,3 +647,11 @@ def test_alt_homozygous_gt():
     v = next(vcf)
     assert v
     assert v.gt_bases[0] == '<*:DEL>/<*:DEL>'
+
+def test_write_missing_contig():
+    input_vcf = VCF('{}/seg.vcf.gz'.format(HERE))
+    output_vcf = Writer('/dev/null', input_vcf)
+    for v in input_vcf:
+        v.genotypes = [[1,1,False]]
+        output_vcf.write_record(v)
+    output_vcf.close()

@@ -253,7 +253,7 @@ def test_add_info_to_header():
 def test_read_flag():
     vcf = VCF(VCF_PATH)
     for v in vcf:
-        "in_exac_flag" in str(v) == v.INFO['in_exac_flag']
+        assert ("in_exac_flag" in str(v)) == v.INFO.get('in_exac_flag', False)
 
 def test_add_flag():
     vcf = VCF(VCF_PATH)
@@ -655,3 +655,11 @@ def test_write_missing_contig():
         v.genotypes = [[1,1,False]]
         output_vcf.write_record(v)
     output_vcf.close()
+
+def test_set_samples():
+    vcf = VCF(VCF_PATH)
+    assert len(vcf.samples) == 189, len(vcf.samples)
+    vcf.set_samples([vcf.samples[2]])
+    assert len(vcf.samples) == 1
+    v = next(vcf)
+    assert len(v.gt_types) == 1

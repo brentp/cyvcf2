@@ -277,6 +277,7 @@ cdef class VCF:
             s = samples.split(",")
             if ret < len(s):
                 sys.stderr.write("warning: not all samples in PED found in VCF\n")
+        self.n_samples = bcf_hdr_nsamples(self.hdr)
 
     def update(self, id, type, number, description):
         """Update the header with an INFO field of the given parameters.
@@ -1712,9 +1713,11 @@ cdef class HREC(object):
         return ["FILTER", "INFO", "FORMAT", "CONTIG", "STR", "GENERIC"][self.hrec.type]
 
     def __getitem__(self, key):
+        if key == "HeaderType":
+            return self.type
         for i in range(self.hrec.nkeys):
             if self.hrec.keys[i] == key:
-                return self.hrec.vals[i]
+                return from_bytes(self.hrec.vals[i])
         raise KeyError
 
     def info(self, extra=False):

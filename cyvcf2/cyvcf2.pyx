@@ -358,27 +358,34 @@ cdef class VCF:
         cdef hts_itr_t *itr
         cdef kstring_t s
         cdef bcf1_t *b
-        cdef int slen, ret
+        cdef int slen = 1, ret = 0
+        cdef bytes bregion = to_bytes(region)
+        cdef char *cregion = bregion
 
-        itr = tbx_itr_querys(self.idx, to_bytes(region))
+        with nogil:
+            itr = tbx_itr_querys(self.idx, cregion)
 
         if itr == NULL:
             sys.stderr.write("no intervals found for %s at %s\n" % (self.fname, region))
             raise StopIteration
 
-        try:
-            slen = tbx_itr_next(self.hts, self.idx, itr, &s)
-            while slen > 0:
-                b = bcf_init()
-                ret = vcf_parse(&s, self.hdr, b)
-                if ret > 0:
-                    bcf_destroy(b)
-                    raise Exception("error parsing")
-                yield newVariant(b, self)
+        while 1:
+            with nogil:
                 slen = tbx_itr_next(self.hts, self.idx, itr, &s)
-        finally:
-            stdlib.free(s.s)
-            hts_itr_destroy(itr)
+            if slen > 0:
+                    b = bcf_init()
+                    ret = vcf_parse(&s, self.hdr, b)
+            if slen <= 0:
+                break
+            if ret > 0:
+                bcf_destroy(b)
+                stdlib.free(s.s)
+                hts_itr_destroy(itr)
+                raise Exception("error parsing")
+            yield newVariant(b, self)
+
+        stdlib.free(s.s)
+        hts_itr_destroy(itr)
 
     def header_iter(self):
         """

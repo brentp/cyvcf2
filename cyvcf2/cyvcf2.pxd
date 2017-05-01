@@ -70,8 +70,8 @@ cdef extern from "htslib/tbx.h":
 
     tbx_t *tbx_index_load(const char *fn);
     hts_itr_t *tbx_itr_queryi(tbx_t *tbx, int tid, int beg, int end)
-    hts_itr_t *tbx_itr_querys(tbx_t *tbx, char *reg)
-    int tbx_itr_next(htsFile *fp, tbx_t *tbx, hts_itr_t *iter, void *data);
+    hts_itr_t *tbx_itr_querys(tbx_t *tbx, char *reg) nogil
+    int tbx_itr_next(htsFile *fp, tbx_t *tbx, hts_itr_t *iter, void *data) nogil;
     void tbx_destroy(tbx_t *tbx);
 
 cdef extern from "htslib/vcf.h":

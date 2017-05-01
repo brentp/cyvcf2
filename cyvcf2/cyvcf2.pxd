@@ -212,7 +212,7 @@ cdef extern from "htslib/vcf.h":
 
     void bcf_destroy(bcf1_t *v);
     bcf1_t * bcf_init() nogil;
-    int vcf_parse(kstring_t *s, const bcf_hdr_t *h, bcf1_t *v);
+    int vcf_parse(kstring_t *s, const bcf_hdr_t *h, bcf1_t *v) nogil;
 
     bcf_hdr_t *bcf_hdr_read(htsFile *fp);
 

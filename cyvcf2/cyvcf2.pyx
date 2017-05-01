@@ -372,9 +372,9 @@ cdef class VCF:
         while 1:
             with nogil:
                 slen = tbx_itr_next(self.hts, self.idx, itr, &s)
-            if slen > 0:
-                    b = bcf_init()
-                    ret = vcf_parse(&s, self.hdr, b)
+                if slen > 0:
+                        b = bcf_init()
+                        ret = vcf_parse(&s, self.hdr, b)
             if slen <= 0:
                 break
             if ret > 0:

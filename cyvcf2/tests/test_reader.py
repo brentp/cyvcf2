@@ -663,3 +663,20 @@ def test_set_samples():
     assert len(vcf.samples) == 1
     v = next(vcf)
     assert len(v.gt_types) == 1
+
+def test_issue44():
+    vcf = VCF('{}/issue_44.vcf'.format(HERE))
+    w = Writer('__o.vcf', vcf)
+    for v in vcf:
+        tmp = v.genotypes
+        #print(tmp, file=sys.stderr)
+        v.genotypes = tmp
+        w.write_record(v)
+    w.close()
+    #           "./."            "."          ".|."           "0|0"
+    expected = [[-1, -1, False], [-1, False], [-1, -1, True], [0, 0, True]]
+    print("", file=sys.stderr)
+    for i, v in enumerate(VCF('__o.vcf')):
+        #print(v.genotypes, file=sys.stderr)
+        assert v.genotypes == [expected[i]], (v.genotypes, expected[i])
+    os.unlink("__o.vcf")

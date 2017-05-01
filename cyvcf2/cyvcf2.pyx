@@ -1151,7 +1151,7 @@ cdef class Variant(object):
               for j in range(nret):
                   if bcf_gt_is_missing(gts[k + j]):
                       self._genotypes[i].append(-1)
-                      break
+                      continue
                   if gts[k + j] == bcf_int32_vector_end:
                       break
                   self._genotypes[i].append(bcf_gt_allele(gts[k + j]))
@@ -1173,10 +1173,16 @@ cdef class Variant(object):
             for i in range(n_samples):
                 if gts[i][-1]:
                     cgts[2*i] = bcf_gt_phased(gts[i][0])
-                    cgts[2*i+1] = bcf_gt_phased(gts[i][1])
+                    if len(gts[i]) > 2:
+                        cgts[2*i+1] = bcf_gt_phased(gts[i][1])
+                    else:
+                        cgts[2*i+1] = bcf_int32_vector_end #bcf_gt_phased(-1)
                 else:
                     cgts[2*i] = bcf_gt_unphased(gts[i][0])
-                    cgts[2*i+1] = bcf_gt_unphased(gts[i][1])
+                    if len(gts[i]) > 2:
+                        cgts[2*i+1] = bcf_gt_unphased(gts[i][1])
+                    else:
+                        cgts[2*i+1] = bcf_int32_vector_end #bcf_gt_unphased(-1)
 
             ret = bcf_update_genotypes(self.vcf.hdr, self.b, cgts, n_samples * 2)
             if ret < 0:

@@ -1,0 +1,13 @@
+##fileformat=VCFv4.1
+##FILTER=<ID=PASS,Description="All filters passed">
+##log_file=shapeit_18022017_21h52m25s_134fb6d8-5a8f-4ddb-ab2a-84d25a7828e0.log
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Phased Genotype">
+##contig=<ID=1>
+##contig=<ID=2>
+##bcftools_viewVersion=1.4-19-g1802ff3+htslib-1.4-29-g42bfe70
+##bcftools_viewCommand=view cyvcf2/tests/issue_44.vcf; Date=Mon May  1 08:52:21 2017
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SSC00089
+2	176938646	.	A	G	.	PASS	.	GT	./.
+2	176938647	.	A	G	.	PASS	.	GT	.
+2	176938648	.	A	G	.	PASS	.	GT	.|.
+2	176938649	.	A	G	.	PASS	.	GT	0|0

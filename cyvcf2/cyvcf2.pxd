@@ -211,7 +211,7 @@ cdef extern from "htslib/vcf.h":
     bint bcf_float_is_vector_end(float f)
 
     void bcf_destroy(bcf1_t *v);
-    bcf1_t * bcf_init();
+    bcf1_t * bcf_init() nogil;
     int vcf_parse(kstring_t *s, const bcf_hdr_t *h, bcf1_t *v);
 
     bcf_hdr_t *bcf_hdr_read(htsFile *fp);

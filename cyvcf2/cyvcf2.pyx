@@ -477,9 +477,10 @@ cdef class VCF:
 
     def __next__(self):
 
-        cdef bcf1_t *b = bcf_init()
+        cdef bcf1_t *b
         cdef int ret
         with nogil:
+            b = bcf_init()
             ret = bcf_read(self.hts, self.hdr, b)
         if ret >= 0:
             return newVariant(b, self)

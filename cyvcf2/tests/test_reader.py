@@ -680,3 +680,24 @@ def test_issue44():
         #print(v.genotypes, file=sys.stderr)
         assert v.genotypes == [expected[i]], (v.genotypes, expected[i])
     os.unlink("__o.vcf")
+
+def test_id_field_updates():
+    # 1 10172   .       CCCTAA  C       92.0    PASS
+    v = VCF(VCF_PATH)
+    variant = next(v)
+    assert variant.ID is None, variant.ID
+
+    variant.ID = 'foo'
+    assert variant.ID == 'foo', variant.ID
+
+    variant.ID = 100
+    assert variant.ID == '100', variant.ID
+
+    variant.ID = 100.1
+    assert variant.ID == '100.1', variant.ID
+
+    variant.ID = '.'
+    assert variant.ID is None, variant.ID
+
+    variant.ID = None
+    assert variant.ID is None, variant.ID

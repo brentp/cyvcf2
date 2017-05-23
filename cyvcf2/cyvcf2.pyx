@@ -139,6 +139,8 @@ cdef class VCF:
         if True, then gt_types will be 0=HOM_REF, 1=HET, 2=HOM_ALT, 3=UNKNOWN. If False, 3, 2 are flipped.
     lazy: bool
         if True, then don't unpack (parse) the underlying record until needed.
+    missingness: bool
+        if True, then any '.' present in a genotype will classify the corresponding element in the gt_types array as UNKNOWN.
     samples: list
         list of samples to extract from full set in file.
 
@@ -157,6 +159,7 @@ cdef class VCF:
     cdef bytes fname
     cdef bint gts012
     cdef bint lazy
+    cdef bint missingness
     cdef list _seqnames
     # holds a lookup of format field -> type.
     cdef dict format_types
@@ -170,7 +173,7 @@ cdef class VCF:
     #: The constant used to indicate the the genotype is UNKNOWN.
     cdef readonly int UNKNOWN
 
-    def __init__(self, fname, mode="r", gts012=False, lazy=False, samples=None, threads=None):
+    def __init__(self, fname, mode="r", gts012=False, lazy=False, missingness=False, samples=None, threads=None):
         if fname == b"-" or fname == "-":
             fname = b"/dev/stdin"
         if not op.exists(fname):
@@ -191,6 +194,7 @@ cdef class VCF:
         self.fname = to_bytes(fname)
         self.gts012 = gts012
         self.lazy = lazy
+        self.missingness = missingness
         self._seqnames = []
         set_constants(self)
         self.format_types = {}
@@ -950,7 +954,7 @@ cdef class Variant(object):
             cdef int unknown = 3 if self.vcf.gts012 else 2
             for i in range(0, n * self.vcf.n_samples, n):
                 if n == 2:
-                    if gt_types[j] == unknown:
+                    if (gt_types[j] == unknown) and (self.vcf.missingness == False):
                         a.append("./.")
                     else:
                         try:
@@ -1255,9 +1259,9 @@ cdef class Variant(object):
                     j += 1
 
                 if self.vcf.gts012:
-                    n = as_gts012(self._gt_types, self.vcf.n_samples, nper)
+                    n = as_gts012(self._gt_types, self.vcf.n_samples, nper, self.vcf.missingness)
                 else:
-                    n = as_gts(self._gt_types, self.vcf.n_samples, nper)
+                    n = as_gts(self._gt_types, self.vcf.n_samples, nper, self.vcf.missingness)
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_types)

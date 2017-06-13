@@ -1667,6 +1667,12 @@ cdef class Variant(object):
             if id == b".": return None
             return from_bytes(id)
 
+        def __set__(self, value):
+            sanitized = str(value) if value is not None else '.'
+            ret = bcf_update_id(self.vcf.hdr, self.b, to_bytes(sanitized))
+            if ret != 0:
+                raise Exception("not able to set ID: %s", value)
+
     property FILTER:
         "the value of FILTER from the VCF field."
         def __get__(self):

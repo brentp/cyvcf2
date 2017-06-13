@@ -466,7 +466,9 @@ cdef class VCF:
 
     def close(self):
         if self.hts != NULL:
-            hts_close(self.hts)
+            if self.fname != "-":
+                # TODO flush
+                hts_close(self.hts)
             self.hts = NULL
 
     def __dealloc__(self):
@@ -1727,10 +1729,12 @@ cdef class HREC(object):
         return ["FILTER", "INFO", "FORMAT", "CONTIG", "STR", "GENERIC"][self.hrec.type]
 
     def __getitem__(self, key):
+        key = from_bytes(key)
         if key == "HeaderType":
             return self.type
+        cdef int i
         for i in range(self.hrec.nkeys):
-            if self.hrec.keys[i] == key:
+            if from_bytes(self.hrec.keys[i]) == key:
                 return from_bytes(self.hrec.vals[i])
         raise KeyError
 

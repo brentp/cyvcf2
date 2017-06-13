@@ -664,6 +664,14 @@ def test_set_samples():
     v = next(vcf)
     assert len(v.gt_types) == 1
 
+def test_hrec():
+
+    vcf = VCF(VCF_PATH)
+    for item in vcf.header_iter():
+        info = item.info()
+        if info['HeaderType'] != 'GENERIC':
+            assert 'ID' in info
+
 def test_issue44():
     vcf = VCF('{}/issue_44.vcf'.format(HERE))
     w = Writer('__o.vcf', vcf)

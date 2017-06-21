@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
 
-def print_header(vcf_obj, include, exclude, silent=False):
+def print_header(vcf_obj, include, exclude):
     """Print the header of a vcf obj
     
     Parameters
@@ -22,30 +22,21 @@ def print_header(vcf_obj, include, exclude, silent=False):
         set of strings with info fields that should be included
     exclude: tuple
         set of strings with info fields that should be excluded
-    silent: bool
-        If stuff should be printed or not
     """
     for header_line in vcf_obj.raw_header.split('\n'):
-        if len(header_line)>0:
-            print_line = True
-            if include:
-                if 'INFO' in header_line:
-                    print_line = False
-                    for inclusion in include:
-                        if inclusion in header_line:
-                            print_line = True
-            if exclude:
-                if 'INFO' in header_line:
-                    print_line = True
-                    for exclusion in exclude:
-                        if exclusion in header_line:
-                            print_line = False
-                
-            if not silent:
-                if print_line:
-                    click.echo(header_line)
+        if len(header_line) == 0:
+            continue
+        print_line = True
+        if 'INFO' not in header_line:
+            pass
+        elif include:
+            print_line = any('ID='+inc+','for inc in include)
+        elif exclude:
+            print_line = not any('ID='+exc+','for exc in exclude)
+        if print_line:
+            click.echo(header_line)
 
-def print_variant(variant, include, exclude, silent=False):
+def print_variant(variant, include, exclude):
     """Print a vcf variant
     
     Parameters
@@ -55,8 +46,6 @@ def print_variant(variant, include, exclude, silent=False):
         set of strings with info fields that should be included
     include: tuple
         set of strings with info fields that should be included
-    silent: bool
-        If stuff should be printed or not
     """
     if include:
         for info in variant.INFO:
@@ -64,13 +53,12 @@ def print_variant(variant, include, exclude, silent=False):
             if not key in include:
                 del variant.INFO[key]
     if exclude:
-        for exclusion in exclude:
-            if variant.INFO.get(exclusion):
-                del variant.INFO[exclusion]
+        for exc in exclude:
+            if variant.INFO.get(exc):
+                del variant.INFO[exc]
                 
-    if not silent:
-        print_string = str(variant).rstrip()
-        click.echo(print_string)
+    print_string = str(variant).rstrip()
+    click.echo(print_string)
         
     
 
@@ -142,12 +130,14 @@ def cyvcf2(context, vcf, include, exclude, chrom, start, end, loglevel, silent):
             log.warning("%s does not exist in header", exclusion)
             context.abort()
     
-    print_header(vcf_obj, include, exclude, silent)
+    if not silent:
+        print_header(vcf_obj, include, exclude)
     
     nr_variants = None
     try:
         for nr_variants, variant in enumerate(vcf_obj(region)):
-            print_variant(variant, include, exclude, silent)
+            if not silent:
+                print_variant(variant, include, exclude)
     except Exception as err:
         log.warning(err)
         context.abort()

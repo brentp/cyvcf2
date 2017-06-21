@@ -68,9 +68,19 @@ for v in vcf('11:435345-556565'):
 Installation
 ============
 
+## pip
 ```
 pip install cyvcf2
 ```
+
+## github
+
+```
+git clone https://github.com/brentp/cyvcf2
+cd cyvcf2
+pip install --editable .
+```
+
 
 Testing
 =======
@@ -80,6 +90,30 @@ Tests can be run with:
 ```
 python setup.py test
 ```
+
+CLI
+=======
+Run with `cyvcf2 path_to_vcf`
+
+```
+$ cyvcf2 --help
+Usage: cyvcf2 [OPTIONS] <vcf_file> or -
+
+  fast vcf parsing with cython + htslib
+
+Options:
+  -c, --chrom TEXT                Specify what chromosome to include.
+  -s, --start INTEGER             Specify the start of region.
+  -e, --end INTEGER               Specify the end of the region.
+  --include TEXT                  Specify what info field to include.
+  --exclude TEXT                  Specify what info field to exclude.
+  --loglevel [DEBUG|INFO|WARNING|ERROR|CRITICAL]
+                                  Set the level of log output.  [default:
+                                  INFO]
+  --silent                        Skip printing of vcf.
+  --help                          Show this message and exit.
+```
+
 
 See Also
 ========

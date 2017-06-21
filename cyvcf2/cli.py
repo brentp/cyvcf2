@@ -109,7 +109,7 @@ def print_variant(variant, include, exclude, silent=False):
 )
 @click.pass_context
 def cyvcf2(context, vcf, include, exclude, chrom, start, end, loglevel, silent):
-    """pleasingly pythonic pedigree manipulation"""
+    """fast vcf parsing with cython + htslib"""
     coloredlogs.install(log_level=loglevel)
     start_parsing = datetime.now()
     log.info("Running cyvcf2 version %s", __version__)

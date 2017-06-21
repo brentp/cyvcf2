@@ -1,2 +1,3 @@
 cython>=0.23.3
 numpy
+coloredlogs

@@ -82,6 +82,11 @@ setup(
     cmdclass=cmdclass,
     ext_modules=extension,
     packages=['cyvcf2', 'cyvcf2.tests'],
+    entry_points=dict(
+        console_scripts=[
+            'cyvcf2 = cyvcf2.__main__:cli',
+        ],
+    ),
     test_suite='nose.collector',
     tests_require='nose',
     install_requires=['numpy'],

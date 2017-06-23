@@ -954,7 +954,7 @@ cdef class Variant(object):
             cdef int unknown = 3 if self.vcf.gts012 else 2
             for i in range(0, n * self.vcf.n_samples, n):
                 if n == 2:
-                    if (gt_types[j] == unknown) and (self.vcf.missingness == False):
+                    if (gt_types[j] == unknown) and (not self.vcf.missingness):
                         a.append("./.")
                     else:
                         try:

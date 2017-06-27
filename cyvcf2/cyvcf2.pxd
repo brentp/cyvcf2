@@ -12,8 +12,8 @@ cdef extern from "relatedness.h":
     int krelated(int32_t *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t n_samples)
 
 cdef extern from "helpers.h":
-    int as_gts(int32_t *gts, int num_samples, int ploidy, int missingness);
-    int as_gts012(int32_t *gts, int num_samples, int ploidy, int missingness);
+    int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt);
+    int as_gts012(int32_t *gts, int num_samples, int ploidy, int strict_gt);
 
 cdef extern from "htslib/kstring.h":
 

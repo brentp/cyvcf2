@@ -1,6 +1,6 @@
 #include <htslib/vcf.h>
 
-int as_gts(int32_t *gts, int num_samples, int ploidy, int missingness) {
+int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
     int j = 0, i, k;
 	int missing;
     for (i = 0; i < ploidy * num_samples; i += ploidy){
@@ -14,7 +14,7 @@ int as_gts(int32_t *gts, int num_samples, int ploidy, int missingness) {
 		if (missing == ploidy) {
 			gts[j++] = 2; // unknown
 			continue;
-		} else if ( (missing != 0) && (missingness == 1) ) {
+		} else if ( (missing != 0) && (strict_gt == 1) ) {
 			gts[j++] = 2; // unknown
 			continue;
 		} else if (missing != 0) {
@@ -58,7 +58,7 @@ int as_gts(int32_t *gts, int num_samples, int ploidy, int missingness) {
     return j;
 }
 
-int as_gts012(int32_t *gts, int num_samples, int ploidy, int missingness) {
+int as_gts012(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
     int j = 0, i, k;
 	int missing;
     for (i = 0; i < ploidy * num_samples; i += ploidy){
@@ -72,7 +72,7 @@ int as_gts012(int32_t *gts, int num_samples, int ploidy, int missingness) {
 		if (missing == ploidy) {
 			gts[j++] = 3; // unknown
 			continue;
-		} else if ( (missing != 0) && (missingness == 1) ) {
+		} else if ( (missing != 0) && (strict_gt == 1) ) {
 			gts[j++] = 3; // unknown
 			continue;
 		} else if (missing != 0) {

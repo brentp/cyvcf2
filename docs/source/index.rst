@@ -87,6 +87,32 @@ show an example of how to annotate variants with the genes that they overlap.
 
     w.close(); vcf.close()
 
+Setting Genotyping Strictness
+=============================
+
+By default, genotypes containing a single missing allele (e.g. genotypes such
+as ``0/.``, ``./0``, ``1/.``, or ``./1``) are classified as heterozygous ("HET"
+or id: 1) instead of "UNKNOWN" (or id: 2).  A case can be made for either
+classification on these partially missing genotypes depending on the situation.
+
+A better way to explicitly control the genotype classification for these cases,
+is to use the "strict genotype", or ``strict_gt``, feature.  Here's an example
+usage:
+
+.. code-block:: python
+
+    from cyvcf2 import VCF
+    vcf = VCF("/path/to/vcf/file", strict_gt=True)
+    for variant in vcf:
+        # do something
+
+When the ``strict_gt`` flag is enabled, `cyvcf2` will treat any genotype
+containing a missing allele (containing a '.') as an UNKNOWN genotype;
+otherwise, genotypes like ``0/.``, ``./0``, ``1/.``, or ``./1`` will be
+classified as heterozygous ("HET").
+
+The "strict genotype" feature is not enabled by default (i.e. ``strict_gt`` is
+set to `False` by default) to preserve backwards compatibility.
 
 Installation
 ============

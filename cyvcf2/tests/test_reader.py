@@ -702,8 +702,8 @@ def test_id_field_updates():
     variant.ID = None
     assert variant.ID is None, variant.ID
 
-def test_missingness_option_flag():
-    test_vcf = '{}/test-missingness-option-flag.vcf.gz'.format(HERE)
+def test_strict_gt_option_flag():
+    test_vcf = '{}/test-strict-gt-option-flag.vcf.gz'.format(HERE)
 
     truth_gt_bases = ('T/T', 'C/C', 'T/C', 'C/T', 'C/.', './C', 'T/.', './T', './.')
     truth_genotypes = (
@@ -721,16 +721,16 @@ def test_missingness_option_flag():
     vcf = VCF(test_vcf, gts012=False)
     variant = next(vcf)
 
-    msg = "VCF(gts012=False, missingness=False) not working"
+    msg = "VCF(gts012=False, strict_gt=False) not working"
     truth_gt_types = (0, 3, 1, 1, 1, 1, 1, 1, 2)
     assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
     assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
 
-    vcf = VCF(test_vcf, gts012=False, missingness=True)
+    vcf = VCF(test_vcf, gts012=False, strict_gt=True)
     variant = next(vcf)
 
-    msg = "VCF(gts012=False, missingness=True) not working"
+    msg = "VCF(gts012=False, strict_gt=True) not working"
     truth_gt_types = (0, 3, 1, 1, 2, 2, 2, 2, 2)
     assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
@@ -739,16 +739,16 @@ def test_missingness_option_flag():
     vcf = VCF(test_vcf, gts012=True)
     variant = next(vcf)
 
-    msg = "VCF(gts012=True, missingness=False) not working"
+    msg = "VCF(gts012=True, strict_gt=False) not working"
     truth_gt_types = (0, 2, 1, 1, 1, 1, 1, 1, 3)
     assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
     assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
 
-    vcf = VCF(test_vcf, gts012=True, missingness=True)
+    vcf = VCF(test_vcf, gts012=True, strict_gt=True)
     variant = next(vcf)
 
-    msg = "VCF(gts012=True, missingness=True) not working"
+    msg = "VCF(gts012=True, strict_gt=True) not working"
     truth_gt_types = (0, 2, 1, 1, 3, 3, 3, 3, 3)
     assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)

@@ -1804,8 +1804,16 @@ cdef class INFO(object):
             if ret != 0:
                 raise Exception("not able to set flag", key, value, ret)
             return
-
-        ret = bcf_update_info_string(self.hdr, self.b, to_bytes(key), to_bytes(value))
+        cdef int32_t iint
+        cdef float ifloat
+        if isinstance(value, int):
+            iint = value
+            ret = bcf_update_info_int32(self.hdr, self.b, to_bytes(key), &iint, 1)
+        elif isinstance(value, float):
+            ifloat = value
+            ret = bcf_update_info_float(self.hdr, self.b, to_bytes(key), &ifloat, 1)
+        else:
+            ret = bcf_update_info_string(self.hdr, self.b, to_bytes(key), to_bytes(value))
         if ret != 0:
             raise Exception("not able to set: %s -> %s (%d)", key, value, ret)
 

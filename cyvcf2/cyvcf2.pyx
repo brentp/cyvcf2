@@ -280,7 +280,8 @@ cdef class VCF:
         if ret != 0 and samples != "-":
             s = samples.split(",")
             if ret < len(s):
-                sys.stderr.write("warning: not all samples in PED found in VCF\n")
+                sys.stderr.write("warning: not all requested samples found in VCF\n")
+
         self.n_samples = bcf_hdr_nsamples(self.hdr)
 
     def update(self, id, type, number, description):
@@ -1229,7 +1230,7 @@ cdef class Variant(object):
         else:
             raise Exception("format: currently only float and int numpy arrays are supported. got %s", data.dtype)
         if ret < 0:
-            raise Exception("error setting format with: %s" % data[:100])
+            raise Exception("error (%d) setting format with: %s" % (ret, data[:100]))
 
     property gt_types:
         """gt_types returns a numpy array indicating the type of each sample.

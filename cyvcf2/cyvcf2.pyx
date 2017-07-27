@@ -1599,6 +1599,8 @@ cdef class Variant(object):
             if len(self.ALT) > 1: return False
 
             if not self.is_indel: return False
+            if len(self.ALT) == 0:
+                return True
             alt = self.ALT[0]
             if alt is None or alt == ".":
                 return True

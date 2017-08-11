@@ -1965,7 +1965,7 @@ cdef from_bytes(s):
         try:
             return s.decode(ENC)
         except UnicodeDecodeError:
-            return s.decode('utf8')
+            return s.decode('utf8', errors='replace')
     return s
 
 

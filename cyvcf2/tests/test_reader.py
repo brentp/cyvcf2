@@ -710,6 +710,16 @@ def test_id_field_updates():
     variant.ID = None
     assert variant.ID is None, variant.ID
 
+def test_set_pos():
+    test_vcf = '{}/test-strict-gt-option-flag.vcf.gz'.format(HERE)
+    vcf = VCF(test_vcf, gts012=False)
+    v = next(vcf)
+
+    orig_pos, orig_start = v.POS, v.start
+    v.set_pos(22)
+    assert v.start == 22
+    assert v.POS == 23
+
 def test_strict_gt_option_flag():
     test_vcf = '{}/test-strict-gt-option-flag.vcf.gz'.format(HERE)
 

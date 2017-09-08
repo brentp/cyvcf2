@@ -1204,6 +1204,13 @@ cdef class Variant(object):
                 raise Exception("error setting genotypes with: %s" % gts)
             stdlib.free(cgts)
 
+    def set_pos(self, int pos0):
+        """
+        set the POS to the given 0-based position
+        """
+        self.b.pos = pos0
+        self.POS = self.b.pos + 1
+
     def set_format(self, name, np.ndarray data not None):
         """
         set the format field given by name..

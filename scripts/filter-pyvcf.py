@@ -2,7 +2,7 @@ import sys
 from vcf import Reader
 import gzip
 
-vcf = Reader(open(sys.argv[1], 'r'))
+vcf = Reader(open(sys.argv[1], 'rb'))
 n = 0
 
 for v in vcf:

@@ -2,7 +2,7 @@
 
 int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
     int j = 0, i, k;
-	int missing;
+	int missing= 0;
     for (i = 0; i < ploidy * num_samples; i += ploidy){
 		missing = 0;
 		for (k = 0; k < ploidy; k++) {
@@ -16,9 +16,6 @@ int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
 			continue;
 		} else if ( (missing != 0) && (strict_gt == 1) ) {
 			gts[j++] = 2; // unknown
-			continue;
-		} else if (missing != 0) {
-			gts[j++] = 1; // HET
 			continue;
 		}
 
@@ -38,7 +35,14 @@ int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
         int b = bcf_gt_allele(gts[i+1]);
 
         if((a == 0) && (b == 0)) {
-            gts[j] = 0; //  HOM_REF
+            gts[j++] = 0; //  HOM_REF
+            continue;
+        }
+        //fprintf(stderr, "i: %d\tmissing:%d\ta:%d\tb:%d\n", i/ploidy, missing, a, b);
+        if ((missing > 0) && ((a == 0) || (b == 0))) {
+            // if a single allele is missing e.g 0/. it's still encoded as hom ref because it has no alts
+            gts[j++] = 0; // HOM_REF
+            continue;
         }
         else if((a == 1) && (b == 1)) {
             gts[j] = 3; //  HOM_ALT
@@ -53,8 +57,6 @@ int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
         }
         j++;
     }
-    // free the latter part of the array that we don't need.
-    //free((void *)(&(gts[j])));
     return j;
 }
 
@@ -75,9 +77,6 @@ int as_gts012(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
 		} else if ( (missing != 0) && (strict_gt == 1) ) {
 			gts[j++] = 3; // unknown
 			continue;
-		} else if (missing != 0) {
-			gts[j++] = 1; // HET
-			continue;
 		}
 
 		if(ploidy == 1) {
@@ -96,7 +95,11 @@ int as_gts012(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
         int b = bcf_gt_allele(gts[i+1]);
 
         if((a == 0) && (b == 0)) {
-            gts[j] = 0; //  HOM_REF
+            gts[j++] = 0; //  HOM_REF
+            continue;
+        }
+        if ((missing > 0) && ((a == 0)  || b == 0)) {
+            gts[j] = 0; // HOM_REF
         }
         else if((a == 1) && (b == 1)) {
             gts[j] = 2; //  HOM_ALT
@@ -111,7 +114,5 @@ int as_gts012(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
         }
         j++;
     }
-    // free the latter part of the array that we don't need.
-    //free((void *)(&(gts[j])));
     return j;
 }

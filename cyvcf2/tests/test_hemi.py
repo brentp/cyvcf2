@@ -11,7 +11,7 @@ VCF_PATH = os.path.join(HERE, "test.vcf.gz")
 
 def check_var(v):
     s = [x.split(":")[0] for x in str(v).split("\t")[9:]]
-    lookup = {'0/0': 0, '0/1': 1, './1': 1, '1/.': 1, '0/.': 1, './0': 1, '1/1': 3, '.': 2, './.': 2}
+    lookup = {'0/0': 0, '0/1': 1, './1': 1, '1/.': 1, '0/.': 0, './0': 0, '1/1': 3, '.': 2, './.': 2}
     expected = np.array([lookup[ss] for ss in s])
     obs = v.gt_types
     assert np.all(expected == obs), zip(expected, obs)

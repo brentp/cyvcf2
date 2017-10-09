@@ -360,9 +360,9 @@ def _get_samples(v):
         if not ":" in s:
             return 2
         s = s.split(":", 1)[0]
-        if s in ("0/0", "0|0"):
+        if s in ("0/0", "0|0", "0/.", "./0", "0|."):
             return 0
-        if s in ("0/1", "0|1", "0/.", "1/.", "./1", "1/."):
+        if s in ("0/1", "0|1", "1/.", "./1", "1/."):
             return 1
         if s in ("1/1", "1|1"):
             return 3
@@ -740,7 +740,7 @@ def test_strict_gt_option_flag():
     variant = next(vcf)
 
     msg = "VCF(gts012=False, strict_gt=False) not working"
-    truth_gt_types = (0, 3, 1, 1, 1, 1, 1, 1, 2)
+    truth_gt_types = (0, 3, 1, 1, 1, 1, 0, 0, 2)
     assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
     assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
@@ -754,12 +754,15 @@ def test_strict_gt_option_flag():
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
     assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
 
+
     vcf = VCF(test_vcf, gts012=True)
     variant = next(vcf)
 
     msg = "VCF(gts012=True, strict_gt=False) not working"
-    truth_gt_types = (0, 2, 1, 1, 1, 1, 1, 1, 3)
+    truth_gt_types = (0, 2, 1, 1, 1, 1, 0, 0, 3)
     assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
+    #sys.stderr.write("\nobs:%s\n" % variant.gt_types.tolist())
+    #sys.stderr.write("exp:%s\n" % list(truth_gt_types))
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
     assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
 
@@ -771,3 +774,16 @@ def test_strict_gt_option_flag():
     assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
     assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
+
+def test_alt_repr():
+    v = os.path.join(HERE, "test-alt-repr.vcf")
+    vcf = VCF(v, gts012=True, strict_gt=False)
+    v = next(vcf)
+    assert np.all(v.gt_types == np.array([0, 1, 2, 0, 1, 3]))
+
+    v = os.path.join(HERE, "test-alt-repr.vcf")
+    vcf = VCF(v, gts012=False, strict_gt=False)
+    v = next(vcf)
+    assert np.all(v.gt_types == np.array([0, 1, 3, 0, 1, 2]))
+
+

@@ -161,6 +161,7 @@ cdef class VCF:
     cdef bint lazy
     cdef bint strict_gt
     cdef list _seqnames
+    cdef list _seqlens
     # holds a lookup of format field -> type.
     cdef dict format_types
 
@@ -196,6 +197,7 @@ cdef class VCF:
         self.lazy = lazy
         self.strict_gt = strict_gt
         self._seqnames = []
+        self._seqlens = []
         set_constants(self)
         self.format_types = {}
         if threads is not None:
@@ -515,25 +517,33 @@ cdef class VCF:
             s = bcf_hdr_fmt_text(self.hdr, 0, &hlen)
             return from_bytes(s)
 
+    property seqlens:
+        def __get__(self):
+            if len(self._seqlens) > 0: return self._seqlens
+            cdef int32_t nseq;
+            cdef int32_t* sls = bcf_hdr_seqlen(self.hdr, &nseq)
+            self._seqlens = [sls[i] for i in range(nseq)]
+            stdlib.free(sls)
+            return self._seqlens
+
     property seqnames:
         "list of chromosomes in the VCF"
         def __get__(self):
             if len(self._seqnames) > 0: return self._seqnames
             cdef char **cnames
             cdef int i, n = 0
-            if self.fname.decode(ENC).endswith('.bcf'):
+            cnames = bcf_hdr_seqnames(self.hdr, &n)
+            if n == 0 and self.fname.decode(ENC).endswith('.bcf'):
                 if self.hidx == NULL:
                     self.hidx = bcf_index_load(self.fname)
                 if self.hidx != NULL:
                     cnames = bcf_index_seqnames(self.hidx, self.hdr, &n)
-            else:
+            elif n == 0:
                 if self.idx == NULL and (op.exists(from_bytes(self.fname)+ ".tbi") or
                         op.exists(from_bytes(self.fname) + ".csi")):
                     self.idx = tbx_index_load(to_bytes(self.fname))
                 if self.idx !=NULL:
                     cnames = tbx_seqnames(self.idx, &n)
-            if n == 0:
-                cnames = bcf_hdr_seqnames(self.hdr, &n)
 
             self._seqnames = [cnames[i].decode() for i in range(n)]
             stdlib.free(cnames)

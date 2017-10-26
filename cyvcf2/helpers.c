@@ -1,4 +1,4 @@
-#include <htslib/vcf.h>
+#include <helpers.h>
 
 int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
     int j = 0, i, k;
@@ -116,3 +116,30 @@ int as_gts012(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
     }
     return j;
 }
+
+
+KHASH_MAP_INIT_STR(vdict, bcf_idinfo_t)
+typedef khash_t(vdict) vdict_t;
+
+// this is taken directly from atks/vt
+int32_t* bcf_hdr_seqlen(const bcf_hdr_t *hdr, int32_t *nseq)
+{
+    vdict_t *d = (vdict_t*)hdr->dict[BCF_DT_CTG];
+    int tid, m = kh_size(d);
+    int32_t *lens = (int32_t*) malloc(m*sizeof(int32_t));
+    khint_t k;
+
+    for (k=kh_begin(d); k<kh_end(d); k++)
+    {
+        if ( !kh_exist(d,k) ) continue;
+        tid = kh_val(d,k).id;
+        lens[tid] = bcf_hrec_find_key(kh_val(d, k).hrec[0],"length");
+        int j;
+        if ( sscanf(kh_val(d, k).hrec[0]->vals[lens[tid]],"%d",&j) )
+            lens[tid] = j;
+    }
+	*nseq = m;
+    return lens;
+}
+
+

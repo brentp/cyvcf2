@@ -11,6 +11,7 @@ import numpy as np
 from array import array
 import math
 import ctypes
+import re
 
 
 from libc cimport stdlib
@@ -20,6 +21,7 @@ np.import_array()
 import locale
 
 ENC = locale.getpreferredencoding()
+BND_ALT_PATTERN = re.compile(r".*[\],\[](.*?):(.*?)[\],\[]")
 
 from cython cimport view
 
@@ -1682,7 +1684,22 @@ cdef class Variant(object):
     property end:
         "end of the variant. the INFO field is parsed for SVs."
         def __get__(self):
+            svt = self.INFO.get("SVTYPE")
+            if svt == "BND":
+                match = BND_ALT_PATTERN.match(self.ALT[0])
+                if match:
+                    return int(match.group(2))
             return self.b.pos + self.b.rlen
+
+    property end_chrom:
+        "chrom of end position. can only differ from self.CHROM if BND."
+        def __get__(self):
+            svt = self.INFO.get("SVTYPE")
+            if svt == "BND":
+                match = BND_ALT_PATTERN.match(self.ALT[0])
+                if match:
+                    return match.group(1)
+            return self.CHROM
 
     property ID:
         "the value of ID from the VCF field."

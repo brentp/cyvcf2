@@ -2019,12 +2019,15 @@ cdef class Writer(VCF):
         bcf_hdr_sync(self.hdr)
         self.header_written = False
 
+    def write_header(Writer self):
+        bcf_hdr_write(self.hts, self.hdr)
+        self.header_written = True
+        
     def write_record(Writer self, Variant var):
         "Write the variant to the writer."
         cdef bcf_hrec_t *h
         if not self.header_written:
-            bcf_hdr_write(self.hts, self.hdr)
-            self.header_written = True
+            self.write_header()
         if var.b.errcode == BCF_ERR_CTG_UNDEF:
             h = bcf_hdr_id2hrec(self.ohdr, BCF_DT_CTG, 0, var.b.rid)
             if h == NULL:
@@ -2035,3 +2038,8 @@ cdef class Writer(VCF):
         elif var.b.errcode != 0:
             raise Exception("variant to be written has errorcode: %d" % var.b.errcode)
         return bcf_write(self.hts, self.hdr, var.b)
+    
+    def close(Writer self):
+        if not self.header_written:
+            self.write_header()
+        super().close()

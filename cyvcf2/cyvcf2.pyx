@@ -1684,6 +1684,11 @@ cdef class Variant(object):
     property end:
         "end of the variant. the INFO field is parsed for SVs."
         def __get__(self):
+            return self.b.pos + self.b.rlen
+
+    property sv_end:
+        "This will try to get the true end. If BND parse the ALT field"
+        def __get__(self):
             svt = self.INFO.get("SVTYPE")
             if svt == "BND":
                 match = BND_ALT_PATTERN.match(self.ALT[0])

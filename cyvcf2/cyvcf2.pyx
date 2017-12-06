@@ -211,9 +211,8 @@ cdef class VCF:
     cdef get_type(self, fmt):
         fmt = from_bytes(fmt)
         if not fmt in self.format_types:
-            s = self[fmt]
+            s = self.get_header_type(fmt, order=[BCF_HL_FMT])
             self.format_types[fmt] = s["Type"]
-
         return from_bytes(self.format_types[fmt])
 
     def add_to_header(self, line):
@@ -434,7 +433,7 @@ cdef class VCF:
         return {sample_pairs[i]: bins[i, :] for i in range(len(sample_pairs))}
 
     # pull something out of the HEADER, e.g. CSQ
-    def __getitem__(self, key):
+    cpdef get_header_type(self, key, order=[BCF_HL_INFO, BCF_HL_FMT]):
         """Extract a field from the VCF header by id.
 
         Parameters
@@ -447,10 +446,12 @@ cdef class VCF:
             dictionary containing header information.
         """
         key = to_bytes(key)
-        cdef bcf_hrec_t *b = bcf_hdr_get_hrec(self.hdr, BCF_HL_INFO, b"ID", key, NULL);
+        cdef bcf_hrec_t *b
         cdef int i
-        if b == NULL:
-            b = bcf_hdr_get_hrec(self.hdr, BCF_HL_FMT, b"ID", key, NULL);
+        for typ in order:
+            b = bcf_hdr_get_hrec(self.hdr, typ, b"ID", key, NULL);
+            if b != NULL:
+                break
         if b == NULL:
             b = bcf_hdr_get_hrec(self.hdr, BCF_HL_GEN, key, NULL, NULL);
             if b == NULL:
@@ -460,6 +461,9 @@ cdef class VCF:
             d =  {from_bytes(b.keys[i]): from_bytes(b.vals[i]) for i in range(b.nkeys)}
         #bcf_hrec_destroy(b)
         return d
+
+    def __getitem__(self, key):
+        return self.get_header_type(key)
 
     def __contains__(self, key):
         """Check if the given ID is in the header."""

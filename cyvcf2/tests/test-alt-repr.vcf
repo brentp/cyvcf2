@@ -16,10 +16,12 @@
 ##INFO=<ID=HRun,Number=1,Type=Integer,Description="Largest Contiguous Homopolymer Run of Variant Allele In Either Direction">
 ##INFO=<ID=HaplotypeScore,Number=1,Type=Float,Description="Consistency of the site with at most two segregating haplotypes">
 ##INFO=<ID=MQ,Number=1,Type=Float,Description="RMS Mapping Quality">
+##FORMAT=<ID=DQ,Number=1,Type=Float,Description="XX">
+##INFO=<ID=DQ,Number=1,Type=Integer,Description="XX">
 ##INFO=<ID=MQ0,Number=1,Type=Integer,Description="Total Mapping Quality Zero Reads">
 ##INFO=<ID=MQRankSum,Number=1,Type=Float,Description="Z-score From Wilcoxon rank sum test of Alt vs. Ref read mapping qualities">
 ##INFO=<ID=QD,Number=1,Type=Float,Description="Variant Confidence/Quality by Depth">
 ##contig=<ID=1,length=249250621,assembly=b37>
 ##reference=file:///home/arq5x/cphg-home/shared/genomes/hg19/bwa/gatk/human_g1k_v37.fasta
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	samplea	sampleb	samplec	sampled	samplee	samplef
-1	17363	.	C	T	62	PASS	AC=2;AF=0.083;AN=24	GT:AD:GQ	0/0:20,0:10	0/1:20,20:10	1/1:0,20:10	0/.:20,0	./1:0,20:10	./.:0,0:0
+1	17363	.	C	T	62	PASS	AC=2;AF=0.083;AN=24;DQ=1	GT:AD:GQ:DQ	0/0:20,0:10:0	0/1:20,20:10:.	1/1:0,20:10	0/.:20,0:.	./1:0,20:10	./.:0,0:0:.

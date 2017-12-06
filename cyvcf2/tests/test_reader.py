@@ -800,3 +800,15 @@ def test_seqlens():
         155397, 159169, 161147, 161802, 164239, 166566, 169874, 172149, 172294,
         172545, 174588, 179198, 179693, 180455, 182896, 186858, 186861, 187035,
         189789, 191469, 211173, 547496, 171823, 35477943, 5386], v.seqlens
+
+def test_issue72():
+    path = os.path.join(HERE, "test-alt-repr.vcf")
+    vcf = VCF(path, gts012=True, strict_gt=False)
+
+    v = next(vcf)
+    assert v.INFO['DQ'] == 1
+
+    assert v.format('DQ') is not None
+
+
+

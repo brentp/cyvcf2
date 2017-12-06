@@ -810,5 +810,8 @@ def test_issue72():
 
     assert v.format('DQ') is not None
 
+def test_is_transition():
+    vcf = VCF(VCF_ALTFREQ_PATH)
 
-
+    for r in vcf:
+        assert r.is_transition

@@ -1607,10 +1607,10 @@ cdef class Variant(object):
             ref = self.REF
                 # just one alt allele
             alt_allele = self.ALT[0]
-            if ((ref == b'A' and alt_allele == b'G') or
-                (ref == b'G' and alt_allele == b'A') or
-                (ref == b'C' and alt_allele == b'T') or
-                (ref == b'T' and alt_allele == b'C')):
+            if ((ref == 'A' and alt_allele == 'G') or
+                (ref == 'G' and alt_allele == 'A') or
+                (ref == 'C' and alt_allele == 'T') or
+                (ref == 'T' and alt_allele == 'C')):
                     return True
             return False
 

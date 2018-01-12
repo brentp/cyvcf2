@@ -499,6 +499,8 @@ cdef class VCF:
 
         cdef bcf1_t *b
         cdef int ret
+        if self.hts == NULL:
+            raise Exception("attempt to iterate over closed/invalid VCF")
         with nogil:
             b = bcf_init()
             ret = bcf_read(self.hts, self.hdr, b)

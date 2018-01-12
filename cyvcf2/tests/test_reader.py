@@ -801,6 +801,13 @@ def test_seqlens():
         172545, 174588, 179198, 179693, 180455, 182896, 186858, 186861, 187035,
         189789, 191469, 211173, 547496, 171823, 35477943, 5386], v.seqlens
 
+def test_closed_iter():
+    path = os.path.join(HERE, "test-alt-repr.vcf")
+    vcf = VCF(path, gts012=True, strict_gt=False)
+    vcf.close()
+
+    assert_raises(Exception, next, vcf)
+
 def test_issue72():
     path = os.path.join(HERE, "test-alt-repr.vcf")
     vcf = VCF(path, gts012=True, strict_gt=False)

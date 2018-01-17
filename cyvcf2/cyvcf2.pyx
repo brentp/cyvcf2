@@ -766,12 +766,15 @@ cdef class VCF:
         cdef int32_t[:] hets = np.zeros((n_samples, ), np.int32)
         cdef int32_t[:] gt_types = np.zeros((n_samples, ), np.int32)
         cdef int32_t[:] depths = np.zeros((n_samples, ), np.int32)
+        cdef double[:] alt_freqs = np.zeros((n_samples,), np.double)
 
         cdef Variant v
 
         for j, (i, v) in enumerate(gen()):
             gt_types = v.gt_types
-            krelated(&gt_types[0], &ibs[0, 0], &n[0, 0], &hets[0], n_samples)
+            alt_freqs = v.gt_alt_freqs
+            krelated(&gt_types[0], &ibs[0, 0], &n[0, 0], &hets[0], n_samples,
+                    &alt_freqs[0])
 
         return ibs, n, hets
 
@@ -999,7 +1002,9 @@ cdef class Variant(object):
             raise Exception("must call relatedness with gts012")
         if self._gt_types == NULL:
             self.gt_types
-        return krelated(<int32_t *>self._gt_types, &ibs[0, 0], &n[0, 0], &hets[0], self.vcf.n_samples)
+        cdef double[:] alt_freqs = self.gt_alt_freqs
+        return krelated(<int32_t *>self._gt_types, &ibs[0, 0], &n[0, 0],
+                &hets[0], self.vcf.n_samples, &alt_freqs[0])
 
     property num_called:
         "number of samples that were not UKNOWN."

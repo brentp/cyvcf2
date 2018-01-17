@@ -141,17 +141,18 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 // IBS0: (AA, aa) and (aa, AA)
 // IBS1: 1 _HET, 1 HOM_{REF,ALT} : not calculated (shared-hets is used instead)
 // IBS2: samples are same (even unphased hets)
-int krelated(int32_t *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t n_samples) {
+int krelated(int32_t *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t n_samples, double *ab) {
 	int32_t j, k;
 	int n_used = 0;
 	int32_t gtj, gtk;
 	int is_het = 0;
-	hets[n_samples - 1] += (gt_types[n_samples -1] == _HET);
+	hets[n_samples - 1] += (gt_types[n_samples -1] == _HET && ab[n_samples - 1] >= 0.2 && ab[n_samples -1] <= 0.8);
 
 	for(j=0; j<n_samples-1; j++){
 		if(gt_types[j] == _UNKNOWN){ continue; }
 		gtj = gt_types[j];
 		is_het = (gtj == _HET);
+		if(is_het && (ab[j] < 0.2 || ab[j] > 0.8)) { continue; }
 		hets[j] += is_het;
 		n_used++;
 		for(k=j+1; k<n_samples; k++){
@@ -160,7 +161,7 @@ int krelated(int32_t *gt_types, int32_t *ibs, int32_t *n, int32_t *hets, int32_t
 			n[j * n_samples + k]++;
 			if(is_het) {
 				// shared hets
-				ibs[k * n_samples + j] += (gtk == _HET); // already know gtj is _HET
+				ibs[k * n_samples + j] += (gtk == _HET && ab[k] >= 0.2 && ab[k] <= 0.8); // already know gtj is _HET
 			} else {
 				// only need to check these if sample 1 isn't het.
 				// ibs0

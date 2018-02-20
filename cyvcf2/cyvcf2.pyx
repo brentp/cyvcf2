@@ -1161,6 +1161,13 @@ cdef class Variant(object):
         stdlib.free(buf)
         return iret
 
+    def genotype(self):
+        if self.vcf.n_samples == 0: return None
+        cdef int32_t *gts = NULL
+        cdef int ndst = 0
+        cdef int nret = bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst)
+
+
     property genotypes:
         """genotypes returns a list for each sample Indicating the allele and phasing.
 
@@ -1709,7 +1716,10 @@ cdef class Variant(object):
                 raise Exception("not able to set ID: %s", value)
 
     property FILTER:
-        "the value of FILTER from the VCF field."
+        """the value of FILTER from the VCF field.
+        
+        a value of PASS in the VCF will give None for this function
+        """
         def __get__(self):
             cdef int i
             cdef int n = self.b.d.n_flt

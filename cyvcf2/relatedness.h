@@ -134,9 +134,9 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 }
 
 // implementation of the relatedness calculation in king.
-// ibs is n_samples * n_samples. the upper diag stores ibs0, the lower diag stores number of shared hets
-// n is n_samples * n_samples. upper stores the number of times that each pair was used.
-//                             lower diag stores the ibs2.
+// ibs is n_samples * n_samples. the lower diag stores ibs0, the lower diag stores number of shared hets
+// n is n_samples * n_samples. lower stores the number of times that each pair was used.
+//                             upper diag stores the ibs2.
 // hets is n_samples it counts the number of hets per sample.
 // IBS0: (AA, aa) and (aa, AA)
 // IBS1: 1 _HET, 1 HOM_{REF,ALT} : not calculated (shared-hets is used instead)

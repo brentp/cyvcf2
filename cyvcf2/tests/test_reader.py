@@ -41,6 +41,20 @@ def test_format_str():
     f = next(vcf).format("RULE")
     assert list(f) == ['F2,F3,F4', 'G2,G3,G4']
 
+"""
+def test_write_format_str():
+    vcf = VCF(os.path.join(HERE, "test-format-string.vcf"))
+    wtr = Writer("x.vcf", vcf)
+
+    variant = next(vcf)
+    variant.set_format("TSTRING", np.array(["asdfxx","35\0"]))
+
+    wtr.write_record(variant)
+    wtr.close()
+
+    assert "asdfxx" in str(variant), str(variant)
+    assert "35" in str(variant) 
+    """
 
 def test_ibd():
     samples = ['101976-101976', '100920-100920', '100231-100231']
@@ -822,3 +836,10 @@ def test_is_transition():
 
     for r in vcf:
         assert r.is_transition
+
+def test_decomposed():
+    vcf = VCF(os.path.join(HERE, "decomposed.vcf"))
+    v = next(vcf)
+    #0/.	./0	1/.	./1	./.
+    assert np.all(v.gt_types == np.array([vcf.HOM_REF, vcf.HOM_REF, vcf.HET, vcf.HET, vcf.UNKNOWN]))
+

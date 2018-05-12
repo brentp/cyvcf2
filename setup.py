@@ -49,7 +49,7 @@ def install_requirements(specifiers):
         subprocess.call(cmd)
 
 
-requires = ['cython', 'numpy']
+requires = ['cython', 'numpy', 'coloredlogs', 'click']
 install_requirements(missing_requirements(requires))
 
 

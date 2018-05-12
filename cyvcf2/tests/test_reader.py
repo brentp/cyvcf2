@@ -843,3 +843,16 @@ def test_decomposed():
     #0/.	./0	1/.	./1	./.
     assert np.all(v.gt_types == np.array([vcf.HOM_REF, vcf.HOM_REF, vcf.HET, vcf.HET, vcf.UNKNOWN]))
 
+
+def test_fd():
+
+    fh = open(os.path.join(HERE, "decomposed.vcf"))
+    fn = fh.fileno()
+
+    vcf = VCF(fn)
+    v = next(vcf)
+    assert np.all(v.gt_types == np.array([vcf.HOM_REF, vcf.HOM_REF, vcf.HET, vcf.HET, vcf.UNKNOWN]))
+    fh.close()
+    vcf.close()
+
+

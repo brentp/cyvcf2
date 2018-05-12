@@ -25,9 +25,13 @@ cdef extern from "htslib/kstring.h":
 
     inline char *ks_release(kstring_t *s)
 
-cdef extern from "htslib/hts.h":
+cdef extern from "htslib/hfile.h":
     ctypedef struct hFILE:
         pass
+    hFILE *hdopen(int fd, const char *mode);
+
+cdef extern from "htslib/hts.h":
+
 
     int hts_set_threads(htsFile *fp, int n);
 
@@ -50,6 +54,8 @@ cdef extern from "htslib/hts.h":
     int hts_detect_format(hFILE *fp, htsFormat *fmt);
 
     htsFile *hts_open(char *fn, char *mode);
+
+    htsFile *hts_hopen(hFILE *fp, const char *fn, const char *mode);
 
     cdef int hts_verbose = 1
 

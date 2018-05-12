@@ -175,12 +175,22 @@ cdef class VCF:
     cdef readonly int UNKNOWN
 
     def __init__(self, fname, mode="r", gts012=False, lazy=False, strict_gt=False, samples=None, threads=None):
-        if fname == b"-" or fname == "-":
-            fname = b"/dev/stdin"
-        if not op.exists(fname):
-            raise Exception("bad path: %s" % fname)
-        fname, mode = to_bytes(fname), to_bytes(mode)
-        self.hts = hts_open(fname, mode)
+
+        cdef hFILE *hf
+
+        if isinstance(fname, basestring):
+            if fname == b"-" or fname == "-":
+                fname = b"/dev/stdin"
+            if not op.exists(fname):
+                raise Exception("bad path: %s" % fname)
+            fname, mode = to_bytes(fname), to_bytes(mode)
+            self.hts = hts_open(fname, mode)
+            self.fname = fname
+        else:
+            mode = to_bytes(mode)
+            hf = hdopen(int(fname), mode)
+            self.hts = hts_hopen(hf, "<file>", mode)
+
         if self.hts == NULL:
             raise IOError("Error opening %s" % fname)
         if self.hts.format.format != vcf and self.hts.format.format != bcf:
@@ -192,7 +202,6 @@ cdef class VCF:
             self.set_samples(samples)
         self.n_samples = bcf_hdr_nsamples(self.hdr)
         self.PASS = -1
-        self.fname = to_bytes(fname)
         self.gts012 = gts012
         self.lazy = lazy
         self.strict_gt = strict_gt

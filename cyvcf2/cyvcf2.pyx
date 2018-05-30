@@ -626,13 +626,15 @@ cdef class VCF:
             if isinstance(sites, basestring):
                 isites = []
                 for i in (x.strip().split(":") for x in open(sites)):
-                    # handle 'chr' prefix on incoming.
                     if not i[0] in seqnames and 'chr' + i[0] in seqnames:
                         i[0] = 'chr' + i[0]
                     i[1] = int(i[1])
                     isites.append(i)
             else:
                 isites = sites
+                for i in isites:
+                    if not i[0] in seqnames and 'chr' + i[0] in seqnames:
+                        i[0] = 'chr' + i[0]
 
         cdef Variant v
         cdef int k, last_pos

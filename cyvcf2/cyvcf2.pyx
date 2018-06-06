@@ -288,7 +288,7 @@ cdef class VCF:
         ret = bcf_hdr_set_samples(self.hdr, <const char *>samples, 0)
         assert ret >= 0, ("error setting samples", ret)
         if ret != 0 and samples != "-":
-            s = samples.split(",")
+            s = from_bytes(samples).split(",")
             if ret < len(s):
                 sys.stderr.write("warning: not all requested samples found in VCF\n")
 

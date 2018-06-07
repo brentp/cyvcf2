@@ -59,6 +59,7 @@ def test_write_format_str():
 def test_missing_samples():
     samples = ['101976-101976', 'sample_not_in_vcf']
     vcf = VCF(VCF_PATH, gts012=True, samples=samples)
+    assert len(vcf.samples) == 1
 
 def test_ibd():
     samples = ['101976-101976', '100920-100920', '100231-100231']

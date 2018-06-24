@@ -175,7 +175,7 @@ def cyvcf2(context, vcf, include, exclude, chrom, start, end, loglevel, silent,
         context.abort()
     
     if nr_variants is None:
-        log.info("No variants in vcf"
+        log.info("No variants in vcf")
         return
     
     log.info("{0} variants parsed".format(nr_variants+1))

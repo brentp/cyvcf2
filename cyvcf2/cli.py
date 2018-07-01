@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
 
-def print_header(vcf_obj, include, exclude):
+def print_header(vcf_obj, include, exclude, samples=None):
     """Print the header of a vcf obj
     
     Parameters
@@ -22,7 +22,12 @@ def print_header(vcf_obj, include, exclude):
         set of strings with info fields that should be included
     exclude: tuple
         set of strings with info fields that should be excluded
+    samples: list
+            list of samples to extract.
     """
+    if not samples is None:
+        vcf_obj.set_samples(samples)
+    
     for header_line in vcf_obj.raw_header.split('\n'):
         if len(header_line) == 0:
             continue
@@ -85,6 +90,14 @@ def print_variant(variant, include, exclude):
     help="Specify what info field to exclude.",
     multiple=True,
 )
+@click.option('--individual', '-i',
+    help="Only print genotype call for individual.",
+    multiple=True,
+)
+@click.option('--no-inds',
+    help="Do not print genotypes.",
+    is_flag=True,
+)
 @click.option('--loglevel',
     default='INFO',
     type=click.Choice(LOG_LEVELS),
@@ -96,7 +109,8 @@ def print_variant(variant, include, exclude):
     help='Skip printing of vcf.'
 )
 @click.pass_context
-def cyvcf2(context, vcf, include, exclude, chrom, start, end, loglevel, silent):
+def cyvcf2(context, vcf, include, exclude, chrom, start, end, loglevel, silent,
+           individual, no_inds):
     """fast vcf parsing with cython + htslib"""
     coloredlogs.install(log_level=loglevel)
     start_parsing = datetime.now()
@@ -130,9 +144,27 @@ def cyvcf2(context, vcf, include, exclude, chrom, start, end, loglevel, silent):
             log.warning("%s does not exist in header", exclusion)
             context.abort()
     
-    if not silent:
-        print_header(vcf_obj, include, exclude)
+    if individual:
+        # Check if the choosen individuals exists in vcf
+        test = True
+        for ind_id in individual:
+            if ind_id not in vcf_obj.samples:
+                log.warning("Individual '%s' does not exist in vcf", ind_id)
+                test = False
+            if not test:
+                context.abort()
+        # Convert individuals to list for VCF.set_individuals
+        individual = list(individual)
+    else:
+        individual = None
     
+    # Set individual to be empty list to skip all genotypes
+    if no_inds:
+        individual = []
+
+    if not silent:
+        print_header(vcf_obj, include, exclude, individual)
+
     nr_variants = None
     try:
         for nr_variants, variant in enumerate(vcf_obj(region)):
@@ -142,8 +174,11 @@ def cyvcf2(context, vcf, include, exclude, chrom, start, end, loglevel, silent):
         log.warning(err)
         context.abort()
     
-    if nr_variants:
-        log.info("{0} variants parsed".format(nr_variants+1))
-        log.info("Time to parse variants: {0}".format(datetime.now() - start_parsing))
+    if nr_variants is None:
+        log.info("No variants in vcf")
+        return
+    
+    log.info("{0} variants parsed".format(nr_variants+1))
+    log.info("Time to parse variants: {0}".format(datetime.now() - start_parsing))
         
     

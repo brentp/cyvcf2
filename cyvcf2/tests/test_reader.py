@@ -53,7 +53,7 @@ def test_write_format_str():
     wtr.close()
 
     assert "asdfxx" in str(variant), str(variant)
-    assert "35" in str(variant) 
+    assert "35" in str(variant)
     """
 
 def test_missing_samples():
@@ -99,7 +99,7 @@ def test_pls():
 
 def test_gt_alt_freqs():
     vcf = VCF(VCF_ALTFREQ_PATH)
-    
+
     v = next(vcf)
     assert v.gt_alt_freqs[0] == 0.2
     assert v.gt_alt_freqs[1] == 1.0
@@ -706,10 +706,10 @@ def test_issue44():
     w.close()
     #           "./."            "."          ".|."           "0|0"
     expected = [[-1, -1, False], [-1, False], [-1, -1, True], [0, 0, True]]
-    print("", file=sys.stderr)
+    #print("", file=sys.stderr)
     for i, v in enumerate(VCF('__o.vcf')):
         #print(v.genotypes, file=sys.stderr)
-        assert v.genotypes == [expected[i]], (v.genotypes, expected[i])
+        assert v.genotypes == [expected[i]], (i, v.genotypes, expected[i])
     os.unlink("__o.vcf")
 
 def test_id_field_updates():

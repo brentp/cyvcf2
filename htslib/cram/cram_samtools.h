@@ -2,23 +2,23 @@
 Copyright (c) 2010-2013 Genome Research Ltd.
 Author: James Bonfield <jkb@sanger.ac.uk>
 
-Redistribution and use in source and binary forms, with or without 
+Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 
-   1. Redistributions of source code must retain the above copyright notice, 
+   1. Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
 
-   2. Redistributions in binary form must reproduce the above copyright notice, 
-this list of conditions and the following disclaimer in the documentation 
+   2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation
 and/or other materials provided with the distribution.
 
    3. Neither the names Genome Research Ltd and Wellcome Trust Sanger
 Institute nor the names of its contributors may be used to endorse or promote
 products derived from this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY GENOME RESEARCH LTD AND CONTRIBUTORS "AS IS" AND 
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+THIS SOFTWARE IS PROVIDED BY GENOME RESEARCH LTD AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL GENOME RESEARCH LTD OR CONTRIBUTORS BE LIABLE
 FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
 DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
@@ -45,7 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define bam_flag(b)      (b)->core.flag
 #define bam_bin(b)       (b)->core.bin
 #define bam_map_qual(b)  (b)->core.qual
-#define bam_name_len(b)  (b)->core.l_qname
+#define bam_name_len(b)  ((b)->core.l_qname - (b)->core.l_extranul)
 #define bam_name(b)      bam_get_qname((b))
 #define bam_qual(b)      bam_get_qual((b))
 #define bam_seq(b)       bam_get_seq((b))
@@ -84,19 +84,19 @@ bam_hdr_t *cram_header_to_bam(SAM_hdr *h);
 SAM_hdr *bam_header_to_cram(bam_hdr_t *h);
 
 int bam_construct_seq(bam_seq_t **bp, size_t extra_len,
-		      const char *qname, size_t qname_len,
-		      int flag,
-		      int rname,      // Ref ID
-		      int pos,
-		      int end,        // aligned start/end coords
-		      int mapq,
-		      uint32_t ncigar, const uint32_t *cigar,
-		      int mrnm,       // Mate Ref ID
-		      int mpos,
-		      int isize,
-		      int len,
-		      const char *seq,
-		      const char *qual);
+                      const char *qname, size_t qname_len,
+                      int flag,
+                      int rname,      // Ref ID
+                      int pos,
+                      int end,        // aligned start/end coords
+                      int mapq,
+                      uint32_t ncigar, const uint32_t *cigar,
+                      int mrnm,       // Mate Ref ID
+                      int mpos,
+                      int isize,
+                      int len,
+                      const char *seq,
+                      const char *qual);
 
 #ifdef __cplusplus
 }

@@ -28,29 +28,21 @@ DEALINGS IN THE SOFTWARE.  */
 
 #include "htslib/hts.h"
 
+#include "textutils_internal.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// The <ctype.h> functions operate on ints such as are returned by fgetc(),
-// i.e., characters represented as unsigned-char-valued ints, or EOF.
-// To operate on plain chars (and to avoid warnings on some platforms),
-// technically one must cast to unsigned char everywhere (see CERT STR37-C)
-// or less painfully use these *_c() functions that operate on plain chars
-// (but not EOF, which must be considered separately where it is applicable).
-// TODO We may eventually wish to implement these functions directly without
-// using their <ctype.h> equivalents, and thus make them immune to locales.
-static inline int isalnum_c(char c) { return isalnum((unsigned char) c); }
-static inline int isalpha_c(char c) { return isalpha((unsigned char) c); }
-static inline int isdigit_c(char c) { return isdigit((unsigned char) c); }
-static inline int isgraph_c(char c) { return isgraph((unsigned char) c); }
-static inline int islower_c(char c) { return islower((unsigned char) c); }
-static inline int isprint_c(char c) { return isprint((unsigned char) c); }
-static inline int isspace_c(char c) { return isspace((unsigned char) c); }
-static inline int isupper_c(char c) { return isupper((unsigned char) c); }
-static inline char tolower_c(char c) { return tolower((unsigned char) c); }
-static inline char toupper_c(char c) { return toupper((unsigned char) c); }
+struct hFILE;
 
+struct hts_json_token {
+    char type;    ///< Token type
+    char *str;    ///< Value as a C string (filled in for all token types)
+    // TODO Add other fields to fill in for particular data types, e.g.
+    // int inum;
+    // float fnum;
+};
 
 struct cram_fd;
 
@@ -65,6 +57,9 @@ typedef struct hts_cram_idx_t {
     struct cram_fd *cram;
 } hts_cram_idx_t;
 
+
+// Entry point to hFILE_multipart backend.
+struct hFILE *hopen_htsget_redirect(struct hFILE *hfile, const char *mode);
 
 struct hts_path_itr {
     kstring_t path, entry;

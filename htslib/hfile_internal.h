@@ -1,6 +1,6 @@
 /*  hfile_internal.h -- internal parts of low-level input/output streams.
 
-    Copyright (C) 2013-2015 Genome Research Ltd.
+    Copyright (C) 2013-2016 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -25,11 +25,36 @@ DEALINGS IN THE SOFTWARE.  */
 #ifndef HFILE_INTERNAL_H
 #define HFILE_INTERNAL_H
 
+#include <stdarg.h>
+
 #include "htslib/hfile.h"
+
+#include "textutils_internal.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/*!
+  @abstract  Resizes the buffer within an hFILE.
+
+  @notes  Changes the buffer size for an hFILE.  Ideally this is done
+  immediately after opening.  If performed later, this function may
+  fail if we are reducing the buffer size and the current offset into
+  the buffer is beyond the new capacity.
+
+  @param fp        The file stream
+  @param bufsiz    The size of the new buffer
+
+  @return Returns 0 on success, -1 on failure.
+ */
+int hfile_set_blksize(hFILE *fp, size_t bufsiz);
+
+struct BGZF;
+/*!
+  @abstract Return the hFILE connected to a BGZF
+ */
+struct hFILE *bgzf_hfile(struct BGZF *fp);
 
 struct hFILE_backend {
     /* As per read(2), returning the number of bytes read (possibly 0) or
@@ -66,6 +91,13 @@ int hfile_oflags(const char *mode);
    or 0 for a default-sized buffer.  */
 hFILE *hfile_init(size_t struct_size, const char *mode, size_t capacity);
 
+/* Alternative to hfile_init() for in-memory backends for which the base
+   buffer is the only storage.  Buffer is already allocated via malloc(2)
+   of size buf_size and with buf_filled bytes already filled.  Ownership
+   of the buffer is transferred to the resulting hFILE.  */
+hFILE *hfile_init_fixed(size_t struct_size, const char *mode,
+                        char *buffer, size_t buf_filled, size_t buf_size);
+
 /* May be called by hopen_*() functions to undo the effects of hfile_init()
    in the event opening the stream subsequently fails.  (This is safe to use
    even if fp is NULL.  This takes care to preserve errno.)  */
@@ -86,8 +118,17 @@ struct hFILE_scheme_handler {
     const char *provider;
 
     /* If multiple handlers are registered for the same scheme, the one with
-       the highest priority is used; range is 0 (lowest) to 100 (highest).  */
+       the highest priority is used; range is 0 (lowest) to 100 (highest).
+       This field is used modulo 1000 as a priority; thousands indicate
+       later revisions to this structure, as noted below.  */
     int priority;
+
+    /* Fields below are present when priority >= 2000.  */
+
+    /* Same as the open() method, used when extra arguments have been given
+       to hopen().  */
+    hFILE *(*vopen)(const char *filename, const char *mode, va_list args)
+        HTS_RESULT_USED;
 };
 
 /* May be used as an isremote() function in simple cases.  */
@@ -125,12 +166,18 @@ extern int hfile_plugin_init(struct hFILE_plugin *self);
    even with --disable-plugins need to use PLUGIN_GLOBAL and be listed here;
    others can simply define hfile_plugin_init().  */
 
-extern int hfile_plugin_init_irods(struct hFILE_plugin *self);
+extern int hfile_plugin_init_gcs(struct hFILE_plugin *self);
 extern int hfile_plugin_init_libcurl(struct hFILE_plugin *self);
+extern int hfile_plugin_init_s3(struct hFILE_plugin *self);
 #endif
 
 /* This one is never built as a separate plugin.  */
 extern int hfile_plugin_init_net(struct hFILE_plugin *self);
+
+// Callback to allow headers to be set in http connections.  Currently used
+// to allow s3 to renew tokens when seeking.  Kept internal for now,
+// although we may consider exposing it in the API later.
+typedef int (* hts_httphdr_callback) (void *cb_data, char ***hdrs);
 
 #ifdef __cplusplus
 }

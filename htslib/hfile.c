@@ -26,8 +26,10 @@ DEALINGS IN THE SOFTWARE.  */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 
 #include <pthread.h>
 
@@ -44,6 +46,10 @@ DEALINGS IN THE SOFTWARE.  */
 #define EPROTONOSUPPORT ENOSYS
 #endif
 
+#ifndef SSIZE_MAX /* SSIZE_MAX is POSIX 1 */
+#define SSIZE_MAX LONG_MAX
+#endif
+
 /* hFILE fields are used as follows:
 
    char *buffer;     // Pointer to the start of the I/O buffer
@@ -55,6 +61,8 @@ DEALINGS IN THE SOFTWARE.  */
 
    off_t offset;     // Offset within the stream of buffer position 0
    unsigned at_eof:1;// For reading, whether EOF has been seen
+   unsigned mobile:1;// Buffer is a mobile window or fixed full contents
+   unsigned readonly:1;// Whether opened as "r" rather than "r+"/"w"/"a"
    int has_errno;    // Error number from the last failure on this stream
 
 For reading, begin is the first unread character in the buffer and end is the
@@ -73,7 +81,17 @@ equal to buffer:
 Thus if begin > end then there is a non-empty write buffer, if begin < end
 then there is a non-empty read buffer, and if begin == end then both buffers
 are empty.  In all cases, the stream's file position indicator corresponds
-to the position pointed to by begin.  */
+to the position pointed to by begin.
+
+The above is the normal scenario of a mobile window.  For in-memory
+streams (eg via hfile_init_fixed) the buffer can be used as the full
+contents without any separate backend behind it.  These always have at_eof
+set, offset set to 0, need no read() method, and should just return EINVAL
+for seek():
+
+   abcdefghijkLMNOPQRSTUVWXYZ------
+   ^buffer    ^begin         ^end  ^limit
+*/
 
 hFILE *hfile_init(size_t struct_size, const char *mode, size_t capacity)
 {
@@ -92,6 +110,8 @@ hFILE *hfile_init(size_t struct_size, const char *mode, size_t capacity)
 
     fp->offset = 0;
     fp->at_eof = 0;
+    fp->mobile = 1;
+    fp->readonly = (strchr(mode, 'r') && ! strchr(mode, '+'));
     fp->has_errno = 0;
     return fp;
 
@@ -99,6 +119,26 @@ error:
     hfile_destroy(fp);
     return NULL;
 }
+
+hFILE *hfile_init_fixed(size_t struct_size, const char *mode,
+                        char *buffer, size_t buf_filled, size_t buf_size)
+{
+    hFILE *fp = (hFILE *) malloc(struct_size);
+    if (fp == NULL) return NULL;
+
+    fp->buffer = fp->begin = buffer;
+    fp->end = &fp->buffer[buf_filled];
+    fp->limit = &fp->buffer[buf_size];
+
+    fp->offset = 0;
+    fp->at_eof = 1;
+    fp->mobile = 0;
+    fp->readonly = (strchr(mode, 'r') && ! strchr(mode, '+'));
+    fp->has_errno = 0;
+    return fp;
+}
+
+static const struct hFILE_backend mem_backend;
 
 void hfile_destroy(hFILE *fp)
 {
@@ -121,7 +161,7 @@ static ssize_t refill_buffer(hFILE *fp)
     ssize_t n;
 
     // Move any unread characters to the start of the buffer
-    if (fp->begin > fp->buffer) {
+    if (fp->mobile && fp->begin > fp->buffer) {
         fp->offset += fp->begin - fp->buffer;
         memmove(fp->buffer, fp->begin, fp->end - fp->begin);
         fp->end = &fp->buffer[fp->end - fp->begin];
@@ -140,10 +180,99 @@ static ssize_t refill_buffer(hFILE *fp)
     return n;
 }
 
+/*
+ * Changes the buffer size for an hFILE.  Ideally this is done
+ * immediately after opening.  If performed later, this function may
+ * fail if we are reducing the buffer size and the current offset into
+ * the buffer is beyond the new capacity.
+ *
+ * Returns 0 on success;
+ *        -1 on failure.
+ */
+int hfile_set_blksize(hFILE *fp, size_t bufsiz) {
+    char *buffer;
+    ptrdiff_t curr_used;
+    if (!fp) return -1;
+    curr_used = (fp->begin > fp->end ? fp->begin : fp->end) - fp->buffer;
+    if (bufsiz == 0) bufsiz = 32768;
+
+    // Ensure buffer resize will not erase live data
+    if (bufsiz < curr_used)
+        return -1;
+
+    if (!(buffer = (char *) realloc(fp->buffer, bufsiz))) return -1;
+
+    fp->begin  = buffer + (fp->begin - fp->buffer);
+    fp->end    = buffer + (fp->end   - fp->buffer);
+    fp->buffer = buffer;
+    fp->limit  = &fp->buffer[bufsiz];
+
+    return 0;
+}
+
 /* Called only from hgetc(), when our buffer is empty.  */
 int hgetc2(hFILE *fp)
 {
     return (refill_buffer(fp) > 0)? (unsigned char) *(fp->begin++) : EOF;
+}
+
+ssize_t hgetdelim(char *buffer, size_t size, int delim, hFILE *fp)
+{
+    char *found;
+    size_t n, copied = 0;
+    ssize_t got;
+
+    if (size < 1 || size > SSIZE_MAX) {
+        fp->has_errno = errno = EINVAL;
+        return -1;
+    }
+    if (writebuffer_is_nonempty(fp)) {
+        fp->has_errno = errno = EBADF;
+        return -1;
+    }
+
+    --size; /* to allow space for the NUL terminator */
+
+    do {
+        n = fp->end - fp->begin;
+        if (n > size - copied) n = size - copied;
+
+        /* Look in the hFILE buffer for the delimiter */
+        found = memchr(fp->begin, delim, n);
+        if (found != NULL) {
+            n = found - fp->begin + 1;
+            memcpy(buffer + copied, fp->begin, n);
+            buffer[n + copied] = '\0';
+            fp->begin += n;
+            return n + copied;
+        }
+
+        /* No delimiter yet, copy as much as we can and refill if necessary */
+        memcpy(buffer + copied, fp->begin, n);
+        fp->begin += n;
+        copied += n;
+
+        if (copied == size) { /* Output buffer full */
+            buffer[copied] = '\0';
+            return copied;
+        }
+
+        got = refill_buffer(fp);
+    } while (got > 0);
+
+    if (got < 0) return -1; /* Error on refill. */
+
+    buffer[copied] = '\0';  /* EOF, return anything that was copied. */
+    return copied;
+}
+
+char *hgets(char *buffer, int size, hFILE *fp)
+{
+    if (size < 1) {
+        fp->has_errno = errno = EINVAL;
+        return NULL;
+    }
+    return hgetln(buffer, size, fp) > 0 ? buffer : NULL;
 }
 
 ssize_t hpeek(hFILE *fp, void *buffer, size_t nbytes)
@@ -166,6 +295,7 @@ ssize_t hpeek(hFILE *fp, void *buffer, size_t nbytes)
 ssize_t hread2(hFILE *fp, void *destv, size_t nbytes, size_t nread)
 {
     const size_t capacity = fp->limit - fp->buffer;
+    int buffer_invalidated = 0;
     char *dest = (char *) destv;
     dest += nread, nbytes -= nread;
 
@@ -174,9 +304,19 @@ ssize_t hread2(hFILE *fp, void *destv, size_t nbytes, size_t nread)
         ssize_t n = fp->backend->read(fp, dest, nbytes);
         if (n < 0) { fp->has_errno = errno; return n; }
         else if (n == 0) fp->at_eof = 1;
+        else buffer_invalidated = 1;
         fp->offset += n;
         dest += n, nbytes -= n;
         nread += n;
+    }
+
+    if (buffer_invalidated) {
+        // Our unread buffer is empty, so begin == end, but our already-read
+        // buffer [buffer,begin) is likely non-empty and is no longer valid as
+        // its contents are no longer adjacent to the file position indicator.
+        // Discard it so that hseek() can't try to take advantage of it.
+        fp->offset += fp->begin - fp->buffer;
+        fp->begin = fp->end = fp->buffer;
     }
 
     while (nbytes > 0 && !fp->at_eof) {
@@ -228,8 +368,10 @@ int hputc2(int c, hFILE *fp)
     return c;
 }
 
-/* Called only from hwrite() and hputs2(); when called, our buffer is full and
-   ncopied bytes from the source have already been copied to our buffer.  */
+/* Called only from hwrite() and hputs2(); when called, our buffer is either
+   full and ncopied bytes from the source have already been copied to our
+   buffer; or completely empty, ncopied is zero and totalbytes is greater than
+   the buffer size.  */
 ssize_t hwrite2(hFILE *fp, const void *srcv, size_t totalbytes, size_t ncopied)
 {
     const char *src = (const char *) srcv;
@@ -266,7 +408,7 @@ off_t hseek(hFILE *fp, off_t offset, int whence)
 {
     off_t curpos, pos;
 
-    if (writebuffer_is_nonempty(fp)) {
+    if (writebuffer_is_nonempty(fp) && fp->mobile) {
         int ret = flush_buffer(fp);
         if (ret < 0) return ret;
     }
@@ -287,8 +429,26 @@ off_t hseek(hFILE *fp, off_t offset, int whence)
         whence = SEEK_SET;
         offset = curpos + offset;
     }
+    // For fixed immobile buffers, convert everything else to SEEK_SET too
+    // so that seeking can be avoided for all (within range) requests.
+    else if (! fp->mobile && whence == SEEK_END) {
+        size_t length = fp->end - fp->buffer;
+        if (offset > 0 || -offset > length) {
+            fp->has_errno = errno = EINVAL;
+            return -1;
+        }
 
-    // TODO Avoid seeking if the desired position is within our read buffer
+        whence = SEEK_SET;
+        offset = length + offset;
+    }
+
+    // Avoid seeking if the desired position is within our read buffer.
+    // (But not when the next operation may be a write on a mobile buffer.)
+    if (whence == SEEK_SET && (! fp->mobile || fp->readonly) &&
+        offset >= fp->offset && offset - fp->offset <= fp->end - fp->buffer) {
+        fp->begin = &fp->buffer[offset - fp->offset];
+        return offset;
+    }
 
     pos = fp->backend->seek(fp, offset, whence);
     if (pos < 0) { fp->has_errno = errno; return pos; }
@@ -370,6 +530,18 @@ static ssize_t fd_write(hFILE *fpv, const void *buffer, size_t nbytes)
         n = fp->is_socket?  send(fp->fd, buffer, nbytes, 0)
                          : write(fp->fd, buffer, nbytes);
     } while (n < 0 && errno == EINTR);
+#ifdef _WIN32
+        // On windows we have no SIGPIPE.  Instead write returns
+        // EINVAL.  We check for this and our fd being a pipe.
+        // If so, we raise SIGTERM instead of SIGPIPE.  It's not
+        // ideal, but I think the only alternative is extra checking
+        // in every single piece of code.
+        if (n < 0 && errno == EINVAL &&
+            GetLastError() == ERROR_NO_DATA &&
+            GetFileType((HANDLE)_get_osfhandle(fp->fd)) == FILE_TYPE_PIPE) {
+            raise(SIGTERM);
+        }
+#endif
     return n;
 }
 
@@ -381,12 +553,13 @@ static off_t fd_seek(hFILE *fpv, off_t offset, int whence)
 
 static int fd_flush(hFILE *fpv)
 {
-    hFILE_fd *fp = (hFILE_fd *) fpv;
-    int ret;
+    int ret = 0;
     do {
 #ifdef HAVE_FDATASYNC
+        hFILE_fd *fp = (hFILE_fd *) fpv;
         ret = fdatasync(fp->fd);
-#else
+#elif defined(HAVE_FSYNC)
+        hFILE_fd *fp = (hFILE_fd *) fpv;
         ret = fsync(fp->fd);
 #endif
         // Ignore invalid-for-fsync(2) errors due to being, e.g., a pipe,
@@ -446,6 +619,56 @@ error:
     return NULL;
 }
 
+// Loads the contents of filename to produced a read-only, in memory,
+// immobile hfile.  fp is the already opened file.  We always close this
+// input fp, irrespective of whether we error or whether we return a new
+// immobile hfile.
+static hFILE *hpreload(hFILE *fp) {
+    hFILE *mem_fp;
+    char *buf = NULL;
+    off_t buf_sz = 0, buf_a = 0, buf_inc = 8192, len;
+
+    for (;;) {
+        if (buf_a - buf_sz < 5000) {
+            buf_a += buf_inc;
+            char *t = realloc(buf, buf_a);
+            if (!t) goto err;
+            buf = t;
+            if (buf_inc < 1000000) buf_inc *= 1.3;
+        }
+        len = hread(fp, buf+buf_sz, buf_a-buf_sz);
+        if (len > 0)
+            buf_sz += len;
+        else
+            break;
+    }
+
+    if (len < 0) goto err;
+    mem_fp = hfile_init_fixed(sizeof(hFILE), "r", buf, buf_sz, buf_a);
+    if (!mem_fp) goto err;
+    mem_fp->backend = &mem_backend;
+
+    if (hclose(fp) < 0) {
+        hclose_abruptly(mem_fp);
+        goto err;
+    }
+    return mem_fp;
+
+ err:
+    free(buf);
+    hclose_abruptly(fp);
+    return NULL;
+}
+
+static int is_preload_url_remote(const char *url){
+    return hisremote(url + 8); // len("preload:") = 8
+}
+
+static hFILE *hopen_preload(const char *url, const char *mode){
+    hFILE* fp = hopen(url + 8, mode);
+    return hpreload(fp);
+}
+
 hFILE *hdopen(int fd, const char *mode)
 {
     hFILE_fd *fp = (hFILE_fd*) hfile_init(sizeof (hFILE_fd), mode, blksize(fd));
@@ -462,6 +685,11 @@ static hFILE *hopen_fd_fileuri(const char *url, const char *mode)
     if (strncmp(url, "file://localhost/", 17) == 0) url += 16;
     else if (strncmp(url, "file:///", 8) == 0) url += 7;
     else { errno = EPROTONOSUPPORT; return NULL; }
+
+#ifdef _WIN32
+    // For cases like C:/foo
+    if (url[0] == '/' && url[2] == ':' && url[3] == '/') url++;
+#endif
 
     return hopen_fd(url, mode);
 }
@@ -506,43 +734,16 @@ int hfile_oflags(const char *mode)
  * In-memory backend *
  *********************/
 
+#include "hts_internal.h"
+
 typedef struct {
     hFILE base;
-    const char *buffer;
-    size_t length, pos;
 } hFILE_mem;
-
-static ssize_t mem_read(hFILE *fpv, void *buffer, size_t nbytes)
-{
-    hFILE_mem *fp = (hFILE_mem *) fpv;
-    size_t avail = fp->length - fp->pos;
-    if (nbytes > avail) nbytes = avail;
-    memcpy(buffer, fp->buffer + fp->pos, nbytes);
-    fp->pos += nbytes;
-    return nbytes;
-}
 
 static off_t mem_seek(hFILE *fpv, off_t offset, int whence)
 {
-    hFILE_mem *fp = (hFILE_mem *) fpv;
-    size_t absoffset = (offset >= 0)? offset : -offset;
-    size_t origin;
-
-    switch (whence) {
-    case SEEK_SET: origin = 0; break;
-    case SEEK_CUR: origin = fp->pos; break;
-    case SEEK_END: origin = fp->length; break;
-    default: errno = EINVAL; return -1;
-    }
-
-    if ((offset  < 0 && absoffset > origin) ||
-        (offset >= 0 && absoffset > fp->length - origin)) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    fp->pos = origin + offset;
-    return fp->pos;
+    errno = EINVAL;
+    return -1;
 }
 
 static int mem_close(hFILE *fpv)
@@ -552,24 +753,104 @@ static int mem_close(hFILE *fpv)
 
 static const struct hFILE_backend mem_backend =
 {
-    mem_read, NULL, mem_seek, NULL, mem_close
+    NULL, NULL, mem_seek, NULL, mem_close
 };
 
-static hFILE *hopen_mem(const char *data, const char *mode)
+static int cmp_prefix(const char *key, const char *s)
 {
-    if (strncmp(data, "data:", 5) == 0) data += 5;
+    while (*key)
+        if (tolower_c(*s) != *key) return +1;
+        else s++, key++;
 
-    // TODO Implement write modes, which will require memory allocation
-    if (strchr(mode, 'r') == NULL) { errno = EINVAL; return NULL; }
+    return 0;
+}
 
-    hFILE_mem *fp = (hFILE_mem *) hfile_init(sizeof (hFILE_mem), mode, 0);
-    if (fp == NULL) return NULL;
+static hFILE *create_hfile_mem(char* buffer, const char* mode, size_t buf_filled, size_t buf_size)
+{
+    hFILE_mem *fp = (hFILE_mem *) hfile_init_fixed(sizeof(hFILE_mem), mode, buffer, buf_filled, buf_size);
+    if (fp == NULL)
+        return NULL;
 
-    fp->buffer = data;
-    fp->length = strlen(data);
-    fp->pos = 0;
     fp->base.backend = &mem_backend;
     return &fp->base;
+}
+
+static hFILE *hopen_mem(const char *url, const char *mode)
+{
+    size_t length, size;
+    char *buffer;
+    const char *data, *comma = strchr(url, ',');
+    if (comma == NULL) { errno = EINVAL; return NULL; }
+    data = comma+1;
+
+    // TODO Implement write modes
+    if (strchr(mode, 'r') == NULL) { errno = EROFS; return NULL; }
+
+    if (comma - url >= 7 && cmp_prefix(";base64", &comma[-7]) == 0) {
+        size = hts_base64_decoded_length(strlen(data));
+        buffer = malloc(size);
+        if (buffer == NULL) return NULL;
+        hts_decode_base64(buffer, &length, data);
+    }
+    else {
+        size = strlen(data) + 1;
+        buffer = malloc(size);
+        if (buffer == NULL) return NULL;
+        hts_decode_percent(buffer, &length, data);
+    }
+    hFILE* hf;
+
+    if(!(hf = create_hfile_mem(buffer, mode, length, size))){
+        free(buffer);
+        return NULL;
+    }
+
+    return hf;
+}
+
+hFILE *hopenv_mem(const char *filename, const char *mode, va_list args)
+{
+    char* buffer = va_arg(args, char*);
+    size_t sz = va_arg(args, size_t);
+    va_end(args);
+
+    hFILE* hf;
+
+    if(!(hf = create_hfile_mem(buffer, mode, sz, sz))){
+        free(buffer);
+        return NULL;
+    }
+
+    return hf;
+}
+
+char *hfile_mem_get_buffer(hFILE *file, size_t *length) {
+    if (file->backend != &mem_backend) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (length)
+        *length = file->buffer - file->limit;
+
+    return file->buffer;
+}
+
+char *hfile_mem_steal_buffer(hFILE *file, size_t *length) {
+    char *buf = hfile_mem_get_buffer(file, length);
+    if (buf)
+        file->buffer = NULL;
+    return buf;
+}
+
+int hfile_plugin_init_mem(struct hFILE_plugin *self)
+{
+    // mem files are declared remote so they work with a tabix index
+    static const struct hFILE_scheme_handler handler =
+            {NULL, hfile_always_remote, "mem", 2000 + 50, hopenv_mem};
+    self->name = "mem";
+    hfile_add_scheme_handler("mem", &handler);
+    return 0;
 }
 
 
@@ -577,10 +858,9 @@ static hFILE *hopen_mem(const char *data, const char *mode)
  * Plugin and hopen() backend dispatcher *
  *****************************************/
 
-#include "hts_internal.h"
 #include "htslib/khash.h"
 
-KHASH_MAP_INIT_STR(scheme_string, const struct hFILE_scheme_handler *);
+KHASH_MAP_INIT_STR(scheme_string, const struct hFILE_scheme_handler *)
 static khash_t(scheme_string) *schemes = NULL;
 
 struct hFILE_plugin_list {
@@ -611,12 +891,17 @@ static void hfile_exit()
     pthread_mutex_destroy(&plugins_lock);
 }
 
+static inline int priority(const struct hFILE_scheme_handler *handler)
+{
+    return handler->priority % 1000;
+}
+
 void hfile_add_scheme_handler(const char *scheme,
                               const struct hFILE_scheme_handler *handler)
 {
     int absent;
     khint_t k = kh_put(scheme_string, schemes, scheme, &absent);
-    if (absent || handler->priority > kh_value(schemes, k)->priority) {
+    if (absent || priority(handler) > priority(kh_value(schemes, k))) {
         kh_value(schemes, k) = handler;
     }
 }
@@ -635,16 +920,12 @@ static int init_add_plugin(void *obj, int (*init)(struct hFILE_plugin *),
     int ret = (*init)(&p->plugin);
 
     if (ret != 0) {
-        if (hts_verbose >= 4)
-            fprintf(stderr, "[W::load_hfile_plugins] "
-                    "initialisation failed for plugin \"%s\": %d\n",
-                    pluginname, ret);
+        hts_log_debug("Initialisation failed for plugin \"%s\": %d", pluginname, ret);
         free(p);
         return ret;
     }
 
-    if (hts_verbose >= 5)
-        fprintf(stderr, "[M::load_hfile_plugins] loaded \"%s\"\n", pluginname);
+    hts_log_debug("Loaded \"%s\"", pluginname);
 
     p->next = plugins, plugins = p;
     return 0;
@@ -654,14 +935,17 @@ static void load_hfile_plugins()
 {
     static const struct hFILE_scheme_handler
         data = { hopen_mem, hfile_always_local, "built-in", 80 },
-        file = { hopen_fd_fileuri, hfile_always_local, "built-in", 80 };
+        file = { hopen_fd_fileuri, hfile_always_local, "built-in", 80 },
+        preload = { hopen_preload, is_preload_url_remote, "built-in", 80 };
 
     schemes = kh_init(scheme_string);
     if (schemes == NULL) abort();
 
     hfile_add_scheme_handler("data", &data);
     hfile_add_scheme_handler("file", &file);
+    hfile_add_scheme_handler("preload", &preload);
     init_add_plugin(NULL, hfile_plugin_init_net, "knetfile");
+    init_add_plugin(NULL, hfile_plugin_init_mem, "mem");
 
 #ifdef ENABLE_PLUGINS
     struct hts_path_itr path;
@@ -679,11 +963,14 @@ static void load_hfile_plugins()
     }
 #else
 
-#ifdef HAVE_IRODS
-    init_add_plugin(NULL, hfile_plugin_init_irods, "iRODS");
-#endif
 #ifdef HAVE_LIBCURL
     init_add_plugin(NULL, hfile_plugin_init_libcurl, "libcurl");
+#endif
+#ifdef ENABLE_GCS
+    init_add_plugin(NULL, hfile_plugin_init_gcs, "gcs");
+#endif
+#ifdef ENABLE_S3
+    init_add_plugin(NULL, hfile_plugin_init_s3, "s3");
 #endif
 
 #endif
@@ -720,7 +1007,8 @@ static const struct hFILE_scheme_handler *find_scheme_handler(const char *s)
         else if (s[i] == ':') break;
         else return NULL;
 
-    if (i == 0 || i >= sizeof scheme) return NULL;
+    // 1 byte schemes are likely windows C:/foo pathnames
+    if (i <= 1 || i >= sizeof scheme) return NULL;
     scheme[i] = '\0';
 
     pthread_mutex_lock(&plugins_lock);
@@ -731,10 +1019,24 @@ static const struct hFILE_scheme_handler *find_scheme_handler(const char *s)
     return (k != kh_end(schemes))? kh_value(schemes, k) : &unknown_scheme;
 }
 
-hFILE *hopen(const char *fname, const char *mode)
+hFILE *hopen(const char *fname, const char *mode, ...)
 {
     const struct hFILE_scheme_handler *handler = find_scheme_handler(fname);
-    if (handler) return handler->open(fname, mode);
+    if (handler) {
+        if (strchr(mode, ':') == NULL
+            || handler->priority < 2000
+            || handler->vopen == NULL) {
+            return handler->open(fname, mode);
+        }
+        else {
+            hFILE *fp;
+            va_list arg;
+            va_start(arg, mode);
+            fp = handler->vopen(fname, mode, arg);
+            va_end(arg);
+            return fp;
+        }
+    }
     else if (strcmp(fname, "-") == 0) return hopen_fd_stdinout(mode);
     else return hopen_fd(fname, mode);
 }

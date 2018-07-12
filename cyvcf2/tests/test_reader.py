@@ -345,7 +345,7 @@ def test_seqnames():
     v = VCF(VCF_PATH)
     assert v.seqnames ==  [u'1', u'2', u'3', u'4', u'5', u'6', u'7', u'8', u'9', u'10', u'11', u'12', u'13', u'14', u'15', u'16', u'17', u'18', u'19', u'20', u'21', u'22', u'X', u'Y', u'MT', u'GL000207.1', u'GL000226.1', u'GL000229.1', u'GL000231.1', u'GL000210.1', u'GL000239.1', u'GL000235.1', u'GL000201.1', u'GL000247.1', u'GL000245.1', u'GL000197.1', u'GL000203.1', u'GL000246.1', u'GL000249.1', u'GL000196.1', u'GL000248.1', u'GL000244.1', u'GL000238.1', u'GL000202.1', u'GL000234.1', u'GL000232.1', u'GL000206.1', u'GL000240.1', u'GL000236.1', u'GL000241.1', u'GL000243.1', u'GL000242.1', u'GL000230.1', u'GL000237.1', u'GL000233.1', u'GL000204.1', u'GL000198.1', u'GL000208.1', u'GL000191.1', u'GL000227.1', u'GL000228.1', u'GL000214.1', u'GL000221.1', u'GL000209.1', u'GL000218.1', u'GL000220.1', u'GL000213.1', u'GL000211.1', u'GL000199.1', u'GL000217.1', u'GL000216.1', u'GL000215.1', u'GL000205.1', u'GL000219.1', u'GL000224.1', u'GL000223.1', u'GL000195.1', u'GL000212.1', u'GL000222.1', u'GL000200.1', u'GL000193.1', u'GL000194.1', u'GL000225.1', u'GL000192.1', u'NC_007605', u'hs37d5', u'phix'], v.seqnames
 
-    b = VCF('{}/test.snpeff.bcf'.format(HERE))
+    b = VCF('{}/test.snpeff.bcf'.format(HERE), threads=3)
     assert b.seqnames[0] == 'chr1', b.seqnames
     assert b.seqnames[-1] == 'chrY', b.seqnames
 

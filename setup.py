@@ -66,7 +66,7 @@ from Cython.Distutils import build_ext
 cmdclass = {'build_ext': build_ext}
 extension = [Extension("cyvcf2.cyvcf2",
                         ["cyvcf2/cyvcf2.pyx"] + sources,
-                        libraries=['z'],
+                        libraries=['z', 'curl'],
                         include_dirs=['htslib', 'cyvcf2', np.get_include()])]
 
 

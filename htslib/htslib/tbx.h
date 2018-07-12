@@ -52,7 +52,7 @@ typedef struct {
     void *dict;
 } tbx_t;
 
-extern tbx_conf_t tbx_conf_gff, tbx_conf_bed, tbx_conf_psltbl, tbx_conf_sam, tbx_conf_vcf;
+extern const tbx_conf_t tbx_conf_gff, tbx_conf_bed, tbx_conf_psltbl, tbx_conf_sam, tbx_conf_vcf;
 
     #define tbx_itr_destroy(iter) hts_itr_destroy(iter)
     #define tbx_itr_queryi(tbx, tid, beg, end) hts_itr_query((tbx)->idx, (tid), (beg), (end), tbx_readrec)
@@ -69,6 +69,7 @@ extern tbx_conf_t tbx_conf_gff, tbx_conf_bed, tbx_conf_psltbl, tbx_conf_sam, tbx
     tbx_t *tbx_index(BGZF *fp, int min_shift, const tbx_conf_t *conf);
     int tbx_index_build(const char *fn, int min_shift, const tbx_conf_t *conf);
     int tbx_index_build2(const char *fn, const char *fnidx, int min_shift, const tbx_conf_t *conf);
+    int tbx_index_build3(const char *fn, const char *fnidx, int min_shift, int n_threads, const tbx_conf_t *conf);
     tbx_t *tbx_index_load(const char *fn);
     tbx_t *tbx_index_load2(const char *fn, const char *fnidx);
     const char **tbx_seqnames(tbx_t *tbx, int *n);  // free the array but not the values

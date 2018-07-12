@@ -39,6 +39,7 @@ DEALINGS IN THE SOFTWARE.  */
 #include "hts.h"
 #include "kstring.h"
 #include "hts_defs.h"
+#include "hts_endian.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -136,6 +137,7 @@ extern uint8_t bcf_type_shift[];
 #define VCF_MNP   2
 #define VCF_INDEL 4
 #define VCF_OTHER 8
+#define VCF_BND   16    // breakend
 
 typedef struct {
     int type, n;    // variant type and the number of bases affected, negative for deletions
@@ -605,7 +607,7 @@ typedef struct {
     // from bcf_get_genotypes() below.
     #define bcf_gt_phased(idx)      (((idx)+1)<<1|1)
     #define bcf_gt_unphased(idx)    (((idx)+1)<<1)
-    #define bcf_gt_missing          0 
+    #define bcf_gt_missing          0
     #define bcf_gt_is_missing(val)  ((val)>>1 ? 0 : 1)
     #define bcf_gt_is_phased(idx)   ((idx)&1)
     #define bcf_gt_allele(val)      (((val)>>1)-1)
@@ -635,8 +637,8 @@ typedef struct {
      * bcf_get_*_id() - returns pointer to FORMAT/INFO field data given the header index instead of the string ID
      * @line: VCF line obtained from vcf_parse1
      * @id:  The header index for the tag, obtained from bcf_hdr_id2int()
-     * 
-     * Returns bcf_fmt_t* / bcf_info_t*. These functions do not check if the index is valid 
+     *
+     * Returns bcf_fmt_t* / bcf_info_t*. These functions do not check if the index is valid
      * as their goal is to avoid the header lookup.
      */
     bcf_fmt_t *bcf_get_fmt_id(bcf1_t *line, const int id);
@@ -650,10 +652,11 @@ typedef struct {
      *  @dst:       *dst is pointer to a memory location, can point to NULL
      *  @ndst:      pointer to the size of allocated memory
      *
-     *  Returns negative value on error or the number of written values on
-     *  success. bcf_get_info_string() returns on success the number of
-     *  characters written excluding the null-terminating byte. bcf_get_info_flag()
-     *  returns 1 when flag is set or 0 if not.
+     *  Returns negative value on error or the number of written values
+     *  (including missing values) on success. bcf_get_info_string() returns
+     *  on success the number of characters written excluding the null-
+     *  terminating byte. bcf_get_info_flag() returns 1 when flag is set or 0
+     *  if not.
      *
      *  List of return codes:
      *      -1 .. no such INFO tag defined in the header
@@ -677,6 +680,10 @@ typedef struct {
      *
      *  Returns negative value on error or the number of written values on success.
      *
+     *  Use the returned number of written values for accessing valid entries of dst, as ndst is only a
+     *  watermark that can be higher than the returned value, i.e. the end of dst can contain carry-over
+     *  values from previous calls to bcf_get_format_*() on lines with more values per sample.
+     *
      *  Example:
      *      int ndst = 0; char **dst = NULL;
      *      if ( bcf_get_format_string(hdr, line, "XX", &dst, &ndst) > 0 )
@@ -684,8 +691,35 @@ typedef struct {
      *      free(dst[0]); free(dst);
      *
      *  Example:
-     *      int ngt, *gt_arr = NULL, ngt_arr = 0;
+     *      int i, j, ngt, nsmpl = bcf_hdr_nsamples(hdr);
+     *      int32_t *gt_arr = NULL, ngt_arr = 0;
+     *
      *      ngt = bcf_get_genotypes(hdr, line, &gt_arr, &ngt_arr);
+     *      if ( ngt<=0 ) return; // GT not present
+     *
+     *      int max_ploidy = ngt/nsmpl;
+     *      for (i=0; i<nsmpl; i++)
+     *      {
+     *        int32_t *ptr = gt + i*max_ploidy;
+     *        for (j=0; j<max_ploidy; j++)
+     *        {
+     *           // if true, the sample has smaller ploidy
+     *           if ( ptr[j]==bcf_int32_vector_end ) break;
+     *
+     *           // missing allele
+     *           if ( bcf_gt_is_missing(ptr[j]) ) continue;
+     *
+     *           // the VCF 0-based allele index
+     *           int allele_index = bcf_gt_allele(ptr[j]);
+     *
+     *           // is phased?
+     *           int is_phased = bcf_gt_is_phased(ptr[j]);
+     *
+     *           // .. do something ..
+     *         }
+     *      }
+     *      free(gt_arr);
+     *
      */
     #define bcf_get_format_int32(hdr,line,tag,dst,ndst)  bcf_get_format_values(hdr,line,tag,(void**)(dst),ndst,BCF_HT_INT)
     #define bcf_get_format_float(hdr,line,tag,dst,ndst)  bcf_get_format_values(hdr,line,tag,(void**)(dst),ndst,BCF_HT_REAL)
@@ -768,8 +802,13 @@ typedef struct {
 
     /**
      *  bcf_index_build() - Generate and save an index file
-     *  @fn:         Input VCF/BCF filename
-     *  @min_shift:  Positive to generate CSI, or 0 to generate TBI
+     *  @fn:         Input VCF(compressed)/BCF filename
+     *  @min_shift:  log2(width of the smallest bin), e.g. a value of 14
+     *  imposes a 16k base lower limit on the width of index bins.
+     *  Positive to generate CSI, or 0 to generate TBI. However, a small
+     *  value of min_shift would create a large index, which would lead to
+     *  reduced performance when using the index. A recommended value is 14.
+     *  For BCF files, only the CSI index can be generated.
      *
      *  Returns 0 if successful, or negative if an error occurred.
      *
@@ -777,6 +816,7 @@ typedef struct {
      *      -1 .. indexing failed
      *      -2 .. opening @fn failed
      *      -3 .. format not indexable
+     *      -4 .. failed to create and/or save the index
      */
     int bcf_index_build(const char *fn, int min_shift);
 
@@ -792,8 +832,26 @@ typedef struct {
      *      -1 .. indexing failed
      *      -2 .. opening @fn failed
      *      -3 .. format not indexable
+     *      -4 .. failed to create and/or save the index
      */
     int bcf_index_build2(const char *fn, const char *fnidx, int min_shift);
+
+    /**
+     *  bcf_index_build3() - Generate and save an index to a specific file
+     *  @fn:         Input VCF/BCF filename
+     *  @fnidx:      Output filename, or NULL to add .csi/.tbi to @fn
+     *  @min_shift:  Positive to generate CSI, or 0 to generate TBI
+     *  @n_threads:  Number of VCF/BCF decoder threads
+     *
+     *  Returns 0 if successful, or negative if an error occurred.
+     *
+     *  List of error codes:
+     *      -1 .. indexing failed
+     *      -2 .. opening @fn failed
+     *      -3 .. format not indexable
+     *      -4 .. failed to create and/or save the index
+     */
+     int bcf_index_build3(const char *fn, const char *fnidx, int min_shift, int n_threads);
 
 /*******************
  * Typed value I/O *
@@ -861,7 +919,7 @@ static inline void bcf_format_gt(bcf_fmt_t *fmt, int isample, kstring_t *str)
         case BCF_BT_INT16: BRANCH(int16_t, bcf_int16_missing, bcf_int16_vector_end); break;
         case BCF_BT_INT32: BRANCH(int32_t, bcf_int32_missing, bcf_int32_vector_end); break;
         case BCF_BT_NULL:  kputc('.', str); break;
-        default: fprintf(stderr,"FIXME: type %d in bcf_format_gt?\n", fmt->type); abort(); break;
+        default: hts_log_error("Unexpected type %d", fmt->type); abort(); break;
     }
     #undef BRANCH
 }
@@ -920,13 +978,13 @@ static inline int32_t bcf_dec_int1(const uint8_t *p, int type, uint8_t **q)
 {
     if (type == BCF_BT_INT8) {
         *q = (uint8_t*)p + 1;
-        return *(int8_t*)p;
+        return le_to_i8(p);
     } else if (type == BCF_BT_INT16) {
         *q = (uint8_t*)p + 2;
-        return *(int16_t*)p;
+        return le_to_i16(p);
     } else {
         *q = (uint8_t*)p + 4;
-        return *(int32_t*)p;
+        return le_to_i32(p);
     }
 }
 

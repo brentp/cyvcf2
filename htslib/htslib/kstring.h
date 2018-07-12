@@ -31,6 +31,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <limits.h>
 
 #ifndef kroundup32
 #define kroundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
@@ -82,6 +83,7 @@ extern "C" {
 
 	int kvsprintf(kstring_t *s, const char *fmt, va_list ap) KS_ATTR_PRINTF(2,0);
 	int ksprintf(kstring_t *s, const char *fmt, ...) KS_ATTR_PRINTF(2,3);
+    int kputd(double d, kstring_t *s); // custom %g only handler
 	int ksplit_core(char *s, int delimiter, int *_max, int **_offsets);
 	char *kstrstr(const char *str, const char *pat, int **_prep);
 	char *kstrnstr(const char *str, const char *pat, int n, int **_prep);
@@ -140,9 +142,9 @@ static inline char *ks_release(kstring_t *s)
 	return ss;
 }
 
-static inline int kputsn(const char *p, int l, kstring_t *s)
+static inline int kputsn(const char *p, size_t l, kstring_t *s)
 {
-	if (ks_resize(s, s->l + l + 2) < 0)
+    if (l > SIZE_MAX - 2 - s->l || ks_resize(s, s->l + l + 2) < 0)
 		return EOF;
 	memcpy(s->s + s->l, p, l);
 	s->l += l;
@@ -172,9 +174,9 @@ static inline int kputc_(int c, kstring_t *s)
 	return 1;
 }
 
-static inline int kputsn_(const void *p, int l, kstring_t *s)
+static inline int kputsn_(const void *p, size_t l, kstring_t *s)
 {
-	if (ks_resize(s, s->l + l) < 0)
+	if (l > SIZE_MAX - s->l || ks_resize(s, s->l + l) < 0)
 		return EOF;
 	memcpy(s->s + s->l, p, l);
 	s->l += l;

@@ -32,6 +32,7 @@ DEALINGS IN THE SOFTWARE.  */
 #include <stdint.h>
 
 #include "hts_defs.h"
+#include "hts_log.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +44,7 @@ typedef struct BGZF BGZF;
 #endif
 struct cram_fd;
 struct hFILE;
+struct hts_tpool;
 
 #ifndef KSTRING_T
 #define KSTRING_T kstring_t
@@ -57,21 +59,64 @@ typedef struct __kstring_t {
 #endif
 
 /**
- * hts_expand()  - expands memory block pointed to by $ptr;
- * hts_expand0()   the latter sets the newly allocated part to 0.
+ * @hideinitializer
+ * Macro to expand a dynamic array of a given type
  *
- * @param n     requested number of elements of type type_t
- * @param m     size of memory allocated
+ * @param         type_t The type of the array elements
+ * @param[in]     n      Requested number of elements of type type_t
+ * @param[in,out] m      Size of memory allocated
+ * @param[in,out] ptr    Pointer to the array
+ *
+ * @discussion
+ * The array *ptr will be expanded if necessary so that it can hold @p n
+ * or more elements.  If the array is expanded then the new size will be
+ * written to @p m and the value in @ptr may change.
+ *
+ * It must be possible to take the address of @p ptr and @p m must be usable
+ * as an lvalue.
+ *
+ * @bug
+ * If the memory allocation fails, this will call exit(1).  This is
+ * not ideal behaviour in a library.
  */
-#define hts_expand(type_t, n, m, ptr) if ((n) > (m)) { \
-        (m) = (n); kroundup32(m); \
-        (ptr) = (type_t*)realloc((ptr), (m) * sizeof(type_t)); \
-    }
-#define hts_expand0(type_t, n, m, ptr) if ((n) > (m)) { \
-        int t = (m); (m) = (n); kroundup32(m); \
-        (ptr) = (type_t*)realloc((ptr), (m) * sizeof(type_t)); \
-        memset(((type_t*)ptr)+t,0,sizeof(type_t)*((m)-t)); \
-    }
+#define hts_expand(type_t, n, m, ptr) do {                              \
+        if ((n) > (m)) {                                                \
+            size_t hts_realloc_or_die(size_t, size_t, size_t, size_t,   \
+                                      int, void **, const char *);      \
+            (m) = hts_realloc_or_die((n) >= 1 ? (n) : 1, (m), sizeof(m), \
+                                     sizeof(type_t),  0,                \
+                                     (void **)&(ptr), __func__);        \
+        }                                                               \
+    } while (0)
+
+/**
+ * @hideinitializer
+ * Macro to expand a dynamic array, zeroing any newly-allocated memory
+ *
+ * @param         type_t The type of the array elements
+ * @param[in]     n      Requested number of elements of type type_t
+ * @param[in,out] m      Size of memory allocated
+ * @param[in,out] ptr    Pointer to the array
+ *
+ * @discussion
+ * As for hts_expand(), except the bytes that make up the array elements
+ * between the old and new values of @p m are set to zero using memset().
+ *
+ * @bug
+ * If the memory allocation fails, this will call exit(1).  This is
+ * not ideal behaviour in a library.
+ */
+
+
+#define hts_expand0(type_t, n, m, ptr) do {                             \
+        if ((n) > (m)) {                                                \
+            size_t hts_realloc_or_die(size_t, size_t, size_t, size_t,   \
+                                      int, void **, const char *);      \
+            (m) = hts_realloc_or_die((n) >= 1 ? (n) : 1, (m), sizeof(m), \
+                                     sizeof(type_t), 1,                 \
+                                     (void **)&(ptr), __func__);        \
+        }                                                               \
+    } while (0)
 
 /************
  * File I/O *
@@ -93,6 +138,8 @@ enum htsExactFormat {
     unknown_format,
     binary_format, text_format,
     sam, bam, bai, cram, crai, vcf, bcf, csi, gzi, tbi, bed,
+    htsget,
+    json HTS_DEPRECATED_ENUM("Use htsExactFormat 'htsget' instead") = htsget,
     format_maximum = 32767
 };
 
@@ -118,7 +165,7 @@ typedef struct htsFormat {
 //  - fp is used directly in samtools (up to and including current develop)
 //  - line is used directly in bcftools (up to and including current develop)
 typedef struct {
-    uint32_t is_bin:1, is_write:1, is_be:1, is_cram:1, dummy:28;
+    uint32_t is_bin:1, is_write:1, is_be:1, is_cram:1, is_bgzf:1, dummy:27;
     int64_t lineno;
     kstring_t line;
     char *fn, *fn_aux;
@@ -126,10 +173,21 @@ typedef struct {
         BGZF *bgzf;
         struct cram_fd *cram;
         struct hFILE *hfile;
-        void *voidp;
     } fp;
     htsFormat format;
 } htsFile;
+
+// A combined thread pool and queue allocation size.
+// The pool should already be defined, but qsize may be zero to
+// indicate an appropriate queue size is taken from the pool.
+//
+// Reasons for explicitly setting it could be where many more file
+// descriptors are in use than threads, so keeping memory low is
+// important.
+typedef struct {
+    struct hts_tpool *pool; // The shared thread pool itself
+    int qsize;    // Size of I/O queue to use for this fp
+} htsThreadPool;
 
 // REQUIRED_FIELDS
 enum sam_fields {
@@ -153,7 +211,7 @@ enum hts_fmt_option {
     // CRAM specific
     CRAM_OPT_DECODE_MD,
     CRAM_OPT_PREFIX,
-    CRAM_OPT_VERBOSITY,  // make general
+    CRAM_OPT_VERBOSITY,  // obsolete, use hts_set_log_level() instead
     CRAM_OPT_SEQS_PER_SLICE,
     CRAM_OPT_SLICES_PER_CONTAINER,
     CRAM_OPT_RANGE,
@@ -171,10 +229,16 @@ enum hts_fmt_option {
     CRAM_OPT_USE_RANS,
     CRAM_OPT_REQUIRED_FIELDS,
     CRAM_OPT_LOSSY_NAMES,
+    CRAM_OPT_BASES_PER_SLICE,
+    CRAM_OPT_STORE_MD,
+    CRAM_OPT_STORE_NM,
 
     // General purpose
     HTS_OPT_COMPRESSION_LEVEL = 100,
     HTS_OPT_NTHREADS,
+    HTS_OPT_THREAD_POOL,
+    HTS_OPT_CACHE_SIZE,
+    HTS_OPT_BLOCK_SIZE,
 };
 
 // For backwards compatibility
@@ -239,8 +303,6 @@ int hts_parse_format(htsFormat *opt, const char *str);
  *        -1 on failure.
  */
 int hts_parse_opt_list(htsFormat *opt, const char *str);
-
-extern int hts_verbose;
 
 /*! @abstract Table for converting a nucleotide character to 4-bit encoding.
 The input character may be either an IUPAC ambiguity code, '=' for 0, or
@@ -380,9 +442,26 @@ char **hts_readlist(const char *fn, int is_file, int *_n);
   @param fp  The file handle
   @param n   The number of worker threads to create
   @return    0 for success, or negative if an error occurred.
-  @notes     THIS THREADING API IS LIKELY TO CHANGE IN FUTURE.
+  @notes     This function creates non-shared threads for use solely by fp.
+             The hts_set_thread_pool function is the recommended alternative.
 */
 int hts_set_threads(htsFile *fp, int n);
+
+/*!
+  @abstract  Create extra threads to aid compress/decompression for this file
+  @param fp  The file handle
+  @param p   A pool of worker threads, previously allocated by hts_create_threads().
+  @return    0 for success, or negative if an error occurred.
+*/
+int hts_set_thread_pool(htsFile *fp, htsThreadPool *p);
+
+/*!
+  @abstract  Adds a cache of decompressed blocks, potentially speeding up seeks.
+             This may not work for all file types (currently it is bgzf only).
+  @param fp  The file handle
+  @param n   The size of cache, in bytes
+*/
+void hts_set_cache_size(htsFile *fp, int n);
 
 /*!
   @abstract  Set .fai filename for a file opened for reading
@@ -434,13 +513,32 @@ struct __hts_idx_t;
 typedef struct __hts_idx_t hts_idx_t;
 
 typedef struct {
+    uint32_t beg, end;
+} hts_pair32_t;
+
+typedef struct {
     uint64_t u, v;
 } hts_pair64_t;
 
-typedef int hts_readrec_func(BGZF *fp, void *data, void *r, int *tid, int *beg, int *end);
+typedef struct {
+    uint64_t u, v;
+    uint64_t max;
+} hts_pair64_max_t;
 
 typedef struct {
-    uint32_t read_rest:1, finished:1, dummy:29;
+    const char *reg;
+    int tid;
+    hts_pair32_t *intervals;
+    uint32_t count;
+    uint32_t min_beg, max_end;
+} hts_reglist_t;
+
+typedef int hts_readrec_func(BGZF *fp, void *data, void *r, int *tid, int *beg, int *end);
+typedef int hts_seek_func(void *fp, int64_t offset, int where);
+typedef int64_t hts_tell_func(void *fp);
+
+typedef struct {
+    uint32_t read_rest:1, finished:1, is_cram:1, dummy:29;
     int tid, beg, end, n_off, i;
     int curr_tid, curr_beg, curr_end;
     uint64_t curr_off;
@@ -451,6 +549,24 @@ typedef struct {
         int *a;
     } bins;
 } hts_itr_t;
+
+typedef struct {
+    int key;
+    uint64_t min_off, max_off;
+} aux_key_t;
+
+typedef struct {
+    uint32_t read_rest:1, finished:1, is_cram:1, nocoor:1, dummy:28;
+    hts_reglist_t *reg_list;
+    int n_reg, i;
+    int curr_tid, curr_intv, curr_beg, curr_end, curr_reg;
+    hts_pair64_max_t *off;
+    int n_off;
+    uint64_t curr_off, nocoor_off;
+    hts_readrec_func *readrec;
+    hts_seek_func *seek;
+    hts_tell_func *tell;
+} hts_itr_multi_t;
 
     #define hts_bin_first(l) (((1<<(((l)<<1) + (l))) - 1) / 7)
     #define hts_bin_parent(l) (((l) - 1) >> 3)
@@ -492,8 +608,33 @@ hts_idx_t *hts_idx_load(const char *fn, int fmt);
 */
 hts_idx_t *hts_idx_load2(const char *fn, const char *fnidx);
 
-    uint8_t *hts_idx_get_meta(hts_idx_t *idx, int *l_meta);
-    void hts_idx_set_meta(hts_idx_t *idx, int l_meta, uint8_t *meta, int is_copy);
+
+/// Get extra index meta-data
+/** @param idx    The index
+    @param l_meta Pointer to where the length of the extra data is stored
+    @return Pointer to the extra data if present; NULL otherwise
+
+    Indexes (both .tbi and .csi) made by tabix include extra data about
+    the indexed file.  The returns a pointer to this data.  Note that the
+    data is stored exactly as it is in the index.  Callers need to interpret
+    the results themselves, including knowing what sort of data to expect;
+    byte swapping etc.
+*/
+uint8_t *hts_idx_get_meta(hts_idx_t *idx, uint32_t *l_meta);
+
+/// Set extra index meta-data
+/** @param idx     The index
+    @param l_meta  Length of data
+    @param meta    Pointer to the extra data
+    @param is_copy If not zero, a copy of the data is taken
+    @return 0 on success; -1 on failure (out of memory).
+
+    Sets the data that is returned by hts_idx_get_meta().
+
+    If is_copy != 0, a copy of the input data is taken.  If not, ownership of
+    the data pointed to by *meta passes to the index.
+*/
+int hts_idx_set_meta(hts_idx_t *idx, uint32_t l_meta, uint8_t *meta, int is_copy);
 
     int hts_idx_get_stat(const hts_idx_t* idx, int tid, uint64_t* mapped, uint64_t* unmapped);
     uint64_t hts_idx_get_n_no_coor(const hts_idx_t* idx);
@@ -510,7 +651,7 @@ hts_idx_t *hts_idx_load2(const char *fn, const char *fnidx);
     @param flags   Or'ed-together combination of HTS_PARSE_* flags
     @return  Converted value of the parsed number.
 
-    When @a strend is NULL, a warning will be printed (if hts_verbose is 2
+    When @a strend is NULL, a warning will be printed (if hts_verbose is HTS_LOG_WARNING
     or more) if there are any trailing characters after the number.
 */
 long long hts_parse_decimal(const char *str, char **strend, int flags);
@@ -534,6 +675,19 @@ const char *hts_parse_reg(const char *str, int *beg, int *end);
     hts_itr_t *hts_itr_querys(const hts_idx_t *idx, const char *reg, hts_name2id_f getid, void *hdr, hts_itr_query_func *itr_query, hts_readrec_func *readrec);
     int hts_itr_next(BGZF *fp, hts_itr_t *iter, void *r, void *data) HTS_RESULT_USED;
     const char **hts_idx_seqnames(const hts_idx_t *idx, int *n, hts_id2name_f getid, void *hdr); // free only the array, not the values
+
+/**********************************
+ * Iterator with multiple regions *
+ **********************************/
+
+typedef hts_itr_multi_t *hts_itr_multi_query_func(const hts_idx_t *idx, hts_itr_multi_t *itr);
+hts_itr_multi_t *hts_itr_multi_bam(const hts_idx_t *idx, hts_itr_multi_t *iter);
+hts_itr_multi_t *hts_itr_multi_cram(const hts_idx_t *idx, hts_itr_multi_t *iter);
+hts_itr_multi_t *hts_itr_regions(const hts_idx_t *idx, hts_reglist_t *reglist, int count, hts_name2id_f getid, void *hdr, hts_itr_multi_query_func *itr_specific, hts_readrec_func *readrec, hts_seek_func *seek, hts_tell_func *tell);
+int hts_itr_multi_next(htsFile *fd, hts_itr_multi_t *iter, void *r);
+void hts_reglist_free(hts_reglist_t *reglist, int count);
+void hts_itr_multi_destroy(hts_itr_multi_t *iter);
+
 
     /**
      * hts_file_type() - Convenience function to determine file type
@@ -569,14 +723,39 @@ void errmod_destroy(errmod_t *em);
 int errmod_cal(const errmod_t *em, int n, int m, uint16_t *bases, float *q);
 
 
-/*****************************************
- * Probabilistic banded glocal alignment *
- *****************************************/
+/*****************************************************
+ * Probabilistic banded glocal alignment             *
+ * See https://doi.org/10.1093/bioinformatics/btr076 *
+ *****************************************************/
 
 typedef struct probaln_par_t {
     float d, e;
     int bw;
 } probaln_par_t;
+
+/// Perform probabilistic banded glocal alignment
+/** @param      ref     Reference sequence
+    @param      l_ref   Length of reference
+    @param      query   Query sequence
+    @param      l_query Length of query sequence
+    @param      iqual   Query base qualities
+    @param      c       Alignment parameters
+    @param[out] state   Output alignment
+    @param[out] q    Phred scaled posterior probability of state[i] being wrong
+    @return     Phred-scaled likelihood score, or INT_MIN on failure.
+
+The reference and query sequences are coded using integers 0,1,2,3,4 for
+bases A,C,G,T,N respectively (N here is for any ambiguity code).
+
+On output, state and q are arrays of length l_query. The higher 30
+bits give the reference position the query base is matched to and the
+lower two bits can be 0 (an alignment match) or 1 (an
+insertion). q[i] gives the phred scaled posterior probability of
+state[i] being wrong.
+
+On failure, errno will be set to EINVAL if the values of l_ref or l_query
+were invalid; or ENOMEM if a memory allocation failed.
+*/
 
 int probaln_glocal(const uint8_t *ref, int l_ref, const uint8_t *query, int l_query, const uint8_t *iqual, const probaln_par_t *c, int *state, uint8_t *q);
 

@@ -1203,6 +1203,7 @@ cdef class Variant(object):
             for i in range(n_samples):
               k = i * nret
               for j in range(nret):
+                  #assert k + j < ndst
                   if bcf_gt_is_missing(gts[k + j]):
                       self._genotypes[i].append(-1)
                       continue
@@ -1210,7 +1211,7 @@ cdef class Variant(object):
                       break
                   self._genotypes[i].append(bcf_gt_allele(gts[k + j]))
               self._genotypes[i].append(
-                    bool(bcf_gt_is_phased(gts[k+1])))
+                    bool(bcf_gt_is_phased(gts[k+1 if k+1 < ndst else k])))
 
             stdlib.free(gts)
             return self._genotypes

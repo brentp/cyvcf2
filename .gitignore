@@ -2,6 +2,8 @@
 build
 dist
 *.so
+cyvcf2/cyvcf2.c
+htslib/config.h.in~
 *.so.1
 *.swp
 htslib/test

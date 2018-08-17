@@ -1769,6 +1769,9 @@ cdef class Variant(object):
                 return None
             return q
 
+        def __set__(self, value):
+            self.b.qual = value
+
 cdef inline HREC newHREC(bcf_hrec_t *hrec, bcf_hdr_t *hdr):
     cdef HREC h = HREC.__new__(HREC)
     h.hdr = hdr

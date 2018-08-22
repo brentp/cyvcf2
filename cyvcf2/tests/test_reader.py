@@ -754,6 +754,9 @@ def test_set_qual():
     with assert_raises(TypeError):
         variant.QUAL = "30.0"
 
+    variant.QUAL = None
+    assert variant.QUAL is None, 'variant.QUAL is {}'.format(variant.QUAL)
+
 def test_strict_gt_option_flag():
     test_vcf = '{}/test-strict-gt-option-flag.vcf.gz'.format(HERE)
 

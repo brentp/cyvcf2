@@ -215,6 +215,7 @@ cdef extern from "htslib/vcf.h":
         kstring_t mem;
 
 
+    void bcf_float_set(float *ptr, uint32_t value)
     bint bcf_float_is_missing(float f)
     bint bcf_float_is_vector_end(float f)
 

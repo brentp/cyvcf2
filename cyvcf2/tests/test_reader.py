@@ -743,6 +743,20 @@ def test_set_pos():
     assert v.start == 22
     assert v.POS == 23
 
+def test_set_qual():
+    v = VCF(VCF_PATH)
+    variant = next(v)
+    assert variant.QUAL == 92.0
+
+    variant.QUAL = 30.0
+    assert variant.QUAL == 30.0
+
+    with assert_raises(TypeError):
+        variant.QUAL = "30.0"
+
+    variant.QUAL = None
+    assert variant.QUAL is None, 'variant.QUAL is {}'.format(variant.QUAL)
+
 def test_strict_gt_option_flag():
     test_vcf = '{}/test-strict-gt-option-flag.vcf.gz'.format(HERE)
 

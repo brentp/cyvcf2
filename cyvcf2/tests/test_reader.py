@@ -616,6 +616,16 @@ def test_set_gts():
     v.genotypes = [[2, 2, True], [0, 2, True]]
     assert get_gt_str(v) == ["2|2", "0|2"]
 
+    v.genotypes = [[0, 1, 2, False], [1, 2, True]]
+    s = get_gt_str(v) 
+    assert s == ["0/1/2", "1|2"]
+    
+    v.genotypes = [[1, 2, False], [0, 1, 2, True]]
+    assert get_gt_str(v) == ["1/2", "0|1|2"]
+    
+    v.genotypes = [[0, 1, 2, False], [0, 1, 2, True]]
+    assert get_gt_str(v) == ["0/1/2", "0|1|2"]
+
 def test_info_del():
     vcf = VCF(os.path.join(HERE, "test-hemi.vcf"))
     v = next(vcf)

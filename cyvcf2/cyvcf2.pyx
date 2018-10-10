@@ -1186,7 +1186,6 @@ cdef class Variant(object):
         while [1, 2, False] corresponds to 1|2
         """
         def __get__(self):
-
             if self.vcf.n_samples == 0: return None
             if self._genotypes is not None:
               return self._genotypes
@@ -1220,26 +1219,23 @@ cdef class Variant(object):
             cdef int n_samples = self.vcf.n_samples
             if len(gts) != n_samples:
                 raise Exception("genotypes: must set with a number of gts equal the number of samples in the vcf")
-
-            cdef int * cgts = <int *>stdlib.malloc(sizeof(int) * 2 * n_samples)
-            cdef int i
-            #XXXX
+            elif len(gts) == 0:
+                nret = 0
+            else:
+                nret = max(len(gt)-1 for gt in gts)
+            cdef int * cgts = <int *>stdlib.malloc(sizeof(int) * nret * n_samples)
+            cdef int i, j, k
             self._genotypes = None
-            for i in range(n_samples):
-                if gts[i][-1]:
-                    cgts[2*i] = bcf_gt_phased(gts[i][0])
-                    if len(gts[i]) > 2:
-                        cgts[2*i+1] = bcf_gt_phased(gts[i][1])
-                    else:
-                        cgts[2*i+1] = bcf_int32_vector_end #bcf_gt_phased(-1)
-                else:
-                    cgts[2*i] = bcf_gt_unphased(gts[i][0])
-                    if len(gts[i]) > 2:
-                        cgts[2*i+1] = bcf_gt_unphased(gts[i][1])
-                    else:
-                        cgts[2*i+1] = bcf_int32_vector_end #bcf_gt_unphased(-1)
 
-            ret = bcf_update_genotypes(self.vcf.hdr, self.b, cgts, n_samples * 2)
+            for i in range(n_samples):
+                k = i * nret
+                for j in range(nret):
+                    if j == len(gts[i]) - 1:
+                        cgts[k + j] = bcf_int32_vector_end #bcf_gt_phased(-1)
+                        break
+                    else:
+                        cgts[k + j] = bcf_gt_phased(gts[i][j]) if gts[i][-1] else bcf_gt_unphased(gts[i][j])
+            ret = bcf_update_genotypes(self.vcf.hdr, self.b, cgts, n_samples * nret)
             if ret < 0:
                 raise Exception("error setting genotypes with: %s" % gts)
             stdlib.free(cgts)

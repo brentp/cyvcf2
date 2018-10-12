@@ -22,8 +22,17 @@
 /* Define if you have the Common Crypto library. */
 #undef HAVE_COMMONCRYPTO
 
+/* Define to 1 if you have the `drand48' function. */
+#undef HAVE_DRAND48
+
 /* Define to 1 if you have the `fdatasync' function. */
 #undef HAVE_FDATASYNC
+
+/* Define to 1 if fseeko (and presumably ftello) exists and is declared. */
+#undef HAVE_FSEEKO
+
+/* Define to 1 if you have the `fsync' function. */
+#undef HAVE_FSYNC
 
 /* Define to 1 if you have the `getpagesize' function. */
 #undef HAVE_GETPAGESIZE
@@ -43,11 +52,17 @@
 /* Define if libcurl file access is enabled. */
 #undef HAVE_LIBCURL
 
+/* Define if libdeflate is available. */
+#undef HAVE_LIBDEFLATE
+
 /* Define to 1 if you have the `lzma' library (-llzma). */
 #undef HAVE_LIBLZMA
 
 /* Define to 1 if you have the `z' library (-lz). */
 #undef HAVE_LIBZ
+
+/* Define to 1 if you have the <lzma.h> header file. */
+#undef HAVE_LZMA_H
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
@@ -103,13 +118,14 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
-/* Enable large inode numbers on Mac OS X 10.5.  */
-#ifndef _DARWIN_USE_64_BIT_INODE
-# define _DARWIN_USE_64_BIT_INODE 1
-#endif
-
 /* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS
 
+/* Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2). */
+#undef _LARGEFILE_SOURCE
+
 /* Define for large files, on AIX-style hosts. */
 #undef _LARGE_FILES
+
+/* Needed for PTHREAD_MUTEX_RECURSIVE */
+#undef _XOPEN_SOURCE

@@ -81,6 +81,14 @@ cd cyvcf2
 pip install --editable .
 ```
 
+## Configuring + making htslib:
+
+```
+autoheader
+autoconf
+./configure --enable-s3 --disable-lzma --disable-bz2
+make
+```
 
 Testing
 =======

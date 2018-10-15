@@ -334,6 +334,10 @@ cdef class VCF:
                 if ret < 0:
                     bcf_destroy(b)
                     break
+                if bcf_subset_format(self.hdr, b) != 0:
+                    sys.stderr.write("could not subset variant")
+                    bcf_destroy(b)
+                    break
                 yield newVariant(b, self)
         finally:
             if itr != NULL:

@@ -6,6 +6,11 @@ python:
 install:
   - sudo apt-get install libcurl4-openssl-dev
   - pip install -r requirements.txt
+  - cd htslib 
+  - autoheader && autoconf
+  - configure --disable-lzma --disable-bz2
+  - make
+  - cd ..
   - python setup.py install
 
 script:

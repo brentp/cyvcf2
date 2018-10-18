@@ -181,8 +181,6 @@ cdef class VCF:
         if isinstance(fname, basestring):
             if fname == b"-" or fname == "-":
                 fname = b"/dev/stdin"
-            if not op.exists(fname):
-                raise Exception("bad path: %s" % fname)
             fname, mode = to_bytes(fname), to_bytes(mode)
             self.hts = hts_open(fname, mode)
             self.fname = fname

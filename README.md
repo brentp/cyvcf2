@@ -73,21 +73,18 @@ Installation
 pip install cyvcf2
 ```
 
-## github
+## github (building htslib and cyvcf2 from source)
 
 ```
-git clone https://github.com/brentp/cyvcf2
-cd cyvcf2
-pip install --editable .
-```
-
-## Configuring + making htslib:
-
-```
+git clone --recursive https://github.com/brentp/cyvcf2
+cd cyvcf2/htslib
 autoheader
 autoconf
-./configure --enable-s3 --disable-lzma --disable-bz2
+./configure --enable-s3 --disable-lzma --disable-bz2 
 make
+
+cd ..
+pip install --editable .
 ```
 
 Testing

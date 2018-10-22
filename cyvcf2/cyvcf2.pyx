@@ -2,7 +2,6 @@
 #cython: embedsignature=True
 from __future__ import print_function
 import os
-import os.path as op
 import sys
 from collections import defaultdict
 import atexit
@@ -364,11 +363,6 @@ cdef class VCF:
             raise StopIteration
 
         if self.idx == NULL:
-            if not (op.exists(from_bytes(self.fname)+ ".tbi") or
-                    op.exists(from_bytes(self.fname) + ".csi")):
-                raise Exception("can't extract region without tabix or csi index for %s" % self.fname)
-
-
             self.idx = tbx_index_load(to_bytes(self.fname))
             assert self.idx != NULL, "error loading tabix index for %s" % self.fname
 
@@ -556,8 +550,7 @@ cdef class VCF:
                 if self.hidx != NULL:
                     cnames = bcf_index_seqnames(self.hidx, self.hdr, &n)
             elif n == 0:
-                if self.idx == NULL and (op.exists(from_bytes(self.fname)+ ".tbi") or
-                        op.exists(from_bytes(self.fname) + ".csi")):
+                if self.idx == NULL:
                     self.idx = tbx_index_load(to_bytes(self.fname))
                 if self.idx !=NULL:
                     cnames = tbx_seqnames(self.idx, &n)

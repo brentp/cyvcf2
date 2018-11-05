@@ -1583,7 +1583,7 @@ cdef class Variant(object):
 
         def __set__(self, ref):
           # int bcf_update_alleles_str(const bcf_hdr_t *hdr, bcf1_t *line, const char *alleles_string);
-          alleles = (ref + ",".join(self.ALT)).encode()
+          alleles = (ref + "," + ",".join(self.ALT)).encode()
           if bcf_update_alleles_str(self.vcf.hdr, self.b, alleles) != 0:
             raise ValueError("couldn't set reference to:" + str(ref))
 

@@ -889,3 +889,24 @@ def test_fd():
     vcf.close()
 
 
+def test_set_reference():
+    fh = open(os.path.join(HERE, "decomposed.vcf"))
+    fn = fh.fileno()
+
+    vcf = VCF(fn)
+    for v in vcf:
+      v.REF = "CCCCA"
+      assert  "CCCCA" in str(v)
+
+def test_set_alternates():
+    fh = open(os.path.join(HERE, "decomposed.vcf"))
+    fn = fh.fileno()
+
+    vcf = VCF(fn)
+    for v in vcf:
+      v.ALT = "TTT,GGG"
+      assert  "TTT,GGG" in str(v)
+
+      v.ALT = ["AAAC", "CCCA"]
+      assert "AAAC,CCCA" in str(v)
+

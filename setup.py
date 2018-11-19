@@ -61,12 +61,13 @@ sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.
 sources.append('cyvcf2/helpers.c')
 
 import numpy as np
+import platform
 from Cython.Distutils import build_ext
 
 cmdclass = {'build_ext': build_ext}
 extension = [Extension("cyvcf2.cyvcf2",
                         ["cyvcf2/cyvcf2.pyx"] + sources,
-                        libraries=['z', 'curl', 'ssl', 'crypt'],
+                        libraries=['z', 'curl', 'ssl'] + (['crypt'] if platform.system() != 'Darwin' else []),
                         include_dirs=['htslib', 'cyvcf2', np.get_include()])]
 
 

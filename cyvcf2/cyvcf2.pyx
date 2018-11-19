@@ -1581,11 +1581,25 @@ cdef class Variant(object):
         def __get__(self):
             return self.b.d.allele[0].decode()
 
+        def __set__(self, ref):
+          # int bcf_update_alleles_str(const bcf_hdr_t *hdr, bcf1_t *line, const char *alleles_string);
+          alleles = (ref + "," + ",".join(self.ALT)).encode()
+          if bcf_update_alleles_str(self.vcf.hdr, self.b, alleles) != 0:
+            raise ValueError("couldn't set reference to:" + str(ref))
+
     property ALT:
         "the list of alternate alleles."
         def __get__(self):
             cdef int i
             return [self.b.d.allele[i].decode() for i in range(1, self.b.n_allele)]
+
+        def __set__(self, alts):
+          # int bcf_update_alleles_str(const bcf_hdr_t *hdr, bcf1_t *line, const char *alleles_string);
+          if not isinstance(alts, list):
+            alts = [alts]
+          alleles = (self.REF + "," + ",".join(alts)).encode()
+          if bcf_update_alleles_str(self.vcf.hdr, self.b, alleles) != 0:
+            raise ValueError("couldn't set alternates to:" + str(alts))
 
     property is_snp:
         "boolean indicating if the variant is a SNP."

@@ -224,6 +224,9 @@ cdef extern from "htslib/vcf.h":
     int vcf_parse(kstring_t *s, const bcf_hdr_t *h, bcf1_t *v) nogil;
     int bcf_subset_format(const bcf_hdr_t *hdr, bcf1_t *rec);
 
+    int bcf_update_alleles(const bcf_hdr_t *hdr, bcf1_t *line, const char **alleles, int nals);
+    int bcf_update_alleles_str(const bcf_hdr_t *hdr, bcf1_t *line, const char *alleles_string);
+
     bcf_hdr_t *bcf_hdr_read(htsFile *fp);
 
     int bcf_hdr_set_samples(bcf_hdr_t *hdr, const char *samples, int is_file);

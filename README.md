@@ -80,11 +80,11 @@ git clone --recursive https://github.com/brentp/cyvcf2
 cd cyvcf2/htslib
 autoheader
 autoconf
-./configure --enable-s3 --disable-lzma --disable-bz2 
+./configure --enable-libcurl
 make
 
 cd ..
-pip install --editable .
+pip install -e .
 ```
 
 Testing

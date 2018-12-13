@@ -2051,9 +2051,13 @@ cdef class Writer(VCF):
     cdef bint header_written
     cdef const bcf_hdr_t *ohdr
 
-    def __init__(Writer self, fname, VCF tmpl):
+    def __init__(Writer self, fname, VCF tmpl, mode="w"):
         self.name = to_bytes(fname)
-        self.hts = hts_open(self.name, "w")
+        if fname.endswith(".gz") and mode == "w":
+            mode = "wz"
+        if fname.endswith(".bcf") and mode == "w":
+            mode = "wb"
+        self.hts = hts_open(self.name, to_bytes(mode))
         if self.hts == NULL:
             raise Exception("error opening file: %s" % self.name)
 
@@ -2066,7 +2070,7 @@ cdef class Writer(VCF):
     def write_header(Writer self):
         bcf_hdr_write(self.hts, self.hdr)
         self.header_written = True
-        
+
     def write_record(Writer self, Variant var):
         "Write the variant to the writer."
         cdef bcf_hrec_t *h
@@ -2082,7 +2086,7 @@ cdef class Writer(VCF):
         elif var.b.errcode != 0:
             raise Exception("variant to be written has errorcode: %d" % var.b.errcode)
         return bcf_write(self.hts, self.hdr, var.b)
-    
+
     def close(Writer self):
         if not self.header_written:
             self.write_header()

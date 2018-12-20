@@ -1,7 +1,10 @@
 language: python
+dist: xenial
 python:
   - "2.7"
   - "3.5"
+  - "3.6"
+  - "3.7"
 
 install:
   - sudo apt-get install libcurl4-openssl-dev

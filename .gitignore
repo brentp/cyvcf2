@@ -17,3 +17,4 @@ _build
 _static
 _templates
 setup-requires/*
+.cache/v/cache/lastfailed

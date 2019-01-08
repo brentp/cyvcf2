@@ -1181,13 +1181,13 @@ cdef class Variant(object):
             cdef int32_t *gts = NULL
             cdef int i, j, nret = 0, ndst = 0, k = 0, ell = 0
             cdef int n_samples = self.vcf.n_samples
+            nret = bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst)
+            if nret < 0:
+                raise Exception("error parsing genotypes")
+            nret /= n_samples
             if self.vcf.n_samples == 0:
                 return np.array([]), np.array([])
             if self._numpy_genotypes == NULL:
-                nret = bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst)
-                if nret < 0:
-                    raise Exception("error parsing genotypes")
-                nret /= n_samples
                 self._numpy_genotypes = <int32_t *>stdlib.malloc(sizeof(int) * n_samples * (nret+1))
                 for i in range(n_samples):
                     k = i * nret

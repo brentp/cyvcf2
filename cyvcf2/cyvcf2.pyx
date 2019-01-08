@@ -971,34 +971,33 @@ cdef class Variant(object):
         "numpy array indicating the alleles in each sample."
         def __get__(self):
             cdef np.ndarray gt_types = self.gt_types
-            cdef int i, n = self.ploidy, j=0, k
+            cdef int i, n = self.ploidy, j=0, a, b
             cdef char **alleles = self.b.d.allele
             #cdef dict d = {i:alleles[i] for i in range(self.b.n_allele)}
             cdef list d = [from_bytes(alleles[i]) for i in range(self.b.n_allele)]
             d.append(".") # -1 gives .
-            cdef list a = []
-            cdef list phased = list(self.gt_phases)
+            cdef list bases = ["./." for _ in range(self.vcf.n_samples)]
+            cdef np.ndarray phased = self.gt_phases
             cdef list lookup = ["/", "|"]
             cdef int unknown = 3 if self.vcf.gts012 else 2
             for i in range(0, n * self.vcf.n_samples, n):
                 if n == 2:
                     if (gt_types[j] == unknown) and (not self.vcf.strict_gt):
-                        a.append("./.")
+                        continue
                     else:
-                        try:
-                            d[self._gt_idxs[i+1]]
-                            a.append(d[self._gt_idxs[i]] + lookup[phased[j]] + d[self._gt_idxs[i+1]])
-                        except IndexError:
-                            a.append(d[self._gt_idxs[i]])
+                        a = self._gt_idxs[i]
+                        b = self._gt_idxs[i + 1]
+                        if a >= -1 and b >= -1:
+                          bases[j] = d[a] + lookup[phased[j]] + d[b]
+                        else:
+                          bases[j] = d[a]
                 elif n == 1:
-                    a.append(d[self._gt_idxs[i]])
+                    bases[j] = d[self._gt_idxs[i]]
                 else:
                     raise Exception("gt_bases not implemented for ploidy > 2")
 
                 j += 1
-            return np.array(a, np.str)
-
-
+            return np.array(bases, np.str)
 
     def relatedness(self,
                     int32_t[:, ::view.contiguous] ibs,

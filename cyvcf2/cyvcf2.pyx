@@ -1208,9 +1208,34 @@ cdef class Variant(object):
             to_return = np.PyArray_SimpleNewFromData(2, shape, np.NPY_INT32, self._numpy_genotypes)
             return to_return[:,:-1], to_return[:,-1].astype(bool)
 
-        def __set__(self, gts):
-            raise NotImplementedError('Setting numpy_genotypes has not '
-                                      'been implemented.')
+        def __set__(self, gts_and_phase):
+            gts, phase = gts_and_phase
+            cdef int n_samples = self.vcf.n_samples
+            if gts.shape[0] != n_samples:
+                raise Exception("numpy_genotypes: must set with a number of gts "
+                                "equal to the number of samples in the vcf.")
+            elif gts.shape[0] == 0:
+                nret = 0
+            else:
+                nret = gts.shape[1]
+            cdef int * cgts = <int *>stdlib.malloc(sizeof(int) * nret * n_samples)
+            cdef int i, j, k
+            self._numpy_genotypes = NULL
+            self._genotypes = None
+
+            for i in range(n_samples):
+                k = i * nret
+                for j in range(nret):
+                    if gts[i, j] == -2:
+                        cgts[k + j] = bcf_int32_vector_end
+                        break
+                    else:
+                        cgts[k + j] = (bcf_gt_phased(gts[i, j]) if phase[i]
+                                       else bcf_gt_unphased(gts[i, j]))
+            ret = bcf_update_genotypes(self.vcf.hdr, self.b, cgts, n_samples * nret)
+            if ret < 0:
+                raise Exception("error setting genotypes with: %s and %s" % (gts, phase))
+            stdlib.free(cgts)
 
     def genotype(self):
         if self.vcf.n_samples == 0: return None
@@ -1265,6 +1290,7 @@ cdef class Variant(object):
             cdef int * cgts = <int *>stdlib.malloc(sizeof(int) * nret * n_samples)
             cdef int i, j, k
             self._genotypes = None
+            self._numpy_genotypes = NULL
 
             for i in range(n_samples):
                 k = i * nret

@@ -1181,13 +1181,13 @@ cdef class Variant(object):
             cdef int32_t *gts = NULL
             cdef int i, j, nret = 0, ndst = 0, k = 0, ell = 0
             cdef int n_samples = self.vcf.n_samples
-            nret = bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst)
-            if nret < 0:
-                raise Exception("error parsing genotypes")
-            nret /= n_samples
             if self.vcf.n_samples == 0:
                 return np.array([]), np.array([])
             if self._numpy_genotypes == NULL:
+                nret = bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst)
+                if nret < 0:
+                    raise Exception("error parsing genotypes")
+                nret /= n_samples
                 self._numpy_genotypes = <int32_t *>stdlib.malloc(sizeof(int) * n_samples * (nret+1))
                 for i in range(n_samples):
                     k = i * nret
@@ -1206,6 +1206,92 @@ cdef class Variant(object):
             shape[0] = <np.npy_intp> self.vcf.n_samples
             shape[1] = <np.npy_intp> (nret + 1)
             to_return = np.PyArray_SimpleNewFromData(2, shape, np.NPY_INT32, self._numpy_genotypes)
+            return to_return[:,:-1], to_return[:,-1].astype(bool)
+
+        def __set__(self, gts_and_phase):
+            gts, phase = gts_and_phase
+            cdef int n_samples = self.vcf.n_samples
+            if gts.shape[0] != n_samples:
+                raise Exception("numpy_genotypes: must set with a number of gts "
+                                "equal to the number of samples in the vcf.")
+            elif gts.shape[0] == 0:
+                nret = 0
+            else:
+                nret = gts.shape[1]
+            cdef int * cgts = <int *>stdlib.malloc(sizeof(int) * nret * n_samples)
+            cdef int i, j, k
+            self._numpy_genotypes = NULL
+            self._genotypes = None
+
+            for i in range(n_samples):
+                k = i * nret
+                for j in range(nret):
+                    if gts[i, j] == -2:
+                        cgts[k + j] = bcf_int32_vector_end
+                        break
+                    else:
+                        cgts[k + j] = (bcf_gt_phased(gts[i, j]) if phase[i]
+                                       else bcf_gt_unphased(gts[i, j]))
+            ret = bcf_update_genotypes(self.vcf.hdr, self.b, cgts, n_samples * nret)
+            if ret < 0:
+                raise Exception("error setting genotypes with: %s and %s" % (gts, phase))
+            stdlib.free(cgts)
+
+    def genotype(self):
+        if self.vcf.n_samples == 0: return None
+        cdef int32_t *gts = NULL
+        cdef int ndst = 0
+        cdef int nret = bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst)
+
+    property genotypes:
+        """genotypes returns a list for each sample Indicating the allele and phasing.
+
+        e.g. [0, 1, True] corresponds to 0|1
+        while [1, 2, False] corresponds to 1/2
+        """
+        def __get__(self):
+            if self.vcf.n_samples == 0: return None
+            if self._genotypes is not None:
+              return self._genotypes
+            cdef int32_t *gts = NULL
+            cdef int i, j, nret, off = 0, ndst = 0, k = 0
+            cdef int n_samples = self.vcf.n_samples
+            #self._genotypes = []
+            nret = bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst)
+            if nret < 0:
+                raise Exception("error parsing genotypes")
+            nret /= n_samples
+            self._genotypes = [[] for _ in range(n_samples)]
+
+            for i in range(n_samples):
+              k = i * nret
+              for j in range(nret):
+                  #assert k + j < ndst
+                  if bcf_gt_is_missing(gts[k + j]):
+                      self._genotypes[i].append(-1)
+                      continue
+                  if gts[k + j] == bcf_int32_vector_end:
+                      break
+                  self._genotypes[i].append(bcf_gt_allele(gts[k + j]))
+              self._genotypes[i].append(
+                    bool(bcf_gt_is_phased(gts[k+1 if k+1 < ndst else k])))
+
+            stdlib.free(gts)
+            return self._genotypes
+
+        def __set__(self, gts):
+            cdef int n_samples = self.vcf.n_samples
+            if len(gts) != n_samples:
+                raise Exception("genotypes: must set with a number of gts equal the number of samples in the vcf")
+            elif len(gts) == 0:
+                nret = 0
+            else:
+                nret = max(len(gt)-1 for gt in gts)
+            cdef int * cgts = <int *>stdlib.malloc(sizeof(int) * nret * n_samples)
+            cdef int i, j, k
+            self._genotypes = None
+            self._numpy_genotypes = NULL
+
             for i in range(n_samples):
                 k = i * nret
                 for j in range(nret):

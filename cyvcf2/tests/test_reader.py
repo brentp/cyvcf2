@@ -574,15 +574,25 @@ def test_set_format_float():
     obs = fmap(float, get_gt_str(v, "PS"))
     assert allclose(obs, [9998.555, 99911.111]), obs
 
-def test_set_format_int():
+def test_set_format_int_a():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     assert vcf.add_format_to_header(dict(ID="PI", Number=1, Type="Integer", Description="Int example")) == 0
     v = next(vcf)
     v.set_format("PI", np.array([5, 1], dtype=np.int))
     assert allclose(fmap(float, get_gt_str(v, "PI")), [5, 1])
 
+def test_set_format_int_b():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    assert vcf.add_format_to_header(dict(ID="PI", Number=1, Type="Integer", Description="Int example")) == 0
+    v = next(vcf)
+
     v.set_format("PI", np.array([855, 11], dtype=np.int64))
     assert allclose(fmap(float, get_gt_str(v, "PI")), [855, 11])
+
+def test_set_format_int_c():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    assert vcf.add_format_to_header(dict(ID="PI", Number=1, Type="Integer", Description="Int example")) == 0
+    v = next(vcf)
 
     v.set_format("PI", np.array([9998, 99911], dtype=np.int32))
     obs = fmap(float, get_gt_str(v, "PI"))

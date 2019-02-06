@@ -358,7 +358,7 @@ cdef class VCF:
             yield from self
             raise StopIteration
 
-        if self.fname.decode(ENC).endswith('.bcf'):
+        if self.fname[len(self.fname)-1] == 'f' and self.fname.decode(ENC).endswith('.bcf'):
             yield from self._bcf_region(region)
             raise StopIteration
 
@@ -380,23 +380,24 @@ cdef class VCF:
             sys.stderr.write("no intervals found for %s at %s\n" % (self.fname, region))
             raise StopIteration
 
-        while 1:
-            with nogil:
-                slen = tbx_itr_next(self.hts, self.idx, itr, &s)
-                if slen > 0:
-                        b = bcf_init()
-                        ret = vcf_parse(&s, self.hdr, b)
-            if slen <= 0:
-                break
-            if ret > 0:
-                bcf_destroy(b)
-                stdlib.free(s.s)
-                hts_itr_destroy(itr)
-                raise Exception("error parsing")
-            yield newVariant(b, self)
-
-        stdlib.free(s.s)
-        hts_itr_destroy(itr)
+        try:
+            while 1:
+                with nogil:
+                    slen = tbx_itr_next(self.hts, self.idx, itr, &s)
+                    if slen > 0:
+                            b = bcf_init()
+                            ret = vcf_parse(&s, self.hdr, b)
+                if slen <= 0:
+                    break
+                if ret > 0:
+                    bcf_destroy(b)
+                    stdlib.free(s.s)
+                    hts_itr_destroy(itr)
+                    raise Exception("error parsing")
+                yield newVariant(b, self)
+        finally:
+            stdlib.free(s.s)
+            hts_itr_destroy(itr)
 
     def header_iter(self):
         """
@@ -635,40 +636,35 @@ cdef class VCF:
         cdef int k, last_pos
         if sites:
             isites = isites[offset::each]
-            def gen():
-                ref, alt = None, None
-                j = 0
-                for i, osite in enumerate(isites):
-                    if len(osite) >= 4:
-                        chrom, pos, ref, alt = osite[:4]
-                    else:
-                        chrom, pos = osite[:2]
-                    for v in self("%s:%s-%s" % (chrom, pos, pos)):
-                        if len(v.ALT) != 1: continue
-                        if ref is not None:
-                            if v.REF != ref: continue
-                            if alt is not None:
-                                if v.ALT[0] != alt: continue
-                        if v.call_rate < call_rate: continue
-                        yield i, v
-                        j += 1
-                        break
-        else:
-            def gen():
-                last_pos, k = -10000, 0
-                for v in self:
-                    if abs(v.POS - last_pos) < 5000: continue
-                    if len(v.REF) != 1: continue
+            ref, alt = None, None
+            j = 0
+            for i, osite in enumerate(isites):
+                if len(osite) >= 4:
+                    chrom, pos, ref, alt = osite[:4]
+                else:
+                    chrom, pos = osite[:2]
+                for v in self("%s:%s-%s" % (chrom, pos, pos)):
                     if len(v.ALT) != 1: continue
-                    if v.call_rate < 0.5: continue
-                    if not 0.03 < v.aaf < 0.6: continue
-                    if np.mean(v.gt_depths > 7) < 0.5: continue
-                    last_pos = v.POS
-                    if k >= offset and k % each == 0:
-                        yield k, v
-                    k += 1
-                    if k > 20000: break
-        return gen
+                    if ref is not None and v.REF != ref: continue
+                    if alt is not None and v.ALT[0] != alt: continue
+                    if v.call_rate < call_rate: continue
+                    yield i, v
+                    j += 1
+                    break
+        else:
+            last_pos, k = -10000, 0
+            for v in self:
+                if abs(v.POS - last_pos) < 5000: continue
+                if len(v.REF) != 1: continue
+                if len(v.ALT) != 1: continue
+                if v.call_rate < 0.5: continue
+                if not 0.03 < v.aaf < 0.6: continue
+                if np.mean(v.gt_depths > 7) < 0.5: continue
+                last_pos = v.POS
+                if k >= offset and k % each == 0:
+                    yield k, v
+                k += 1
+                if k > 20000: break
 
     def het_check(self, min_depth=8, percentiles=(10, 90), _finish=True,
                   int each=1, int offset=0,
@@ -687,10 +683,9 @@ cdef class VCF:
 
         mean_depths = []
 
-        gen = self.gen_variants(sites, each=each, offset=offset)
         maf_lists = defaultdict(list)
         idxs = np.arange(n_samples)
-        for i, v in gen():
+        for i, v in self.gen_variants(sites, each=each, offset=offset):
             if v.CHROM in ('X', 'chrX'): break
             if v.aaf < 0.01: continue
             if v.call_rate < 0.5: continue
@@ -765,7 +760,6 @@ cdef class VCF:
         cdef int k, i
         assert each >= 0
 
-        gen = self.gen_variants(sites, offset=offset, each=each)
 
         cdef int32_t[:, ::view.contiguous] ibs = np.zeros((n_samples, n_samples), np.int32)
         cdef int32_t[:, ::view.contiguous] n = np.zeros((n_samples, n_samples), np.int32)
@@ -776,7 +770,7 @@ cdef class VCF:
 
         cdef Variant v
 
-        for j, (i, v) in enumerate(gen()):
+        for j, (i, v) in enumerate(self.gen_variants(sites, offset=offset, each=each)):
             gt_types = v.gt_types
             alt_freqs = v.gt_alt_freqs
             krelated(&gt_types[0], &ibs[0, 0], &n[0, 0], &hets[0], n_samples,

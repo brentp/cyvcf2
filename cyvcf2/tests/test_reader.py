@@ -695,13 +695,32 @@ def test_access_genotype():
     assert alleles[1].value == 1
     assert alleles[1].phased == True
 
+
+    assert alleles[1].phased == True
+    alleles[1].phased = False
+    assert alleles[1].phased == False
+    alleles = gts[1]
+    assert alleles[1].phased == False
+
     # can also just get the phased stats of the nth sample:
     assert gts.phased(0) == False
-    assert gts.phased(1) == True
+    # note this got updated above
+    assert gts.phased(1) == False
 
     # and the alleles of the nth sample.
     assert gts.alleles(0) == [0, 0]
+    print(gts.alleles(1), file=sys.stderr)
     assert gts.alleles(1) == [1, 1]
+
+
+    alleles = gts[0]
+    assert alleles[0].value == 0
+    alleles[0].value = 1
+    assert alleles[0].value == 1
+    alleles = gts[0]
+    assert alleles[0].value == 1
+    assert alleles[0].phased == False
+
 
 def test_alt_homozygous_gt():
     vcf = VCF(os.path.join(HERE, "test-multiallelic-homozygous-alt.vcf.gz"))

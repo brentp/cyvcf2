@@ -882,24 +882,47 @@ cdef class VCF:
         return res
 
 cdef class Allele(object):
-    cdef int32_t raw
+    cdef int32_t *_raw
+    cdef int i
+
+    cdef int _value(self):
+        if self._raw[self.i] < 0: return self._raw[self.i]
+        return (self._raw[self.i] >> 1) - 1
 
     @property
     def phased(self):
-        return self.raw & 1 == 1
+        return self._raw[self.i] & 1 == 1
+
+    @phased.setter
+    def phased(self, bint ph):
+        if ph:
+            self._raw[self.i] = (self._value() + 1)<<1|1
+        else:
+            self._raw[self.i] = (self._value() + 1)<<1
 
     @property
     def value(self):
-        if self.raw < 0: return self.raw
-        return (self.raw >> 1) - 1
+        if self._raw[self.i] < 0: return self._raw[self.i]
+        return (self._raw[self.i] >> 1) - 1
+
+    @value.setter
+    def value(self, int value):
+        if value < 0:
+            self._raw[self.i] = value
+            return
+        if self.phased:
+            self._raw[self.i] = (value + 1)<<1|1
+        else:
+            self._raw[self.i] = (value + 1)<<1
 
     def __repr__(self):
         if self.value < 0: return "."
         return str(self.value) + ("|" if self.phased else "/")
 
-cdef inline Allele newAllele(int32_t raw):
+cdef inline Allele newAllele(int32_t *raw, int i):
     cdef Allele a = Allele.__new__(Allele)
-    a.raw = raw
+    a._raw = raw
+    a.i = i
     return a
 
 cdef class Genotypes(object):
@@ -928,7 +951,8 @@ cdef class Genotypes(object):
 
     def __getitem__(self, int i):
         ## return the Allele objects for the i'th sample.
-        return [newAllele(k) for k in self._raw[i*self.ploidy:(i+1)*self.ploidy]]
+        cdef int k
+        return [newAllele(self._raw, k) for k in range(i*self.ploidy,(i+1)*self.ploidy)]
 
 cdef inline Genotypes newGenotypes(int32_t *raw, int ploidy):
     cdef Genotypes gs = Genotypes.__new__(Genotypes)

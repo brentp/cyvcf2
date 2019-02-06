@@ -627,12 +627,12 @@ def test_set_gts():
     assert get_gt_str(v) == ["2|2", "0|2"]
 
     v.genotypes = [[0, 1, 2, False], [1, 2, True]]
-    s = get_gt_str(v) 
+    s = get_gt_str(v)
     assert s == ["0/1/2", "1|2"]
-    
+
     v.genotypes = [[1, 2, False], [0, 1, 2, True]]
     assert get_gt_str(v) == ["1/2", "0|1|2"]
-    
+
     v.genotypes = [[0, 1, 2, False], [0, 1, 2, True]]
     assert get_gt_str(v) == ["0/1/2", "0|1|2"]
 
@@ -677,6 +677,31 @@ def test_access_gts():
 
     v = next(vcf)
     assert v.genotypes == [[-1, True], [0, 2, True]], v.genotypes
+
+def test_access_genotype():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    v = next(vcf)
+    gts = v.genotype()
+
+    # indexing directly gives a list of Allele objects (for diploid, the list
+    # has length 2)
+    alleles = gts[0]
+    assert alleles[0].value == 0
+    assert alleles[1].value == 0
+    assert alleles[0].phased == False
+
+    alleles = gts[1]
+    assert alleles[0].value == 1
+    assert alleles[1].value == 1
+    assert alleles[1].phased == True
+
+    # can also just get the phased stats of the nth sample:
+    assert gts.phased(0) == False
+    assert gts.phased(1) == True
+
+    # and the alleles of the nth sample.
+    assert gts.alleles(0) == [0, 0]
+    assert gts.alleles(1) == [1, 1]
 
 def test_alt_homozygous_gt():
     vcf = VCF(os.path.join(HERE, "test-multiallelic-homozygous-alt.vcf.gz"))

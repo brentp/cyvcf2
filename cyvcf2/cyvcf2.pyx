@@ -881,6 +881,60 @@ cdef class VCF:
                 res['n'].append(_n[sj, sk])
         return res
 
+cdef class Allele(object):
+    cdef int32_t raw
+
+    @property
+    def phased(self):
+        return self.raw & 1 == 1
+
+    @property
+    def value(self):
+        if self.raw < 0: return self.raw
+        return (self.raw >> 1) - 1
+
+    def __repr__(self):
+        if self.value < 0: return "."
+        return str(self.value) + ("|" if self.phased else "/")
+
+cdef inline Allele newAllele(int32_t raw):
+    cdef Allele a = Allele.__new__(Allele)
+    a.raw = raw
+    return a
+
+cdef class Genotypes(object):
+    cdef int32_t *_raw
+    cdef readonly int ploidy
+    def __cinit__(self):
+        self.ploidy = 0
+        self._raw = NULL
+    def __dealloc__(self):
+        if self._raw != NULL:
+            stdlib.free(self._raw)
+
+    def phased(self, int i):
+        """
+        a boolean indicating that the ith sample is phased.
+        """
+        return (self._raw[i * self.ploidy + 1] & 1) == 1
+
+    def alleles(self, int i):
+        cdef list result = []
+        cdef int32_t v
+        for j in range(self.ploidy):
+            v = self._raw[i * self.ploidy + j]
+            result.append((v >> 1) - 1)
+        return result
+
+    def __getitem__(self, int i):
+        ## return the Allele objects for the i'th sample.
+        return [newAllele(k) for k in self._raw[i*self.ploidy:(i+1)*self.ploidy]]
+
+cdef inline Genotypes newGenotypes(int32_t *raw, int ploidy):
+    cdef Genotypes gs = Genotypes.__new__(Genotypes)
+    gs._raw = raw
+    gs.ploidy = ploidy
+    return gs
 
 cdef class Variant(object):
     """
@@ -1165,8 +1219,9 @@ cdef class Variant(object):
         if self.vcf.n_samples == 0: return None
         cdef int32_t *gts = NULL
         cdef int ndst = 0
-        cdef int nret = bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst)
-
+        if bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst) <= 0:
+            raise Exception("couldn't get genotypes for variant")
+        return newGenotypes(gts, ndst/self.vcf.n_samples)
 
     property genotypes:
         """genotypes returns a list for each sample Indicating the allele and phasing.

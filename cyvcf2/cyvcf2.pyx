@@ -358,7 +358,7 @@ cdef class VCF:
             yield from self
             raise StopIteration
 
-        if self.fname[len(self.fname)-1] == 'f' and self.fname.decode(ENC).endswith('.bcf'):
+        if self.fname.decode(ENC).endswith('.bcf'):
             yield from self._bcf_region(region)
             raise StopIteration
 
@@ -880,6 +880,7 @@ cdef class VCF:
                 res['ibs2'].append(_n[sk, sj])
                 res['n'].append(_n[sj, sk])
         return res
+
 
 cdef class Variant(object):
     """

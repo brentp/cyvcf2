@@ -1044,7 +1044,7 @@ cdef class Variant(object):
         "numpy array indicating the alleles in each sample."
         def __get__(self):
             cdef np.ndarray gt_types = self.gt_types
-            cdef int i, n = self.ploidy, j=0, a, b
+            cdef int i, n = self.ploidy, j=-1, a, b
             cdef char **alleles = self.b.d.allele
             #cdef dict d = {i:alleles[i] for i in range(self.b.n_allele)}
             cdef list d = [from_bytes(alleles[i]) for i in range(self.b.n_allele)]
@@ -1054,6 +1054,7 @@ cdef class Variant(object):
             cdef list lookup = ["/", "|"]
             cdef int unknown = 3 if self.vcf.gts012 else 2
             for i in range(0, n * self.vcf.n_samples, n):
+                j += 1
                 if n == 2:
                     if (gt_types[j] == unknown) and (not self.vcf.strict_gt):
                         continue
@@ -1069,7 +1070,6 @@ cdef class Variant(object):
                 else:
                     raise Exception("gt_bases not implemented for ploidy > 2")
 
-                j += 1
             return np.array(bases, np.str)
 
     def relatedness(self,

@@ -1239,6 +1239,7 @@ cdef class Variant(object):
         stdlib.free(buf)
         return iret
 
+    @property
     def genotype(self):
         if self.vcf.n_samples == 0: return None
         cdef int32_t *gts = NULL
@@ -1246,6 +1247,12 @@ cdef class Variant(object):
         if bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst) <= 0:
             raise Exception("couldn't get genotypes for variant")
         return newGenotypes(gts, ndst/self.vcf.n_samples)
+
+    @genotype.setter
+    def genotype(self, Genotypes g):
+        cdef int ret = bcf_update_genotypes(self.vcf.hdr, self.b, g._raw, self.vcf.n_samples * g.ploidy)
+        if ret < 0:
+            raise Exception("error setting genotypes with: %s" % g)
 
     property genotypes:
         """genotypes returns a list for each sample Indicating the allele and phasing.

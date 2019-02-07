@@ -681,7 +681,8 @@ def test_access_gts():
 def test_access_genotype():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     v = next(vcf)
-    gts = v.genotype()
+    gts = v.genotype
+    #print(str(v), file=sys.stderr)
 
     # indexing directly gives a list of Allele objects (for diploid, the list
     # has length 2)
@@ -709,7 +710,7 @@ def test_access_genotype():
 
     # and the alleles of the nth sample.
     assert gts.alleles(0) == [0, 0]
-    print(gts.alleles(1), file=sys.stderr)
+    #print(gts.alleles(1), file=sys.stderr)
     assert gts.alleles(1) == [1, 1]
 
 
@@ -720,6 +721,13 @@ def test_access_genotype():
     alleles = gts[0]
     assert alleles[0].value == 1
     assert alleles[0].phased == False
+
+
+    gts[1][0].value = 0
+
+    # update the varint
+    v.genotype = gts
+    assert "1/0:6728,1:F	0/1:22,1:G" in str(v)
 
 
 def test_alt_homozygous_gt():

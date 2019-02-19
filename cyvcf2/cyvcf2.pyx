@@ -30,7 +30,6 @@ if not hasattr(sys.modules[__name__], '__file__'):
     __file__ = inspect.getfile(inspect.currentframe())
 
 
-
 def par_relatedness(vcf_path, samples, ncpus, sites, min_depth=5, each=1):
     from multiprocessing import Pool
     p = Pool(ncpus)
@@ -98,6 +97,7 @@ def _par_relatedness(args):
     np.savez_compressed(fname, ibs=np.asarray(vibs), hets=np.asarray(vhet), n=np.asarray(vn))
     return fname
 
+
 cdef unicode xstr(s):
     if type(s) is unicode:
         # fast path for most common case(s)
@@ -113,8 +113,10 @@ cdef unicode xstr(s):
     else:
         raise TypeError(...)
 
+
 def r_(int32_t[::view.contiguous] a_gts, int32_t[::view.contiguous] b_gts, float f, int32_t n_samples):
     return r_unphased(&a_gts[0], &b_gts[0], f, n_samples)
+
 
 cdef set_constants(VCF v):
     v.HOM_REF = 0
@@ -125,6 +127,7 @@ cdef set_constants(VCF v):
     else:
         v.UNKNOWN = 2
         v.HOM_ALT = 3
+
 
 cdef class VCF:
     """
@@ -174,7 +177,6 @@ cdef class VCF:
     cdef readonly int UNKNOWN
 
     def __init__(self, fname, mode="r", gts012=False, lazy=False, strict_gt=False, samples=None, threads=None):
-
         cdef hFILE *hf
 
         if isinstance(fname, basestring):
@@ -339,7 +341,6 @@ cdef class VCF:
         finally:
             if itr != NULL:
                 hts_itr_destroy(itr)
-
 
     def __call__(VCF self, region=None):
         """
@@ -572,7 +573,6 @@ cdef class VCF:
           row['jtags'] = '|'.join(row['tags'])
           df.append(row)
 
-
         df = pd.DataFrame(df)
         fig = plt.figure(figsize=(9, 9))
 
@@ -739,13 +739,11 @@ cdef class VCF:
 
             return sample_ranges, sites, np.transpose(all_gt_types)
 
-
     def site_relatedness(self, sites=None,
                          min_depth=5, each=1):
 
         vibs, vn, vhet = self._site_relatedness(sites=sites, min_depth=min_depth, each=each)
         return self._relatedness_finish(vibs, vn, vhet)
-
 
     cdef _site_relatedness(self, sites=None,
             int min_depth=5, int each=1, int offset=0):
@@ -780,7 +778,6 @@ cdef class VCF:
 
     def relatedness(self, int n_variants=35000, int gap=30000, float min_af=0.04,
                     float max_af=0.8, float linkage_max=0.2, min_depth=8):
-
         cdef Variant v
 
         cdef int last = -gap, nv = 0, nvt=0
@@ -927,9 +924,11 @@ cdef inline Allele newAllele(int32_t *raw, int i):
 
 cdef class Genotypes(object):
     cdef int32_t *_raw
+    cdef readonly int n_samples
     cdef readonly int ploidy
     def __cinit__(self):
         self.ploidy = 0
+        self.n_samples = 0
         self._raw = NULL
     def __dealloc__(self):
         if self._raw != NULL:
@@ -941,6 +940,21 @@ cdef class Genotypes(object):
         """
         return (self._raw[i * self.ploidy + 1] & 1) == 1
 
+    def phased_array(self):
+        cdef int ind
+        cdef int* to_return = <int *>stdlib.malloc(sizeof(int)
+                                                   * self.n_samples)
+        cdef np.npy_intp shape[1]
+        shape[0] = self.n_samples
+        for ind in range(self.n_samples):
+            to_return[ind] = self._raw[ind * self.ploidy + 1] & 1
+        return np.PyArray_SimpleNewFromData(
+            1,
+            shape,
+            np.NPY_INT32,
+            to_return
+        ).astype(bool)
+
     def alleles(self, int i):
         cdef list result = []
         cdef int32_t v
@@ -949,15 +963,38 @@ cdef class Genotypes(object):
             result.append((v >> 1) - 1)
         return result
 
+    def alleles_array(self):
+        cdef int ind
+        cdef int allele
+        cdef int* to_return = <int *>stdlib.malloc(sizeof(int)
+                                                   * self.n_samples
+                                                   * self.ploidy)
+        cdef np.npy_intp shape[2]
+        shape[0] = self.n_samples
+        shape[1] = self.ploidy
+
+        for ind in range(self.n_samples):
+            for allele in range(self.ploidy):
+                to_return[ind*self.ploidy + allele] = (
+                    (self._raw[ind * self.ploidy + allele] >> 1) - 1
+                )
+        return np.PyArray_SimpleNewFromData(
+            2,
+            shape,
+            np.NPY_INT32,
+            to_return
+        )
+
     def __getitem__(self, int i):
         ## return the Allele objects for the i'th sample.
         cdef int k
         return [newAllele(self._raw, k) for k in range(i*self.ploidy,(i+1)*self.ploidy)]
 
-cdef inline Genotypes newGenotypes(int32_t *raw, int ploidy):
+cdef inline Genotypes newGenotypes(int32_t *raw, int ploidy, int n_samples):
     cdef Genotypes gs = Genotypes.__new__(Genotypes)
     gs._raw = raw
     gs.ploidy = ploidy
+    gs.n_samples = n_samples
     return gs
 
 cdef class Variant(object):
@@ -1246,7 +1283,7 @@ cdef class Variant(object):
         cdef int ndst = 0
         if bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst) <= 0:
             raise Exception("couldn't get genotypes for variant")
-        return newGenotypes(gts, ndst/self.vcf.n_samples)
+        return newGenotypes(gts, ndst/self.vcf.n_samples, self.vcf.n_samples)
 
     @genotype.setter
     def genotype(self, Genotypes g):
@@ -1258,7 +1295,7 @@ cdef class Variant(object):
         """genotypes returns a list for each sample Indicating the allele and phasing.
 
         e.g. [0, 1, True] corresponds to 0|1
-        while [1, 2, False] corresponds to 1|2
+        while [1, 2, False] corresponds to 1/2
         """
         def __get__(self):
             if self.vcf.n_samples == 0: return None
@@ -1523,7 +1560,6 @@ cdef class Variant(object):
             shape[0] = <np.npy_intp> self.vcf.n_samples
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_ref_depths)
 
-
     property gt_alt_depths:
         """get the count of alternate reads as a numpy array."""
         def __get__(self):
@@ -1579,7 +1615,7 @@ cdef class Variant(object):
                 return []
             t = np.array(self.gt_depths, np.float)
             a = np.array(self.gt_alt_depths, np.float)
-            
+
             # for which samples are the alt or total depths unknown?
             tU = t < 0
             aU = a < 0
@@ -1598,8 +1634,7 @@ cdef class Variant(object):
             clean = ~tU & ~aU & ~t0
             alt_freq[clean] = (a[clean] / t[clean])
 
-            return alt_freq        
-
+            return alt_freq
 
     property gt_quals:
         """get the GQ for each sample as a numpy array."""
@@ -1654,7 +1689,6 @@ cdef class Variant(object):
             shape[0] = <np.npy_intp> self.vcf.n_samples
 
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_phased).astype(bool)
-
 
     property REF:
         "the reference allele."
@@ -1814,7 +1848,7 @@ cdef class Variant(object):
 
     property FILTER:
         """the value of FILTER from the VCF field.
-        
+
         a value of PASS in the VCF will give None for this function
         """
         def __get__(self):
@@ -1860,11 +1894,13 @@ cdef class Variant(object):
             else:
                 self.b.qual = value
 
+
 cdef inline HREC newHREC(bcf_hrec_t *hrec, bcf_hdr_t *hdr):
     cdef HREC h = HREC.__new__(HREC)
     h.hdr = hdr
     h.hrec = hrec
     return h
+
 
 cdef class HREC(object):
     cdef bcf_hdr_t *hdr
@@ -1912,6 +1948,7 @@ cdef class HREC(object):
 
     def __repr__(self):
         return str(self.info())
+
 
 cdef class INFO(object):
     """
@@ -2079,6 +2116,7 @@ cdef bcf_array_to_object(void *data, int type, int n, int scalar=0):
 
     return value
 
+
 cdef inline Variant newVariant(bcf1_t *b, VCF vcf):
     cdef Variant v = Variant.__new__(Variant)
     v.b = b
@@ -2096,10 +2134,12 @@ cdef inline Variant newVariant(bcf1_t *b, VCF vcf):
     v.INFO = i
     return v
 
+
 cdef to_bytes(s, enc=ENC):
     if not isinstance(s, bytes):
         return s.encode(enc)
     return s
+
 
 cdef from_bytes(s):
     if isinstance(s, bytes):

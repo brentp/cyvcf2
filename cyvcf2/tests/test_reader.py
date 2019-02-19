@@ -45,13 +45,10 @@ def test_format_str():
 def test_write_format_str():
     vcf = VCF(os.path.join(HERE, "test-format-string.vcf"))
     wtr = Writer("x.vcf", vcf)
-
     variant = next(vcf)
     variant.set_format("TSTRING", np.array(["asdfxx","35\0"]))
-
     wtr.write_record(variant)
     wtr.close()
-
     assert "asdfxx" in str(variant), str(variant)
     assert "35" in str(variant)
     """
@@ -696,12 +693,16 @@ def test_access_genotype():
     assert alleles[1].value == 1
     assert alleles[1].phased == True
 
+    assert np.all(gts.alleles_array() == np.array([[0, 0], [1, 1]]))
+    assert np.all(gts.phased_array() == np.array([False, True]))
 
     assert alleles[1].phased == True
     alleles[1].phased = False
     assert alleles[1].phased == False
     alleles = gts[1]
     assert alleles[1].phased == False
+
+    assert np.all(gts.phased_array() == np.array([False, False]))
 
     # can also just get the phased stats of the nth sample:
     assert gts.phased(0) == False
@@ -722,8 +723,11 @@ def test_access_genotype():
     assert alleles[0].value == 1
     assert alleles[0].phased == False
 
+    assert np.all(gts.alleles_array() == np.array([[1, 0], [1, 1]]))
 
     gts[1][0].value = 0
+
+    assert np.all(gts.alleles_array() == np.array([[1, 0], [0, 1]]))
 
     # update the varint
     v.genotype = gts
@@ -971,4 +975,3 @@ def test_set_alternates():
 
       v.ALT = ["AAAC", "CCCA"]
       assert "AAAC,CCCA" in str(v)
-

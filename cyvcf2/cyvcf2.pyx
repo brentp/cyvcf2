@@ -940,21 +940,6 @@ cdef class Genotypes(object):
         """
         return (self._raw[i * self.ploidy + 1] & 1) == 1
 
-    def phased_array(self):
-        cdef int ind
-        cdef int* to_return = <int *>stdlib.malloc(sizeof(int)
-                                                   * self.n_samples)
-        cdef np.npy_intp shape[1]
-        shape[0] = self.n_samples
-        for ind in range(self.n_samples):
-            to_return[ind] = self._raw[ind * self.ploidy + 1] & 1
-        return np.PyArray_SimpleNewFromData(
-            1,
-            shape,
-            np.NPY_INT32,
-            to_return
-        ).astype(bool)
-
     def alleles(self, int i):
         cdef list result = []
         cdef int32_t v
@@ -963,25 +948,32 @@ cdef class Genotypes(object):
             result.append((v >> 1) - 1)
         return result
 
-    def alleles_array(self):
+    def array(Genotypes self):
+        """
+        array returns an int16 numpy array  of shape n_samples, (ploidy + 1).
+        The last column indicates phased (1 is phased, 0 is unphased).
+        The other columns indicate the alleles, e.g. [0, 1, 1] is 0|1.
+        """
+        cdef np.int16_t* to_return = <np.int16_t *>stdlib.malloc(sizeof(np.int16_t)
+                                                   * self.n_samples
+                                                   * (self.ploidy+1))
+
         cdef int ind
         cdef int allele
-        cdef int* to_return = <int *>stdlib.malloc(sizeof(int)
-                                                   * self.n_samples
-                                                   * self.ploidy)
-        cdef np.npy_intp shape[2]
-        shape[0] = self.n_samples
-        shape[1] = self.ploidy
+        cdef int p = self.ploidy + 1
 
         for ind in range(self.n_samples):
             for allele in range(self.ploidy):
-                to_return[ind*self.ploidy + allele] = (
-                    (self._raw[ind * self.ploidy + allele] >> 1) - 1
-                )
+                to_return[ind * p + allele] = (self._raw[ind * self.ploidy + allele] >> 1) - 1
+            to_return[ind * p + self.ploidy] = (self._raw[ind * self.ploidy + 1] & 1) == 1
+
+        cdef np.npy_intp shape[2]
+        shape[0] = self.n_samples
+        shape[1] = self.ploidy + 1
         return np.PyArray_SimpleNewFromData(
             2,
             shape,
-            np.NPY_INT32,
+            np.NPY_INT16,
             to_return
         )
 

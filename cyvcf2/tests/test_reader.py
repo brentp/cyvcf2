@@ -45,13 +45,10 @@ def test_format_str():
 def test_write_format_str():
     vcf = VCF(os.path.join(HERE, "test-format-string.vcf"))
     wtr = Writer("x.vcf", vcf)
-
     variant = next(vcf)
     variant.set_format("TSTRING", np.array(["asdfxx","35\0"]))
-
     wtr.write_record(variant)
     wtr.close()
-
     assert "asdfxx" in str(variant), str(variant)
     assert "35" in str(variant)
     """
@@ -696,12 +693,16 @@ def test_access_genotype():
     assert alleles[1].value == 1
     assert alleles[1].phased == True
 
+    assert np.all(gts.alleles_array() == np.array([[0, 0], [1, 1]]))
+    assert np.all(gts.phased_array() == np.array([False, True]))
 
     assert alleles[1].phased == True
     alleles[1].phased = False
     assert alleles[1].phased == False
     alleles = gts[1]
     assert alleles[1].phased == False
+
+    assert np.all(gts.phased_array() == np.array([False, False]))
 
     # can also just get the phased stats of the nth sample:
     assert gts.phased(0) == False
@@ -722,8 +723,11 @@ def test_access_genotype():
     assert alleles[0].value == 1
     assert alleles[0].phased == False
 
+    assert np.all(gts.alleles_array() == np.array([[1, 0], [1, 1]]))
 
     gts[1][0].value = 0
+
+    assert np.all(gts.alleles_array() == np.array([[1, 0], [0, 1]]))
 
     # update the varint
     v.genotype = gts
@@ -783,7 +787,6 @@ def test_issue44():
         #print(v.genotypes, file=sys.stderr)
         assert v.genotypes == [expected[i]], (i, v.genotypes, expected[i])
     os.unlink("__o.vcf")
-
 
 def test_id_field_updates():
     # 1 10172   .       CCCTAA  C       92.0    PASS
@@ -845,6 +848,7 @@ def test_strict_gt_option_flag():
         [-1, 0, False],
         [-1, -1, False],
     )
+
     vcf = VCF(test_vcf, gts012=False)
     variant = next(vcf)
 
@@ -854,8 +858,6 @@ def test_strict_gt_option_flag():
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
     assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
 
-
-
     vcf = VCF(test_vcf, gts012=False, strict_gt=True)
     variant = next(vcf)
 
@@ -864,6 +866,8 @@ def test_strict_gt_option_flag():
     assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
     assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
+
+
     vcf = VCF(test_vcf, gts012=True)
     variant = next(vcf)
 
@@ -971,4 +975,3 @@ def test_set_alternates():
 
       v.ALT = ["AAAC", "CCCA"]
       assert "AAAC,CCCA" in str(v)
-

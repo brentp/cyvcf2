@@ -635,47 +635,6 @@ def test_set_gts():
 
     v.genotypes = [[0, 1, 2, False], [0, 1, 2, True]]
     assert get_gt_str(v) == ["0/1/2", "0|1|2"]
-    assert np.all(v.numpy_genotypes[0] == np.array([[0, 1, 2], [0, 1, 2]]))
-    assert np.all(v.numpy_genotypes[1] == np.array([False, True]))
-
-def test_set_numpy_gts():
-    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
-    v = next(vcf)
-
-    v.numpy_genotypes = (np.array([[1, 1], [0, 0]]),
-                         np.array([True, False]))
-    assert get_gt_str(v) == ["1|1", "0/0"]
-
-    v.numpy_genotypes = (np.array([[-1, 1], [-1, 0]]),
-                         np.array([False, False]))
-    assert get_gt_str(v) == ["./1", "./0"]
-
-    v.numpy_genotypes = (np.array([[-1, -1], [0, 0]]),
-                         np.array([False, True]))
-    assert get_gt_str(v) == ["./.", "0|0"]
-
-    v.numpy_genotypes = (np.array([[2, 2], [0, 2]]),
-                         np.array([True, True]))
-    assert get_gt_str(v) == ["2|2", "0|2"]
-
-    v.numpy_genotypes = (np.array([[0, 1, 2], [1, 2, -2]]),
-                         np.array([False, True]))
-    assert get_gt_str(v) == ["0/1/2", "1|2"]
-
-    v.numpy_genotypes = (np.array([[1, 2, -2], [0, 1, 2]]),
-                         np.array([False, True]))
-    assert get_gt_str(v) == ["1/2", "0|1|2"]
-
-    v.numpy_genotypes = (np.array([[0, 1, 2], [0, 1, 2]]),
-                         np.array([False, True]))
-    assert get_gt_str(v) == ["0/1/2", "0|1|2"]
-    assert v.genotypes == [[0, 1, 2, False], [0, 1, 2, True]]
-
-def test_gt_caching():
-    v = next(VCF('{}/test-format-string.vcf'.format(HERE)))
-    assert v.genotypes == v.genotypes
-    assert np.all(v.numpy_genotypes[0] == v.numpy_genotypes[0])
-    assert np.all(v.numpy_genotypes[1] == v.numpy_genotypes[1])
 
 def test_info_del():
     vcf = VCF(os.path.join(HERE, "test-hemi.vcf"))
@@ -709,27 +668,15 @@ def test_access_gts():
     v = next(vcf)
     gts = v.genotypes
     assert gts == [[0, 0, False], [1, 1, True]], gts
-    ngts = v.numpy_genotypes
-    assert np.all(ngts[0] == np.array([[0, 0], [1, 1]]))
-    assert np.all(ngts[1] == np.array([False, True]))
 
     v = next(vcf)
     assert v.genotypes == [[1, 2, False], [2, 3, True]], v.genotypes
-    ngts = v.numpy_genotypes
-    assert np.all(ngts[0] == np.array([[1, 2], [2, 3]]))
-    assert np.all(ngts[1] == np.array([False, True]))
 
     v = next(vcf)
     assert v.genotypes == [[0, 1, -1, False], [0, True]], v.genotypes
-    ngts = v.numpy_genotypes
-    assert np.all(ngts[0] == np.array([[0, 1, -1], [0, -2, -2]]))
-    assert np.all(ngts[1] == np.array([False, True]))
 
     v = next(vcf)
     assert v.genotypes == [[-1, True], [0, 2, True]], v.genotypes
-    ngts = v.numpy_genotypes
-    assert np.all(ngts[0] == np.array([[-1, -2], [0, 2]]))
-    assert np.all(ngts[1] == np.array([True, True]))
 
 def test_access_genotype():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
@@ -837,26 +784,6 @@ def test_issue44():
         assert v.genotypes == [expected[i]], (i, v.genotypes, expected[i])
     os.unlink("__o.vcf")
 
-def test_issue44_numpy_genotypes():
-    vcf = VCF('{}/issue_44.vcf'.format(HERE))
-    w = Writer('__o.vcf', vcf)
-    for v in vcf:
-        tmp = v.numpy_genotypes
-        v.numpy_genotypes = tmp
-        w.write_record(v)
-    w.close()
-    #           "./."            "."          ".|."           "0|0"
-    expected = ((np.array([[-1, -1]]), np.array(False)),
-                (np.array([[-1]]), np.array(False)),
-                (np.array([[-1, -1]]), np.array(True)),
-                (np.array([[0, 0]]), np.array(True)))
-    for i, v in enumerate(VCF('__o.vcf')):
-        ngts = v.numpy_genotypes
-        assert np.all(ngts[0] == expected[i][0])
-        assert np.all(ngts[1] == expected[i][1]), (v.genotypes)
-    os.unlink("__o.vcf")
-
-
 
 def test_id_field_updates():
     # 1 10172   .       CCCTAA  C       92.0    PASS
@@ -918,26 +845,6 @@ def test_strict_gt_option_flag():
         [-1, 0, False],
         [-1, -1, False],
     )
-    truth_numpy_genotypes = (
-        np.array([[0, 0],
-                  [1, 1],
-                  [0, 1],
-                  [1, 0],
-                  [1, -1],
-                  [-1, 1],
-                  [0, -1],
-                  [-1, 0],
-                  [-1, -1]]),
-        np.array([False,
-                  False,
-                  False,
-                  False,
-                  False,
-                  False,
-                  False,
-                  False,
-                  False])
-    )
     vcf = VCF(test_vcf, gts012=False)
     variant = next(vcf)
 
@@ -946,9 +853,6 @@ def test_strict_gt_option_flag():
     assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
     assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
-    ngts = variant.numpy_genotypes
-    assert np.all(ngts[0] == truth_numpy_genotypes[0]), '{} (numpy_genotypes)'.format(msg)
-    assert np.all(ngts[1] == truth_numpy_genotypes[1]), '{} (numpy_genotypes)'.format(msg)
 
 
 
@@ -960,9 +864,6 @@ def test_strict_gt_option_flag():
     assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
     assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
-    ngts = variant.numpy_genotypes
-    assert np.all(ngts[0] == truth_numpy_genotypes[0]), '{} (numpy_genotypes)'.format(msg)
-    assert np.all(ngts[1] == truth_numpy_genotypes[1]), '{} (numpy_genotypes)'.format(msg)
     vcf = VCF(test_vcf, gts012=True)
     variant = next(vcf)
 
@@ -973,9 +874,6 @@ def test_strict_gt_option_flag():
     #sys.stderr.write("exp:%s\n" % list(truth_gt_types))
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
     assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
-    ngts = variant.numpy_genotypes
-    assert np.all(ngts[0] == truth_numpy_genotypes[0]), '{} (numpy_genotypes)'.format(msg)
-    assert np.all(ngts[1] == truth_numpy_genotypes[1]), '{} (numpy_genotypes)'.format(msg)
 
     vcf = VCF(test_vcf, gts012=True, strict_gt=True)
     variant = next(vcf)
@@ -985,9 +883,6 @@ def test_strict_gt_option_flag():
     assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
     assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
     assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
-    ngts = variant.numpy_genotypes
-    assert np.all(ngts[0] == truth_numpy_genotypes[0]), '{} (numpy_genotypes)'.format(msg)
-    assert np.all(ngts[1] == truth_numpy_genotypes[1]), '{} (numpy_genotypes)'.format(msg)
 
 def test_alt_repr():
     v = os.path.join(HERE, "test-alt-repr.vcf")

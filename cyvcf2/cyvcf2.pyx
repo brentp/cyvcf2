@@ -924,9 +924,11 @@ cdef inline Allele newAllele(int32_t *raw, int i):
 
 cdef class Genotypes(object):
     cdef int32_t *_raw
+    cdef readonly int n_samples
     cdef readonly int ploidy
     def __cinit__(self):
         self.ploidy = 0
+        self.n_samples = 0
         self._raw = NULL
     def __dealloc__(self):
         if self._raw != NULL:
@@ -938,6 +940,21 @@ cdef class Genotypes(object):
         """
         return (self._raw[i * self.ploidy + 1] & 1) == 1
 
+    def phased_array(self):
+        cdef int ind
+        cdef int* to_return = <int *>stdlib.malloc(sizeof(int)
+                                                   * self.n_samples)
+        cdef np.npy_intp shape[1]
+        shape[0] = self.n_samples
+        for ind in range(self.n_samples):
+            to_return[ind] = self._raw[ind * self.ploidy + 1] & 1
+        return np.PyArray_SimpleNewFromData(
+            1,
+            shape,
+            np.NPY_INT32,
+            to_return
+        ).astype(bool)
+
     def alleles(self, int i):
         cdef list result = []
         cdef int32_t v
@@ -946,15 +963,38 @@ cdef class Genotypes(object):
             result.append((v >> 1) - 1)
         return result
 
+    def alleles_array(self):
+        cdef int ind
+        cdef int allele
+        cdef int* to_return = <int *>stdlib.malloc(sizeof(int)
+                                                   * self.n_samples
+                                                   * self.ploidy)
+        cdef np.npy_intp shape[2]
+        shape[0] = self.n_samples
+        shape[1] = self.ploidy
+
+        for ind in range(self.n_samples):
+            for allele in range(self.ploidy):
+                to_return[ind*self.ploidy + allele] = (
+                    (self._raw[ind * self.ploidy + allele] >> 1) - 1
+                )
+        return np.PyArray_SimpleNewFromData(
+            2,
+            shape,
+            np.NPY_INT32,
+            to_return
+        )
+
     def __getitem__(self, int i):
         ## return the Allele objects for the i'th sample.
         cdef int k
         return [newAllele(self._raw, k) for k in range(i*self.ploidy,(i+1)*self.ploidy)]
 
-cdef inline Genotypes newGenotypes(int32_t *raw, int ploidy):
+cdef inline Genotypes newGenotypes(int32_t *raw, int ploidy, int n_samples):
     cdef Genotypes gs = Genotypes.__new__(Genotypes)
     gs._raw = raw
     gs.ploidy = ploidy
+    gs.n_samples = n_samples
     return gs
 
 cdef class Variant(object):
@@ -987,7 +1027,6 @@ cdef class Variant(object):
     cdef readonly INFO INFO
     cdef int _ploidy
     cdef list _genotypes
-    cdef int32_t *_numpy_genotypes
 
     cdef readonly int POS
 
@@ -1000,7 +1039,6 @@ cdef class Variant(object):
         self._gt_phased = NULL
         self._gt_pls = NULL
         self._ploidy = -1
-        self._numpy_genotypes = NULL
 
     def __repr__(self):
         return "Variant(%s:%d %s/%s)" % (self.CHROM, self.POS, self.REF, ",".join(self.ALT))
@@ -1038,8 +1076,6 @@ cdef class Variant(object):
             stdlib.free(self._gt_pls)
         if self._gt_gls != NULL:
             stdlib.free(self._gt_gls)
-        if self._numpy_genotypes != NULL:
-            stdlib.free(self._numpy_genotypes)
 
     property gt_bases:
         "numpy array indicating the alleles in each sample."
@@ -1247,7 +1283,7 @@ cdef class Variant(object):
         cdef int ndst = 0
         if bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst) <= 0:
             raise Exception("couldn't get genotypes for variant")
-        return newGenotypes(gts, ndst/self.vcf.n_samples)
+        return newGenotypes(gts, ndst/self.vcf.n_samples, self.vcf.n_samples)
 
     @genotype.setter
     def genotype(self, Genotypes g):
@@ -1302,7 +1338,6 @@ cdef class Variant(object):
             cdef int * cgts = <int *>stdlib.malloc(sizeof(int) * nret * n_samples)
             cdef int i, j, k
             self._genotypes = None
-            self._numpy_genotypes = NULL
 
             for i in range(n_samples):
                 k = i * nret

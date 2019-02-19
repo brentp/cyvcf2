@@ -574,15 +574,25 @@ def test_set_format_float():
     obs = fmap(float, get_gt_str(v, "PS"))
     assert allclose(obs, [9998.555, 99911.111]), obs
 
-def test_set_format_int():
+def test_set_format_int_a():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     assert vcf.add_format_to_header(dict(ID="PI", Number=1, Type="Integer", Description="Int example")) == 0
     v = next(vcf)
     v.set_format("PI", np.array([5, 1], dtype=np.int))
     assert allclose(fmap(float, get_gt_str(v, "PI")), [5, 1])
 
+def test_set_format_int_b():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    assert vcf.add_format_to_header(dict(ID="PI", Number=1, Type="Integer", Description="Int example")) == 0
+    v = next(vcf)
+
     v.set_format("PI", np.array([855, 11], dtype=np.int64))
     assert allclose(fmap(float, get_gt_str(v, "PI")), [855, 11])
+
+def test_set_format_int_c():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    assert vcf.add_format_to_header(dict(ID="PI", Number=1, Type="Integer", Description="Int example")) == 0
+    v = next(vcf)
 
     v.set_format("PI", np.array([9998, 99911], dtype=np.int32))
     obs = fmap(float, get_gt_str(v, "PI"))
@@ -617,12 +627,12 @@ def test_set_gts():
     assert get_gt_str(v) == ["2|2", "0|2"]
 
     v.genotypes = [[0, 1, 2, False], [1, 2, True]]
-    s = get_gt_str(v) 
+    s = get_gt_str(v)
     assert s == ["0/1/2", "1|2"]
-    
+
     v.genotypes = [[1, 2, False], [0, 1, 2, True]]
     assert get_gt_str(v) == ["1/2", "0|1|2"]
-    
+
     v.genotypes = [[0, 1, 2, False], [0, 1, 2, True]]
     assert get_gt_str(v) == ["0/1/2", "0|1|2"]
     assert np.all(v.numpy_genotypes[0] == np.array([[0, 1, 2], [0, 1, 2]]))
@@ -720,6 +730,58 @@ def test_access_gts():
     ngts = v.numpy_genotypes
     assert np.all(ngts[0] == np.array([[-1, -2], [0, 2]]))
     assert np.all(ngts[1] == np.array([True, True]))
+
+def test_access_genotype():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    v = next(vcf)
+    gts = v.genotype
+    #print(str(v), file=sys.stderr)
+
+    # indexing directly gives a list of Allele objects (for diploid, the list
+    # has length 2)
+    alleles = gts[0]
+    assert alleles[0].value == 0
+    assert alleles[1].value == 0
+    assert alleles[0].phased == False
+
+    alleles = gts[1]
+    assert alleles[0].value == 1
+    assert alleles[1].value == 1
+    assert alleles[1].phased == True
+
+
+    assert alleles[1].phased == True
+    alleles[1].phased = False
+    assert alleles[1].phased == False
+    alleles = gts[1]
+    assert alleles[1].phased == False
+
+    # can also just get the phased stats of the nth sample:
+    assert gts.phased(0) == False
+    # note this got updated above
+    assert gts.phased(1) == False
+
+    # and the alleles of the nth sample.
+    assert gts.alleles(0) == [0, 0]
+    #print(gts.alleles(1), file=sys.stderr)
+    assert gts.alleles(1) == [1, 1]
+
+
+    alleles = gts[0]
+    assert alleles[0].value == 0
+    alleles[0].value = 1
+    assert alleles[0].value == 1
+    alleles = gts[0]
+    assert alleles[0].value == 1
+    assert alleles[0].phased == False
+
+
+    gts[1][0].value = 0
+
+    # update the varint
+    v.genotype = gts
+    assert "1/0:6728,1:F	0/1:22,1:G" in str(v)
+
 
 def test_alt_homozygous_gt():
     vcf = VCF(os.path.join(HERE, "test-multiallelic-homozygous-alt.vcf.gz"))

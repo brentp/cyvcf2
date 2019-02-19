@@ -381,23 +381,24 @@ cdef class VCF:
             sys.stderr.write("no intervals found for %s at %s\n" % (self.fname, region))
             raise StopIteration
 
-        while 1:
-            with nogil:
-                slen = tbx_itr_next(self.hts, self.idx, itr, &s)
-                if slen > 0:
-                        b = bcf_init()
-                        ret = vcf_parse(&s, self.hdr, b)
-            if slen <= 0:
-                break
-            if ret > 0:
-                bcf_destroy(b)
-                stdlib.free(s.s)
-                hts_itr_destroy(itr)
-                raise Exception("error parsing")
-            yield newVariant(b, self)
-
-        stdlib.free(s.s)
-        hts_itr_destroy(itr)
+        try:
+            while 1:
+                with nogil:
+                    slen = tbx_itr_next(self.hts, self.idx, itr, &s)
+                    if slen > 0:
+                            b = bcf_init()
+                            ret = vcf_parse(&s, self.hdr, b)
+                if slen <= 0:
+                    break
+                if ret > 0:
+                    bcf_destroy(b)
+                    stdlib.free(s.s)
+                    hts_itr_destroy(itr)
+                    raise Exception("error parsing")
+                yield newVariant(b, self)
+        finally:
+            stdlib.free(s.s)
+            hts_itr_destroy(itr)
 
     def header_iter(self):
         """
@@ -635,40 +636,35 @@ cdef class VCF:
         cdef int k, last_pos
         if sites:
             isites = isites[offset::each]
-            def gen():
-                ref, alt = None, None
-                j = 0
-                for i, osite in enumerate(isites):
-                    if len(osite) >= 4:
-                        chrom, pos, ref, alt = osite[:4]
-                    else:
-                        chrom, pos = osite[:2]
-                    for v in self("%s:%s-%s" % (chrom, pos, pos)):
-                        if len(v.ALT) != 1: continue
-                        if ref is not None:
-                            if v.REF != ref: continue
-                            if alt is not None:
-                                if v.ALT[0] != alt: continue
-                        if v.call_rate < call_rate: continue
-                        yield i, v
-                        j += 1
-                        break
-        else:
-            def gen():
-                last_pos, k = -10000, 0
-                for v in self:
-                    if abs(v.POS - last_pos) < 5000: continue
-                    if len(v.REF) != 1: continue
+            ref, alt = None, None
+            j = 0
+            for i, osite in enumerate(isites):
+                if len(osite) >= 4:
+                    chrom, pos, ref, alt = osite[:4]
+                else:
+                    chrom, pos = osite[:2]
+                for v in self("%s:%s-%s" % (chrom, pos, pos)):
                     if len(v.ALT) != 1: continue
-                    if v.call_rate < 0.5: continue
-                    if not 0.03 < v.aaf < 0.6: continue
-                    if np.mean(v.gt_depths > 7) < 0.5: continue
-                    last_pos = v.POS
-                    if k >= offset and k % each == 0:
-                        yield k, v
-                    k += 1
-                    if k > 20000: break
-        return gen
+                    if ref is not None and v.REF != ref: continue
+                    if alt is not None and v.ALT[0] != alt: continue
+                    if v.call_rate < call_rate: continue
+                    yield i, v
+                    j += 1
+                    break
+        else:
+            last_pos, k = -10000, 0
+            for v in self:
+                if abs(v.POS - last_pos) < 5000: continue
+                if len(v.REF) != 1: continue
+                if len(v.ALT) != 1: continue
+                if v.call_rate < 0.5: continue
+                if not 0.03 < v.aaf < 0.6: continue
+                if np.mean(v.gt_depths > 7) < 0.5: continue
+                last_pos = v.POS
+                if k >= offset and k % each == 0:
+                    yield k, v
+                k += 1
+                if k > 20000: break
 
     def het_check(self, min_depth=8, percentiles=(10, 90), _finish=True,
                   int each=1, int offset=0,
@@ -687,10 +683,9 @@ cdef class VCF:
 
         mean_depths = []
 
-        gen = self.gen_variants(sites, each=each, offset=offset)
         maf_lists = defaultdict(list)
         idxs = np.arange(n_samples)
-        for i, v in gen():
+        for i, v in self.gen_variants(sites, each=each, offset=offset):
             if v.CHROM in ('X', 'chrX'): break
             if v.aaf < 0.01: continue
             if v.call_rate < 0.5: continue
@@ -763,7 +758,6 @@ cdef class VCF:
         cdef int k, i
         assert each >= 0
 
-        gen = self.gen_variants(sites, offset=offset, each=each)
 
         cdef int32_t[:, ::view.contiguous] ibs = np.zeros((n_samples, n_samples), np.int32)
         cdef int32_t[:, ::view.contiguous] n = np.zeros((n_samples, n_samples), np.int32)
@@ -774,7 +768,7 @@ cdef class VCF:
 
         cdef Variant v
 
-        for j, (i, v) in enumerate(gen()):
+        for j, (i, v) in enumerate(self.gen_variants(sites, offset=offset, each=each)):
             gt_types = v.gt_types
             alt_freqs = v.gt_alt_freqs
             krelated(&gt_types[0], &ibs[0, 0], &n[0, 0], &hets[0], n_samples,
@@ -884,6 +878,85 @@ cdef class VCF:
                 res['n'].append(_n[sj, sk])
         return res
 
+cdef class Allele(object):
+    cdef int32_t *_raw
+    cdef int i
+
+    cdef int _value(self):
+        if self._raw[self.i] < 0: return self._raw[self.i]
+        return (self._raw[self.i] >> 1) - 1
+
+    @property
+    def phased(self):
+        return self._raw[self.i] & 1 == 1
+
+    @phased.setter
+    def phased(self, bint ph):
+        if ph:
+            self._raw[self.i] = (self._value() + 1)<<1|1
+        else:
+            self._raw[self.i] = (self._value() + 1)<<1
+
+    @property
+    def value(self):
+        if self._raw[self.i] < 0: return self._raw[self.i]
+        return (self._raw[self.i] >> 1) - 1
+
+    @value.setter
+    def value(self, int value):
+        if value < 0:
+            self._raw[self.i] = value
+            return
+        if self.phased:
+            self._raw[self.i] = (value + 1)<<1|1
+        else:
+            self._raw[self.i] = (value + 1)<<1
+
+    def __repr__(self):
+        if self.value < 0: return "."
+        return str(self.value) + ("|" if self.phased else "/")
+
+cdef inline Allele newAllele(int32_t *raw, int i):
+    cdef Allele a = Allele.__new__(Allele)
+    a._raw = raw
+    a.i = i
+    return a
+
+cdef class Genotypes(object):
+    cdef int32_t *_raw
+    cdef readonly int ploidy
+    def __cinit__(self):
+        self.ploidy = 0
+        self._raw = NULL
+    def __dealloc__(self):
+        if self._raw != NULL:
+            stdlib.free(self._raw)
+
+    def phased(self, int i):
+        """
+        a boolean indicating that the ith sample is phased.
+        """
+        return (self._raw[i * self.ploidy + 1] & 1) == 1
+
+    def alleles(self, int i):
+        cdef list result = []
+        cdef int32_t v
+        for j in range(self.ploidy):
+            v = self._raw[i * self.ploidy + j]
+            result.append((v >> 1) - 1)
+        return result
+
+    def __getitem__(self, int i):
+        ## return the Allele objects for the i'th sample.
+        cdef int k
+        return [newAllele(self._raw, k) for k in range(i*self.ploidy,(i+1)*self.ploidy)]
+
+cdef inline Genotypes newGenotypes(int32_t *raw, int ploidy):
+    cdef Genotypes gs = Genotypes.__new__(Genotypes)
+    gs._raw = raw
+    gs.ploidy = ploidy
+    return gs
+
 cdef class Variant(object):
     """
     Variant represents a single VCF Record.
@@ -972,32 +1045,33 @@ cdef class Variant(object):
         "numpy array indicating the alleles in each sample."
         def __get__(self):
             cdef np.ndarray gt_types = self.gt_types
-            cdef int i, n = self.ploidy, j=0, k
+            cdef int i, n = self.ploidy, j=0, a, b
             cdef char **alleles = self.b.d.allele
             #cdef dict d = {i:alleles[i] for i in range(self.b.n_allele)}
             cdef list d = [from_bytes(alleles[i]) for i in range(self.b.n_allele)]
             d.append(".") # -1 gives .
-            cdef list a = []
-            cdef list phased = list(self.gt_phases)
+            cdef list bases = ["./." for _ in range(self.vcf.n_samples)]
+            cdef np.ndarray phased = self.gt_phases
             cdef list lookup = ["/", "|"]
             cdef int unknown = 3 if self.vcf.gts012 else 2
             for i in range(0, n * self.vcf.n_samples, n):
                 if n == 2:
                     if (gt_types[j] == unknown) and (not self.vcf.strict_gt):
-                        a.append("./.")
+                        continue
                     else:
-                        try:
-                            d[self._gt_idxs[i+1]]
-                            a.append(d[self._gt_idxs[i]] + lookup[phased[j]] + d[self._gt_idxs[i+1]])
-                        except IndexError:
-                            a.append(d[self._gt_idxs[i]])
+                        a = self._gt_idxs[i]
+                        b = self._gt_idxs[i + 1]
+                        if a >= -1 and b >= -1:
+                          bases[j] = d[a] + lookup[phased[j]] + d[b]
+                        else:
+                          bases[j] = d[a]
                 elif n == 1:
-                    a.append(d[self._gt_idxs[i]])
+                    bases[j] = d[self._gt_idxs[i]]
                 else:
                     raise Exception("gt_bases not implemented for ploidy > 2")
 
                 j += 1
-            return np.array(a, np.str)
+            return np.array(bases, np.str)
 
     def relatedness(self,
                     int32_t[:, ::view.contiguous] ibs,
@@ -1166,82 +1240,20 @@ cdef class Variant(object):
         stdlib.free(buf)
         return iret
 
-    property numpy_genotypes:
-        """numpy_genotypes returns arrays of sample alleles and phasings
-
-        The first array is an int array of shape = (num_samples, ploidy)
-        and the second is a boolean array of shape = num_samples.
-        -1 is used for missingness and -2 is used for absent alleles
-        in mixed ploidies.
-        e.g. np.array([0, 1]), np.array([True]) corresponds to 0|1
-        while np.array([0, -2]), np.array([True]) corresponds to 0
-        and np.array([1, 2]), np.array([False]) corresponds to 1/2
-        """
-        def __get__(self):
-            cdef int32_t *gts = NULL
-            cdef int i, j, nret = 0, ndst = 0, k = 0, ell = 0
-            cdef int n_samples = self.vcf.n_samples
-            nret = bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst)
-            if nret < 0:
-                raise Exception("error parsing genotypes")
-            nret /= n_samples
-            if self.vcf.n_samples == 0:
-                return np.array([]), np.array([])
-            if self._numpy_genotypes == NULL:
-                self._numpy_genotypes = <int32_t *>stdlib.malloc(sizeof(int) * n_samples * (nret+1))
-                for i in range(n_samples):
-                    k = i * nret
-                    ell = i * (nret + 1)
-                    for j in range(nret):
-                        if bcf_gt_is_missing(gts[k + j]):
-                            self._numpy_genotypes[ell + j] = -1
-                            continue
-                        if gts[k + j] == bcf_int32_vector_end:
-                            self._numpy_genotypes[ell + j] = -2
-                            continue
-                        self._numpy_genotypes[ell + j] = bcf_gt_allele(gts[k + j])
-                    self._numpy_genotypes[ell + nret] = bcf_gt_is_phased(gts[k+1 if k+1 < ndst else k])
-                stdlib.free(gts)
-            cdef np.npy_intp shape[2]
-            shape[0] = <np.npy_intp> self.vcf.n_samples
-            shape[1] = <np.npy_intp> (nret + 1)
-            to_return = np.PyArray_SimpleNewFromData(2, shape, np.NPY_INT32, self._numpy_genotypes)
-            return to_return[:,:-1], to_return[:,-1].astype(bool)
-
-        def __set__(self, gts_and_phase):
-            gts, phase = gts_and_phase
-            cdef int n_samples = self.vcf.n_samples
-            if gts.shape[0] != n_samples:
-                raise Exception("numpy_genotypes: must set with a number of gts "
-                                "equal to the number of samples in the vcf.")
-            elif gts.shape[0] == 0:
-                nret = 0
-            else:
-                nret = gts.shape[1]
-            cdef int * cgts = <int *>stdlib.malloc(sizeof(int) * nret * n_samples)
-            cdef int i, j, k
-            self._numpy_genotypes = NULL
-            self._genotypes = None
-
-            for i in range(n_samples):
-                k = i * nret
-                for j in range(nret):
-                    if gts[i, j] == -2:
-                        cgts[k + j] = bcf_int32_vector_end
-                        break
-                    else:
-                        cgts[k + j] = (bcf_gt_phased(gts[i, j]) if phase[i]
-                                       else bcf_gt_unphased(gts[i, j]))
-            ret = bcf_update_genotypes(self.vcf.hdr, self.b, cgts, n_samples * nret)
-            if ret < 0:
-                raise Exception("error setting genotypes with: %s and %s" % (gts, phase))
-            stdlib.free(cgts)
-
+    @property
     def genotype(self):
         if self.vcf.n_samples == 0: return None
         cdef int32_t *gts = NULL
         cdef int ndst = 0
-        cdef int nret = bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst)
+        if bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst) <= 0:
+            raise Exception("couldn't get genotypes for variant")
+        return newGenotypes(gts, ndst/self.vcf.n_samples)
+
+    @genotype.setter
+    def genotype(self, Genotypes g):
+        cdef int ret = bcf_update_genotypes(self.vcf.hdr, self.b, g._raw, self.vcf.n_samples * g.ploidy)
+        if ret < 0:
+            raise Exception("error setting genotypes with: %s" % g)
 
     property genotypes:
         """genotypes returns a list for each sample Indicating the allele and phasing.

@@ -693,8 +693,8 @@ def test_access_genotype():
     assert alleles[1].value == 1
     assert alleles[1].phased == True
 
-    assert np.all(gts.alleles_array() == np.array([[0, 0], [1, 1]]))
-    assert np.all(gts.phased_array() == np.array([False, True]))
+    assert np.all(gts.array()[:, :2] == np.array([[0, 0], [1, 1]]))
+    assert np.all(gts.array()[:, 2] == np.array([False, True]))
 
     assert alleles[1].phased == True
     alleles[1].phased = False
@@ -702,7 +702,7 @@ def test_access_genotype():
     alleles = gts[1]
     assert alleles[1].phased == False
 
-    assert np.all(gts.phased_array() == np.array([False, False]))
+    assert np.all(gts.array()[:, 2] == np.array([False, False]))
 
     # can also just get the phased stats of the nth sample:
     assert gts.phased(0) == False
@@ -723,11 +723,11 @@ def test_access_genotype():
     assert alleles[0].value == 1
     assert alleles[0].phased == False
 
-    assert np.all(gts.alleles_array() == np.array([[1, 0], [1, 1]]))
+    assert np.all(gts.array()[:, :2] == np.array([[1, 0], [1, 1]]))
 
     gts[1][0].value = 0
 
-    assert np.all(gts.alleles_array() == np.array([[1, 0], [0, 1]]))
+    assert np.all(gts.array()[:, :2] == np.array([[1, 0], [0, 1]]))
 
     # update the varint
     v.genotype = gts

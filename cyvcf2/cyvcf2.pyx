@@ -940,21 +940,6 @@ cdef class Genotypes(object):
         """
         return (self._raw[i * self.ploidy + 1] & 1) == 1
 
-    def phased_array(self):
-        cdef int ind
-        cdef int* to_return = <int *>stdlib.malloc(sizeof(int)
-                                                   * self.n_samples)
-        cdef np.npy_intp shape[1]
-        shape[0] = self.n_samples
-        for ind in range(self.n_samples):
-            to_return[ind] = self._raw[ind * self.ploidy + 1] & 1
-        return np.PyArray_SimpleNewFromData(
-            1,
-            shape,
-            np.NPY_INT32,
-            to_return
-        ).astype(bool)
-
     def alleles(self, int i):
         cdef list result = []
         cdef int32_t v
@@ -989,28 +974,6 @@ cdef class Genotypes(object):
             2,
             shape,
             np.NPY_INT16,
-            to_return
-        )
-
-    def alleles_array(self):
-        cdef int ind
-        cdef int allele
-        cdef int* to_return = <int *>stdlib.malloc(sizeof(int)
-                                                   * self.n_samples
-                                                   * self.ploidy)
-        cdef np.npy_intp shape[2]
-        shape[0] = self.n_samples
-        shape[1] = self.ploidy
-
-        for ind in range(self.n_samples):
-            for allele in range(self.ploidy):
-                to_return[ind*self.ploidy + allele] = (
-                    (self._raw[ind * self.ploidy + allele] >> 1) - 1
-                )
-        return np.PyArray_SimpleNewFromData(
-            2,
-            shape,
-            np.NPY_INT32,
             to_return
         )
 

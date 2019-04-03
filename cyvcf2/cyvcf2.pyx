@@ -314,6 +314,13 @@ cdef class VCF:
         if ret != 0:
             raise Exception("unable to update to header")
 
+    def set_index(self, index_path=""):
+        self.hidx = hts_idx_load2(to_bytes(self.fname), to_bytes(index_path))
+        if self.hidx == NULL:
+            self.idx = tbx_index_load2(to_bytes(self.fname), to_bytes(index_path))
+        if self.hidx == NULL and self.idx == NULL:
+          raise OSError("unable to open index:'%s' for '%s'" % (index_path, self.fname))
+
     def _bcf_region(VCF self, region):
         if self.hidx == NULL:
             self.hidx = bcf_index_load(self.fname)

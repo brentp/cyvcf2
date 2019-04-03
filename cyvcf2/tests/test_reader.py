@@ -346,6 +346,13 @@ def test_seqnames():
     assert b.seqnames[0] == 'chr1', b.seqnames
     assert b.seqnames[-1] == 'chrY', b.seqnames
 
+def test_different_index():
+    b = VCF('{}/test.snpeff.bcf'.format(HERE), threads=3)
+    b.set_index("cyvcf2/tests/test-diff.csi")
+    s = 0
+    for r in b("chr1:69427-69429"):
+        s += 1
+    assert s == 1
 
 def test_var_type():
     v = VCF(VCF_PATH)

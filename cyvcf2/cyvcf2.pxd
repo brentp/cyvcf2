@@ -66,6 +66,7 @@ cdef extern from "htslib/hts.h":
         pass
 
     hts_idx_t *bcf_index_load(char *fn)
+    hts_idx_t *hts_idx_load2(const char *fn, const char *fnidx);
 
     #int hts_itr_next(BGZF *fp, hts_itr_t *iter, void *r, void *data);
     void hts_itr_destroy(hts_itr_t *iter);
@@ -77,6 +78,7 @@ cdef extern from "htslib/tbx.h":
         pass
 
     tbx_t *tbx_index_load(const char *fn);
+    tbx_t *tbx_index_load2(const char *fn, const char *fnidx);
     hts_itr_t *tbx_itr_queryi(tbx_t *tbx, int tid, int beg, int end)
     hts_itr_t *tbx_itr_querys(tbx_t *tbx, char *reg) nogil
     int tbx_itr_next(htsFile *fp, tbx_t *tbx, hts_itr_t *iter, void *data) nogil;

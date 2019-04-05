@@ -1722,7 +1722,7 @@ cdef class Variant(object):
             for i in range(1, self.b.n_allele):
                 if not self.b.d.allele[i] in (b"A", b"C", b"G", b"T"):
                     return False
-            return True
+            return self.b.n_allele > 1
 
     property is_indel:
         "boolean indicating if the variant is an indel."
@@ -1745,7 +1745,7 @@ cdef class Variant(object):
     property is_transition:
         "boolean indicating if the variant is a transition."
         def __get__(self):
-            if len(self.ALT) > 1: return False
+            if len(self.ALT) != 1: return False
 
             if not self.is_snp: return False
             ref = self.REF

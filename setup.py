@@ -74,6 +74,7 @@ extension = [Extension("cyvcf2.cyvcf2",
 setup(
     name="cyvcf2",
     description="fast vcf parsing with cython + htslib",
+    long_description_content_type="text/markdown",
     url="https://github.com/brentp/cyvcf2/",
     long_description=open("README.md").read(),
     license="MIT",

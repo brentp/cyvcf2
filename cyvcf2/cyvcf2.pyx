@@ -2223,12 +2223,7 @@ cdef class Writer(VCF):
 
         var = newVariant(b, self)
         if var.b.errcode == BCF_ERR_CTG_UNDEF:
-            h = bcf_hdr_id2hrec(self.hdr, BCF_DT_CTG, 0, var.b.rid)
-            if h == NULL:
-                raise Exception("contig %d unknown and not found in header" % var.b.rid)
-            if bcf_hdr_add_hrec(self.hdr, h) < 0:
-                raise Exception("error adding contig %d to header" % var.b.rid)
-            bcf_hdr_sync(self.hdr)
+            self.add_to_header("##contig=<ID=%s>" % var.CHROM)
             var.b.errcode = 0
         return var
 

@@ -237,20 +237,6 @@ def test_writer_from_string():
     w.close()
 
 
-def test_variant_from_string():
-
-    header = r"""##fileformat=VCFv4.1
-##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-##contig=<ID=chr1,length=249250621,assembly=hg19>
-#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	samplea	sampleb	samplec	sampled	samplee	samplef
-"""
-
-    w = Writer.from_string("out.vcf", header)
-    w.write_header()
-    w.samples == "samplea sampleb samplec sampled samplee samplef".split()
-
-    w.close()
-
 def test_writer():
 
     v = VCF(VCF_PATH)

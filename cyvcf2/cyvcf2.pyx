@@ -407,6 +407,21 @@ cdef class VCF:
             stdlib.free(s.s)
             hts_itr_destroy(itr)
 
+    def variant_from_string(self, variant_string):
+        cdef bcf1_t *b = bcf_init()
+        cdef kstring_t s
+        tmp = to_bytes(variant_string)
+        s.s = tmp
+        s.l = len(variant_string)
+        s.m = len(variant_string)
+        ret = vcf_parse(&s, self.hdr, b)
+        if ret > 0:
+            bcf_destroy(b)
+            raise Exception("error parsing:" + variant_string + " return value:" + ret)
+
+        v = newVariant(b, self)
+        return v
+
     def header_iter(self):
         """
         Iterate over fields in the HEADER
@@ -2200,8 +2215,10 @@ cdef class Writer(VCF):
         self.hdr = bcf_hdr_init(hmode)
         if bcf_hdr_parse(self.hdr, to_bytes(header_string)) != 0:
             raise Exception("error parsing header:" + header_string)
-        bcf_hdr_sync(self.hdr)
+        if bcf_hdr_sync(self.hdr) != 0:
+            raise Exception("error syncing header:" + header_string)
         self.header_written = False
+        self.n_samples = bcf_hdr_nsamples(self.hdr)
         return self
 
 

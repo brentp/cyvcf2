@@ -1,4 +1,5 @@
 #cython: profile=False
+
 #cython: embedsignature=True
 from __future__ import print_function
 import os
@@ -407,20 +408,6 @@ cdef class VCF:
             stdlib.free(s.s)
             hts_itr_destroy(itr)
 
-    def variant_from_string(self, variant_string):
-        cdef bcf1_t *b = bcf_init()
-        cdef kstring_t s
-        tmp = to_bytes(variant_string)
-        s.s = tmp
-        s.l = len(variant_string)
-        s.m = len(variant_string)
-        ret = vcf_parse(&s, self.hdr, b)
-        if ret > 0:
-            bcf_destroy(b)
-            raise Exception("error parsing:" + variant_string + " return value:" + ret)
-
-        v = newVariant(b, self)
-        return v
 
     def header_iter(self):
         """
@@ -2213,6 +2200,7 @@ cdef class Writer(VCF):
         self.hts = hts_open(self.name, to_bytes(mode))
         cdef char *hmode = "w"
         self.hdr = bcf_hdr_init(hmode)
+        self.ohdr = bcf_hdr_dup(self.hdr)
         if bcf_hdr_parse(self.hdr, to_bytes(header_string)) != 0:
             raise Exception("error parsing header:" + header_string)
         if bcf_hdr_sync(self.hdr) != 0:
@@ -2221,6 +2209,28 @@ cdef class Writer(VCF):
         self.n_samples = bcf_hdr_nsamples(self.hdr)
         return self
 
+    def variant_from_string(self, variant_string):
+        cdef bcf1_t *b = bcf_init()
+        cdef kstring_t s
+        tmp = to_bytes(variant_string)
+        s.s = tmp
+        s.l = len(variant_string)
+        s.m = len(variant_string)
+        ret = vcf_parse(&s, self.hdr, b)
+        if ret > 0:
+            bcf_destroy(b)
+            raise Exception("error parsing:" + variant_string + " return value:" + ret)
+
+        var = newVariant(b, self)
+        if var.b.errcode == BCF_ERR_CTG_UNDEF:
+            h = bcf_hdr_id2hrec(self.hdr, BCF_DT_CTG, 0, var.b.rid)
+            if h == NULL:
+                raise Exception("contig %d unknown and not found in header" % var.b.rid)
+            if bcf_hdr_add_hrec(self.hdr, h) < 0:
+                raise Exception("error adding contig %d to header" % var.b.rid)
+            bcf_hdr_sync(self.hdr)
+            var.b.errcode = 0
+        return var
 
     def write_header(Writer self):
         bcf_hdr_write(self.hts, self.hdr)

@@ -226,7 +226,7 @@ def test_writer_from_string():
 
     header = """##fileformat=VCFv4.1
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-##contig=<ID=chr1,length=249250621,assembly=hg19>
+##contig=<ID=chr2,length=249250621,assembly=hg19>
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	samplea
 """
 

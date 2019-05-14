@@ -235,6 +235,8 @@ cdef extern from "htslib/vcf.h":
     int bcf_hdr_nsamples(const bcf_hdr_t *hdr);
     void bcf_hdr_destroy(const bcf_hdr_t *hdr)
     char *bcf_hdr_fmt_text(const bcf_hdr_t *hdr, int is_bcf, int *len);
+    bcf_hdr_t *bcf_hdr_init(const char *mode);
+    int bcf_hdr_parse(bcf_hdr_t *hdr, char *htxt);
 
     int bcf_write(htsFile *fp, const bcf_hdr_t *h, bcf1_t *v);
     int bcf_hdr_write(htsFile *fp, bcf_hdr_t *h);

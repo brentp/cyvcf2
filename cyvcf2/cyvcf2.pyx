@@ -2186,6 +2186,25 @@ cdef class Writer(VCF):
         bcf_hdr_sync(self.hdr)
         self.header_written = False
 
+    @classmethod
+    def from_string(Writer cls, fname, header_string, mode="w"):
+        cdef Writer self = Writer.__new__(Writer)
+
+        self.name = to_bytes(fname)
+        if fname.endswith(".gz") and mode == "w":
+            mode = "wz"
+        if fname.endswith(".bcf") and mode == "w":
+            mode = "wb"
+        self.hts = hts_open(self.name, to_bytes(mode))
+        cdef char *hmode = "w"
+        self.hdr = bcf_hdr_init(hmode)
+        if bcf_hdr_parse(self.hdr, to_bytes(header_string)) != 0:
+            raise Exception("error parsing header:" + header_string)
+        bcf_hdr_sync(self.hdr)
+        self.header_written = False
+        return self
+
+
     def write_header(Writer self):
         bcf_hdr_write(self.hts, self.hdr)
         self.header_written = True

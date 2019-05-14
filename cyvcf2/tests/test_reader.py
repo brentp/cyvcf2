@@ -222,6 +222,16 @@ def test_format_field():
     for v in vcf:
         assert isinstance(v.FORMAT, list)
 
+def test_writer_from_string():
+
+    header = """##fileformat=VCFv4.1
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	samplea	sampleb	samplec	sampled	samplee	samplef
+"""
+
+    w = Writer.from_string("out.vcf", header)
+    w.write_header()
+    w.close()
+
 def test_writer():
 
     v = VCF(VCF_PATH)

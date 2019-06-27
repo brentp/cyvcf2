@@ -544,6 +544,9 @@ cdef class VCF:
             if len(self._seqlens) > 0: return self._seqlens
             cdef int32_t nseq;
             cdef int32_t* sls = bcf_hdr_seqlen(self.hdr, &nseq)
+            if sls == NULL or nseq <= 0:
+              raise AttributeError("no sequence lengths found in header")
+
             self._seqlens = [sls[i] for i in range(nseq)]
             stdlib.free(sls)
             return self._seqlens

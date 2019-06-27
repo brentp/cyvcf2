@@ -1,0 +1,6 @@
+##fileformat=VCFv4.1
+##ALT=<ID=*:DEL,Description="Represents any possible spanning deletion allele at this location">
+##ALT=<ID=NON_REF,Description="Represents any possible alternative allele at this location">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	sample1	sample2	sample3	sample4	sample5
+3	81262	.	G	A	1826147.32	.	.	GT	0/.	./0	1/.	./1	./.

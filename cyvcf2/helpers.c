@@ -128,6 +128,7 @@ int32_t* bcf_hdr_seqlen(const bcf_hdr_t *hdr, int32_t *nseq)
     int tid, m = kh_size(d);
     int32_t *lens = (int32_t*) malloc(m*sizeof(int32_t));
     khint_t k;
+    int found = 0;
 
     for (k=kh_begin(d); k<kh_end(d); k++)
     {
@@ -135,10 +136,17 @@ int32_t* bcf_hdr_seqlen(const bcf_hdr_t *hdr, int32_t *nseq)
         tid = kh_val(d,k).id;
         lens[tid] = bcf_hrec_find_key(kh_val(d, k).hrec[0],"length");
         int j;
-        if ( sscanf(kh_val(d, k).hrec[0]->vals[lens[tid]],"%d",&j) )
+        if (lens[tid] > 0 && sscanf(kh_val(d, k).hrec[0]->vals[lens[tid]],"%d",&j) )
             lens[tid] = j;
+	if(lens[tid] > 0){
+	  found++;
+	}
     }
-	*nseq = m;
+    *nseq = m;
+    // found is used to check that we actually got the lengths.
+    if(found == 0){
+      *nseq = -1;
+    }
     return lens;
 }
 

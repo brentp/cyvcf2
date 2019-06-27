@@ -1000,16 +1000,6 @@ def test_set_alternates():
       v.ALT = ["AAAC", "CCCA"]
       assert "AAAC,CCCA" in str(v)
 
-def test_117():
-    vcf_path = os.path.join(HERE, "test.bug.117.vcf")
-    vcf = VCF(vcf_path)
-    writer = Writer("-", vcf)
-
-    for v in vcf:
-        writer.write_record(v)
-    writer.close()
-
-
 def test_no_seqlen():
 
     vcf_path = os.path.join(HERE, "no-seq-len.vcf")

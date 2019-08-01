@@ -1,0 +1,9 @@
+##fileformat=VCFv4.0
+##phasing=partial
+##contig=<ID=1,length=16>
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA00001	NA00002	NA00003
+chr1	4	.	T	C	9.6	.	.	GT:HQ	./.:51,51	0|0:51,51	1/1:51,51
+chr1	5	.	A	GA	10	.	.	GT:HQ	0|0:10,10	0|0:10,10	0|0:3,3
+chr1	25	.	AACG	GA	10	.	.	GT:HQ	0|0:10,10	1/1:10,10	0|0:3,3

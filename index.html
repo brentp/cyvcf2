@@ -1,42 +1,34 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+<!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>cyvcf2 &mdash; cyvcf2 0.6.5 documentation</title>
-    
+    <meta charset="utf-8" />
+    <title>cyvcf2 &#8212; cyvcf2 0.6.5 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '0.6.5',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="cyvcf2 0.6.5 documentation" href="#" />
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="cyvcf2 API" href="docstrings.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
+  
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body role="document">
+  </head><body>
   
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <div class="section" id="cyvcf2">
@@ -45,7 +37,7 @@
 It is a <cite>cython</cite> wrapper for <a class="reference external" href="https://github.com/samtools/htslib/">htslib</a> developed in
 the <a class="reference external" href="http://quinlanlab.org/">Quinlan lab</a>.</p>
 <p>See the <a class="reference internal" href="docstrings.html#api"><span class="std std-ref">cyvcf2 API</span></a> for detailed documentation, but the most common usage is summarized in the snippet below:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">cyvcf2</span> <span class="kn">import</span> <span class="n">VCF</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">cyvcf2</span> <span class="kn">import</span> <span class="n">VCF</span>
 
 <span class="k">for</span> <span class="n">variant</span> <span class="ow">in</span> <span class="n">VCF</span><span class="p">(</span><span class="s1">&#39;some.vcf.gz&#39;</span><span class="p">):</span> <span class="c1"># or VCF(&#39;some.bcf&#39;)</span>
     <span class="n">variant</span><span class="o">.</span><span class="n">REF</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">ALT</span> <span class="c1"># e.g. REF=&#39;A&#39;, ALT=[&#39;C&#39;, &#39;T&#39;]</span>
@@ -94,7 +86,7 @@ the <a class="reference external" href="http://quinlanlab.org/">Quinlan lab</a>.
 <p><cite>cyvcf2</cite> is optimized for fast reading and extraction from existing files.
 However, it also offers some means of modifying existing VCFs. Here, wrapper
 show an example of how to annotate variants with the genes that they overlap.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">cyvcf2</span> <span class="kn">import</span> <span class="n">VCF</span><span class="p">,</span> <span class="n">Writer</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">cyvcf2</span> <span class="kn">import</span> <span class="n">VCF</span><span class="p">,</span> <span class="n">Writer</span>
 <span class="n">vcf</span> <span class="o">=</span> <span class="n">VCF</span><span class="p">(</span><span class="n">VCF_PATH</span><span class="p">)</span>
 <span class="c1"># adjust the header to contain the new field</span>
 <span class="c1"># the keys &#39;ID&#39;, &#39;Description&#39;, &#39;Type&#39;, and &#39;Number&#39; are required.</span>
@@ -117,9 +109,31 @@ show an example of how to annotate variants with the genes that they overlap.</p
 </pre></div>
 </div>
 </div>
+<div class="section" id="setting-genotyping-strictness">
+<h1>Setting Genotyping Strictness<a class="headerlink" href="#setting-genotyping-strictness" title="Permalink to this headline">¶</a></h1>
+<p>By default, genotypes containing a single missing allele (e.g. genotypes such
+as <code class="docutils literal notranslate"><span class="pre">0/.</span></code>, <code class="docutils literal notranslate"><span class="pre">./0</span></code>, <code class="docutils literal notranslate"><span class="pre">1/.</span></code>, or <code class="docutils literal notranslate"><span class="pre">./1</span></code>) are classified as heterozygous (“HET”
+or id: 1) instead of “UNKNOWN” (or id: 2).  A case can be made for either
+classification on these partially missing genotypes depending on the situation.</p>
+<p>A better way to explicitly control the genotype classification for these cases,
+is to use the “strict genotype”, or <code class="docutils literal notranslate"><span class="pre">strict_gt</span></code>, feature.  Here’s an example
+usage:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">cyvcf2</span> <span class="kn">import</span> <span class="n">VCF</span>
+<span class="n">vcf</span> <span class="o">=</span> <span class="n">VCF</span><span class="p">(</span><span class="s2">&quot;/path/to/vcf/file&quot;</span><span class="p">,</span> <span class="n">strict_gt</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">variant</span> <span class="ow">in</span> <span class="n">vcf</span><span class="p">:</span>
+    <span class="c1"># do something</span>
+</pre></div>
+</div>
+<p>When the <code class="docutils literal notranslate"><span class="pre">strict_gt</span></code> flag is enabled, <cite>cyvcf2</cite> will treat any genotype
+containing a missing allele (containing a ‘.’) as an UNKNOWN genotype;
+otherwise, genotypes like <code class="docutils literal notranslate"><span class="pre">0/.</span></code>, <code class="docutils literal notranslate"><span class="pre">./0</span></code>, <code class="docutils literal notranslate"><span class="pre">1/.</span></code>, or <code class="docutils literal notranslate"><span class="pre">./1</span></code> will be
+classified as heterozygous (“HET”).</p>
+<p>The “strict genotype” feature is not enabled by default (i.e. <code class="docutils literal notranslate"><span class="pre">strict_gt</span></code> is
+set to <cite>False</cite> by default) to preserve backwards compatibility.</p>
+</div>
 <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>pip install cyvcf2
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip install cyvcf2
 </pre></div>
 </div>
 <p>or via bioconda.</p>
@@ -127,7 +141,7 @@ show an example of how to annotate variants with the genes that they overlap.</p
 <div class="section" id="testing">
 <h1>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h1>
 <p>Tests can be run with:</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>python setup.py <span class="nb">test</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python setup.py <span class="nb">test</span>
 </pre></div>
 </div>
 </div>
@@ -143,18 +157,25 @@ show an example of how to annotate variants with the genes that they overlap.</p
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="#">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">cyvcf2</a></li>
-<li><a class="reference internal" href="#modifying-existing-records">Modifying Existing Records</a></li>
-<li><a class="reference internal" href="#installation">Installation</a></li>
-<li><a class="reference internal" href="#testing">Testing</a></li>
-<li><a class="reference internal" href="#see-also">See Also</a></li>
+<h1 class="logo"><a href="#">cyvcf2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="docstrings.html">cyvcf2 API</a></li>
 </ul>
+
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
@@ -163,23 +184,24 @@ show an example of how to annotate variants with the genes that they overlap.</p
   </ul></li>
 </ul>
 </div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="_sources/index.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
       <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
         </div>
       </div>
       <div class="clearer"></div>
@@ -188,11 +210,11 @@ show an example of how to annotate variants with the genes that they overlap.</p
       &copy;2016, Brent Pedersen.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
-      <a href="_sources/index.txt"
+      <a href="_sources/index.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

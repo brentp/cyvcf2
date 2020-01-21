@@ -1126,7 +1126,7 @@ cdef class Variant(object):
                 &hets[0], self.vcf.n_samples, &alt_freqs[0])
 
     property num_called:
-        "number of samples that were not UKNOWN."
+        "number of samples that were not UNKNOWN."
         def __get__(self):
             if self._gt_types == NULL:
                 self.gt_types
@@ -1142,7 +1142,7 @@ cdef class Variant(object):
             return n
 
     property call_rate:
-        "proprtion of samples that were not UKNOWN."
+        "proprtion of samples that were not UNKNOWN."
         def __get__(self):
             if self.vcf.n_samples > 0:
                 return float(self.num_called) / self.vcf.n_samples
@@ -1394,7 +1394,7 @@ cdef class Variant(object):
     property gt_types:
         """gt_types returns a numpy array indicating the type of each sample.
 
-        HOM_REF=0, HET=1. For `gts012=True` HOM_ALT=2, UKNOWN=3
+        HOM_REF=0, HET=1. For `gts012=True` HOM_ALT=2, UNKNOWN=3
         """
         def __get__(self):
             cdef int ndst = 0, ngts, n, i, nper, j = 0, k = 0

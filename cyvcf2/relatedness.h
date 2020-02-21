@@ -7,7 +7,7 @@
 #define _UNKNOWN 3
 
 // internal calculate of alternate allele frequency.
-inline float aaf(int *gt_types, int32_t n_samples){
+static inline float aaf(int *gt_types, int32_t n_samples){
 	float af = 0;
 	int i, n_called = 0;
 
@@ -134,7 +134,7 @@ int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0, int32_t *ibs
 }
 
 // returns 1 if this is a usable site.
-inline int ab_ok(double ab, int ab_missing) {
+static inline int ab_ok(double ab, int ab_missing) {
     if (ab_missing) {
         return 1;
     }

@@ -1684,7 +1684,7 @@ cdef class Variant(object):
             return depth
 
     property gt_phases:
-        """get a boolean indicating wether each sample is phased as a numpy array."""
+        """get a boolean indicating whether each sample is phased as a numpy array."""
         def __get__(self):
             # run for side-effect
             if self._gt_phased == NULL:

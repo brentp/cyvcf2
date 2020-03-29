@@ -73,17 +73,19 @@ Installation
 pip install cyvcf2
 ```
 
-## github (building htslib and cyvcf2 from source)
+## conda
+```
+conda install -c bioconda cyvcf2
+```
 
+
+Developing
+==========
 ```
 git clone --recursive https://github.com/brentp/cyvcf2
-cd cyvcf2/htslib
-autoheader
-autoconf
-./configure --enable-libcurl
-make
+conda install -c bioconda --file requirements.txt
+cd cyvcf
 
-cd ..
 pip install -e .
 ```
 

@@ -1,3 +1,4 @@
+htslib>=1.9
 cython>=0.23.3
 numpy
 coloredlogs

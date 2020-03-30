@@ -68,7 +68,7 @@ for v in vcf('11:435345-556565'):
 Installation
 ============
 
-## pip
+## pip (assuming you have htslib < 1.10 installed)
 ```
 pip install cyvcf2
 ```
@@ -84,7 +84,7 @@ autoconf
 make
 
 cd ..
-pip install -e .
+CYTHONIZE=1 pip install -e .
 ```
 
 On **OSX**, using brew, you may have to set the following as indicated by the brew install:

@@ -1091,7 +1091,7 @@ cdef class Variant(object):
             cdef list d = [from_bytes(alleles[i]) for i in range(self.b.n_allele)]
             d.append(".") # -1 gives .
             cdef list bases = ["./." for _ in range(self.vcf.n_samples)]
-            cdef np.ndarray phased = self.gt_phases
+            cdef np.ndarray phased = (self.gt_phases).astype(int)
             cdef list lookup = ["/", "|"]
             cdef int unknown = 3 if self.vcf.gts012 else 2
             for i in range(0, n * self.vcf.n_samples, n):
@@ -1287,7 +1287,7 @@ cdef class Variant(object):
         cdef int ndst = 0
         if bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst) <= 0:
             raise Exception("couldn't get genotypes for variant")
-        return newGenotypes(gts, ndst/self.vcf.n_samples, self.vcf.n_samples)
+        return newGenotypes(gts, int(ndst/self.vcf.n_samples), self.vcf.n_samples)
 
     @genotype.setter
     def genotype(self, Genotypes g):
@@ -1380,7 +1380,7 @@ cdef class Variant(object):
             size *= data.shape[1]
 
         cdef int ret
-        if np.issubdtype(data.dtype, np.int):
+        if np.issubdtype(data.dtype, np.signedinteger) or np.issubdtype(data.dtype, np.unsignedinteger):
             aint = data.astype(np.int32).reshape((size,))
             ret = bcf_update_format_int32(self.vcf.hdr, self.b, to_bytes(name), &aint[0], size)
         elif np.issubdtype(data.dtype, np.float):
@@ -1404,7 +1404,7 @@ cdef class Variant(object):
             if self._gt_types == NULL:
                 self._gt_phased = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples)
                 ngts = bcf_get_genotypes(self.vcf.hdr, self.b, &self._gt_types, &ndst)
-                nper = ndst / self.vcf.n_samples
+                nper = int(ndst / self.vcf.n_samples)
                 self._ploidy = nper
                 self._gt_idxs = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples * nper)
                 if ndst == 0 or nper == 0:
@@ -1460,7 +1460,7 @@ cdef class Variant(object):
                         if self._gt_pls[i] < 0:
                             self._gt_pls[i] = imax
 
-                self._gt_nper = nret / self.vcf.n_samples
+                self._gt_nper = int(nret / self.vcf.n_samples)
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self._gt_nper * self.vcf.n_samples
             if self._gt_pls != NULL:
@@ -1534,7 +1534,7 @@ cdef class Variant(object):
                 # GATK
                 nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AD", &self._gt_ref_depths, &ndst)
                 if nret > 0:
-                    nper = nret / self.vcf.n_samples
+                    nper = int(nret / self.vcf.n_samples)
                     if nper == 1:
                         stdlib.free(self._gt_ref_depths); self._gt_ref_depths = NULL
                         return -1 + np.zeros(self.vcf.n_samples, np.int32)
@@ -1575,7 +1575,7 @@ cdef class Variant(object):
                 # GATK
                 nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AD", &self._gt_alt_depths, &ndst)
                 if nret > 0:
-                    nper = nret / self.vcf.n_samples
+                    nper = int(nret / self.vcf.n_samples)
                     if nper == 1:
                         stdlib.free(self._gt_alt_depths); self._gt_alt_depths = NULL
                         return (-1 + np.zeros(self.vcf.n_samples, np.int32))
@@ -1590,7 +1590,7 @@ cdef class Variant(object):
                 elif nret == -1:
                     # Freebayes
                     nret = bcf_get_format_int32(self.vcf.hdr, self.b, "AO", &self._gt_alt_depths, &ndst)
-                    nper = nret / self.vcf.n_samples
+                    nper = int(nret / self.vcf.n_samples)
                     if nret < 0:
                         stdlib.free(self._gt_alt_depths); self._gt_alt_depths = NULL
                         return -1 + np.zeros(self.vcf.n_samples, np.int32)

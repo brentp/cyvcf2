@@ -1383,7 +1383,7 @@ cdef class Variant(object):
         if np.issubdtype(data.dtype, np.signedinteger) or np.issubdtype(data.dtype, np.unsignedinteger):
             aint = data.astype(np.int32).reshape((size,))
             ret = bcf_update_format_int32(self.vcf.hdr, self.b, to_bytes(name), &aint[0], size)
-        elif np.issubdtype(data.dtype, np.float):
+        elif np.issubdtype(data.dtype, np.floating):
             afloat = data.astype(np.float32).reshape((size,))
             ret = bcf_update_format_float(self.vcf.hdr, self.b, to_bytes(name), &afloat[0], size)
         else:

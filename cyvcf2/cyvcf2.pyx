@@ -533,11 +533,12 @@ cdef class VCF:
             return [str(self.hdr.samples[i].decode('utf-8')) for i in range(self.n_samples)]
 
     property raw_header:
-        "string of the raw header from the VCF"
-        def __get__(self):
-            cdef int hlen
-            s = bcf_hdr_fmt_text(self.hdr, 0, &hlen)
-            return from_bytes(s)
+         "string of the raw header from the VCF"
+         def __get__(self):
+             cdef kstring_t s
+             s.s, s.l, s.m = NULL, 0, 0
+             bcf_hdr_format(self.hdr, 0, &s)
+             return from_bytes(s.s)
 
     property seqlens:
         def __get__(self):

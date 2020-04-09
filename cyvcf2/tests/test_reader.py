@@ -1,5 +1,5 @@
 from __future__ import print_function
-from cyvcf2 import VCF, Variant, Writer
+from ..cyvcf2 import VCF, Variant, Writer
 import numpy as np
 import os.path
 from nose.tools import assert_raises

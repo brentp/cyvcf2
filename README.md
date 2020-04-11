@@ -1,6 +1,8 @@
 cyvcf2
 ======
 
+Note: cyvcf2 versions < 0.20.0 require htslib < 1.10. cyvcf2 versions >= 0.20.0 require htslib >= 1.10
+
 <!-- ghp-import -p docs/build/html/ -->
 [![Docs](https://img.shields.io/badge/docs-latest-blue.svg)](http://brentp.github.io/cyvcf2/)
 

@@ -57,6 +57,9 @@ sources.append('cyvcf2/helpers.c')
 extensions = [Extension("cyvcf2.cyvcf2",
                         ["cyvcf2/cyvcf2.pyx"] + sources,
                         libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (['crypt'] if platform.system() != 'Darwin' else []),
+                        extra_compile_args=["-Wno-sign-compare", "-Wno-unused-function",
+                            "-Wno-strict-prototypes",
+                            "-Wno-unused-result", "-Wno-discarded-qualifiers"],
                         include_dirs=['htslib', 'cyvcf2', np.get_include()])]
 
 

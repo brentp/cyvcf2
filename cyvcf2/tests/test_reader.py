@@ -1,5 +1,5 @@
 from __future__ import print_function
-from cyvcf2 import VCF, Variant, Writer
+from ..cyvcf2 import VCF, Variant, Writer
 import numpy as np
 import os.path
 from nose.tools import assert_raises
@@ -583,7 +583,7 @@ def test_set_format_float():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     assert vcf.add_format_to_header(dict(ID="PS", Number=1, Type="Float", Description="PS example")) == 0
     v = next(vcf)
-    v.set_format("PS", np.array([0.555, 1.111], dtype=np.float))
+    v.set_format("PS", np.array([0.555, 1.111], dtype=np.float32))
     assert allclose(fmap(float, get_gt_str(v, "PS")), np.array([0.555, 1.111]))
 
     v.set_format("PS", np.array([8.555, 11.111], dtype=np.float64))
@@ -876,18 +876,18 @@ def test_strict_gt_option_flag():
 
     msg = "VCF(gts012=False, strict_gt=False) not working"
     truth_gt_types = (0, 3, 1, 1, 1, 1, 0, 0, 2)
-    assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
-    assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
-    assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
+    assert bool(tuple(variant.gt_bases.tolist()) == truth_gt_bases), '{} [gt_bases]'.format(msg)
+    assert bool(tuple(variant.gt_types.tolist()) == truth_gt_types), '{} [gt_types]'.format(msg)
+    assert bool(tuple(variant.genotypes) == truth_genotypes), '{} (genotypes)'.format(msg)
 
     vcf = VCF(test_vcf, gts012=False, strict_gt=True)
     variant = next(vcf)
 
     msg = "VCF(gts012=False, strict_gt=True) not working"
     truth_gt_types = (0, 3, 1, 1, 2, 2, 2, 2, 2)
-    assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
-    assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
-    assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
+    assert bool(tuple(variant.gt_bases.tolist()) == truth_gt_bases), '{} [gt_bases]'.format(msg)
+    assert bool(tuple(variant.gt_types.tolist()) == truth_gt_types), '{} [gt_types]'.format(msg)
+    assert bool(tuple(variant.genotypes) == truth_genotypes), '{} (genotypes)'.format(msg)
 
 
     vcf = VCF(test_vcf, gts012=True)

@@ -154,7 +154,7 @@ cdef class HTSFile:
         cdef hFILE *hf
         self.mode = to_bytes(mode)
         reading = b"r" in self.mode
-        if not reading and b"w" in self.mode:
+        if not reading and b"w" not in self.mode:
             raise IOError("No 'r' or 'w' in mode %s" % str(self.mode))
         self.from_path = False
         # for htslib, wbu seems to not work

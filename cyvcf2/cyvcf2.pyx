@@ -154,7 +154,7 @@ cdef class HTSFile:
         cdef hFILE *hf
         self.mode = to_bytes(mode)
         reading = b"r" in self.mode
-        if not reading and not b"w":
+        if not reading and b"w" in self.mode:
             raise IOError("No 'r' or 'w' in mode %s" % str(self.mode))
         self.from_path = False
         # for htslib, wbu seems to not work
@@ -198,12 +198,12 @@ cdef class HTSFile:
         if reading:
             if self.hts.format.format != vcf and self.hts.format.format != bcf:
                 raise IOError(
-                    "%s if not valid bcf or vcf (format: %s mode: %s)" % (fname, self.hts.format.format, mode)
+                    "%s is not valid bcf or vcf (format: %s mode: %s)" % (fname, self.hts.format.format, mode)
                 )
         else:
             if self.hts.format.format != text_format and self.hts.format.format != binary_format:
                 raise IOError(
-                    "%s if not valid text_format or binary_format (format: %s mode: %s)" % (fname, self.hts.format.format, mode)
+                    "%s is not valid text_format or binary_format (format: %s mode: %s)" % (fname, self.hts.format.format, mode)
                 )
 
     def close(self):

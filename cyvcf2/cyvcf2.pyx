@@ -11,7 +11,10 @@ import numpy as np
 from array import array
 import math
 import ctypes
-
+try:
+  from pathlib import Path
+except ImportError:
+  from pathlib2 import Path  # python 2 backport
 
 from libc cimport stdlib
 cimport numpy as np
@@ -130,7 +133,87 @@ cdef set_constants(VCF v):
         v.HOM_ALT = 3
 
 
-cdef class VCF:
+
+cdef class HTSFile:
+
+    cdef htsFile *hts
+    cdef bytes fname
+    cdef bytes mode
+    cdef bint from_path
+
+    cdef _open_htsfile(self, fname, mode):
+        """Opens an htsfile for reading or writing.
+
+        Parameters
+        ----------
+        fname: str
+            filename (str or Path), file descriptor (int), or file-like object (has fileno method).
+        mode: str
+            the mode to pass to hts_open.
+        """
+        cdef hFILE *hf
+        self.mode = to_bytes(mode)
+        reading = b"r" in self.mode
+        if not reading and b"w" not in self.mode:
+            raise IOError("No 'r' or 'w' in mode %s" % str(self.mode))
+        self.from_path = False
+        # for htslib, wbu seems to not work
+        if mode == b"wbu":
+            mode = to_bytes(b"wb0")
+        if isinstance(fname, (basestring, Path)):
+            self.from_path = True
+            self.fname = to_bytes(str(fname))
+            if self.fname == b"-":
+                self.fname = to_bytes(b"/dev/stdin") if reading else to_bytes(b"/dev/stdout")
+            if self.fname.endswith(b".gz") and self.mode == b"w":
+                self.mode = b"wz"
+            elif self.fname.endswith(b".bcf") and self.mode == b"w":
+                self.mode = b"wb"
+            self.fname = to_bytes(str(fname))
+            self.mode = to_bytes(mode)
+            self.hts = hts_open(self.fname, self.mode)
+        # from a file descriptor
+        elif isinstance(fname, int):
+            self.mode = to_bytes(mode)
+            hf = hdopen(int(fname), self.mode)
+            self.hts = hts_hopen(hf, "<file>", self.mode)
+            self.fname = None
+        # reading from a File object or other object with fileno
+        elif hasattr(fname, "fileno"):
+            if fname.closed:
+                raise IOError('I/O operation on closed file')
+            self.mode = to_bytes(mode)
+            hf = hdopen(fname.fileno(), self.mode)
+            self.hts = hts_hopen(hf, "<file>", self.mode)
+            # .name can be TextIOWrapper
+            try:
+                self.fname = to_bytes(fname.name)
+            except AttributeError:
+                self.fname = None
+        else:
+            raise IOError("Cannot open '%s' for writing." % str(type(fname)))
+
+        if self.hts == NULL:
+            raise IOError("Error opening %s" % str(fname))
+        if reading:
+            if self.hts.format.format != vcf and self.hts.format.format != bcf:
+                raise IOError(
+                    "%s is not valid bcf or vcf (format: %s mode: %s)" % (fname, self.hts.format.format, mode)
+                )
+        else:
+            if self.hts.format.format != text_format and self.hts.format.format != binary_format:
+                raise IOError(
+                    "%s is not valid text_format or binary_format (format: %s mode: %s)" % (fname, self.hts.format.format, mode)
+                )
+
+    def close(self):
+        if self.hts != NULL:
+            if self.from_path:
+                hts_close(self.hts)
+            self.hts = NULL
+
+
+cdef class VCF(HTSFile):
     """
     VCF class holds methods to iterate over and query a VCF.
 
@@ -146,6 +229,8 @@ cdef class VCF:
         if True, then any '.' present in a genotype will classify the corresponding element in the gt_types array as UNKNOWN.
     samples: list
         list of samples to extract from full set in file.
+    threads: int
+        the number of threads to use including this reader.
 
 
     Returns
@@ -153,13 +238,11 @@ cdef class VCF:
     VCF object for iterating and querying.
     """
 
-    cdef htsFile *hts
     cdef const bcf_hdr_t *hdr
     cdef tbx_t *idx
     cdef hts_idx_t *hidx
     cdef int n_samples
     cdef int PASS
-    cdef bytes fname
     cdef bint gts012
     cdef bint lazy
     cdef bint strict_gt
@@ -178,25 +261,8 @@ cdef class VCF:
     cdef readonly int UNKNOWN
 
     def __init__(self, fname, mode="r", gts012=False, lazy=False, strict_gt=False, samples=None, threads=None):
-        cdef hFILE *hf
-
-        if isinstance(fname, basestring):
-            if fname == b"-" or fname == "-":
-                fname = b"/dev/stdin"
-            fname, mode = to_bytes(fname), to_bytes(mode)
-            self.hts = hts_open(fname, mode)
-            self.fname = fname
-        else:
-            mode = to_bytes(mode)
-            hf = hdopen(int(fname), mode)
-            self.hts = hts_hopen(hf, "<file>", mode)
-
-        if self.hts == NULL:
-            raise IOError("Error opening %s" % fname)
-        if self.hts.format.format != vcf and self.hts.format.format != bcf:
-            raise IOError("%s if not valid bcf or vcf" % fname)
-
         cdef bcf_hdr_t *hdr
+        self._open_htsfile(fname, mode)
         hdr = self.hdr = bcf_hdr_read(self.hts)
         if samples is not None:
             self.set_samples(samples)
@@ -490,13 +556,6 @@ cdef class VCF:
             return False
 
     contains = __contains__
-
-    def close(self):
-        if self.hts != NULL:
-            if self.fname != "-":
-                # TODO flush
-                hts_close(self.hts)
-            self.hts = NULL
 
     def __dealloc__(self):
         if self.hts != NULL and self.hdr != NULL:
@@ -2155,6 +2214,7 @@ cdef from_bytes(s):
     return s
 
 
+# TODO: make Writer extend HTSFile not VCF by moving common methods into HTSFile
 cdef class Writer(VCF):
     """
     Writer class makes a VCF Writer.
@@ -2177,15 +2237,7 @@ cdef class Writer(VCF):
     cdef const bcf_hdr_t *ohdr
 
     def __init__(Writer self, fname, VCF tmpl, mode="w"):
-        self.name = to_bytes(fname)
-        if fname.endswith(".gz") and mode == "w":
-            mode = "wz"
-        if fname.endswith(".bcf") and mode == "w":
-            mode = "wb"
-        self.hts = hts_open(self.name, to_bytes(mode))
-        if self.hts == NULL:
-            raise Exception("error opening file: %s" % self.name)
-
+        self._open_htsfile(fname, mode)
         bcf_hdr_sync(tmpl.hdr)
         self.ohdr = tmpl.hdr
         self.hdr = bcf_hdr_dup(tmpl.hdr)
@@ -2195,14 +2247,8 @@ cdef class Writer(VCF):
     @classmethod
     def from_string(Writer cls, fname, header_string, mode="w"):
         cdef Writer self = Writer.__new__(Writer)
-
-        self.name = to_bytes(fname)
-        if fname.endswith(".gz") and mode == "w":
-            mode = "wz"
-        if fname.endswith(".bcf") and mode == "w":
-            mode = "wb"
-        self.hts = hts_open(self.name, to_bytes(mode))
         cdef char *hmode = "w"
+        self._open_htsfile(fname, mode)
         self.hdr = bcf_hdr_init(hmode)
         self.ohdr = bcf_hdr_dup(self.hdr)
         if bcf_hdr_parse(self.hdr, to_bytes(header_string)) != 0:

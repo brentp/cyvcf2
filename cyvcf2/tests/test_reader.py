@@ -7,6 +7,11 @@ import tempfile
 import sys
 import os
 import atexit
+try:
+  from pathlib import Path
+except ImportError:
+  from pathlib2 import Path  # python 2 backport
+
 
 HERE = os.path.dirname(__file__)
 VCF_PATH = os.path.join(HERE, "test.vcf.gz")
@@ -20,8 +25,29 @@ except NameError:
     basestring = (str, bytes)
 
 def test_init():
+    # string
     v = VCF(VCF_PATH)
     assert v
+    expected_count = sum(1 for _ in v)
+    v.close()
+
+    # Path
+    v = VCF(Path(VCF_PATH))
+    value = sum(1 for _ in v)
+    assert value == expected_count
+
+    # file descriptor
+    with open(VCF_PATH) as fp:
+        fd = fp.fileno()
+        v = VCF(fd)
+        assert sum(1 for _ in v) == expected_count
+        v.close()  # this should not close the file descriptor originally opened
+
+    # file-like object
+    with open(VCF_PATH) as fp:
+        v = VCF(fp)
+        assert sum(1 for _ in v) == expected_count
+        v.close()  # this should not close the file descriptor originally opened
 
 def test_type():
     vcf = VCF(VCF_PATH)
@@ -237,31 +263,45 @@ def test_writer_from_string():
     w.close()
 
 
-def test_writer():
-
-    v = VCF(VCF_PATH)
-    f = tempfile.mktemp(suffix=".vcf")
-    atexit.register(os.unlink, f)
-
-    o = Writer(f, v)
-    rec = next(v)
+def run_writer(writer, filename, rec):
     rec.INFO["AC"] = "3"
     rec.FILTER = ["LowQual"]
-    o.write_record(rec)
+    writer.write_record(rec)
 
     rec.FILTER = ["LowQual", "VQSRTrancheSNP99.90to100.00"]
-    o.write_record(rec)
-
+    writer.write_record(rec)
 
     rec.FILTER = "PASS"
-    o.write_record(rec)
+    writer.write_record(rec)
 
-    o.close()
+    writer.close()
 
     expected = ["LowQual", "LowQual;VQSRTrancheSNP99.90to100.00", None]
 
-    for i, variant in enumerate(VCF(f)):
+    for i, variant in enumerate(VCF(filename)):
         assert variant.FILTER == expected[i], (variant.FILTER, expected[i])
+
+def test_writer():
+    v = VCF(VCF_PATH)
+    f = tempfile.mktemp(suffix=".vcf")
+    atexit.register(os.unlink, f)
+    rec = next(v)
+
+    # string
+    run_writer(Writer(f, v), f, rec)
+
+    # Path
+    path = Path(f)
+    run_writer(Writer(path, v), f, rec)
+
+    # file descriptor
+    with open(VCF_PATH) as fp:
+        fd = fp.fileno()
+        run_writer(Writer(fd, v), f, rec)
+
+    # file-like object
+    with open(VCF_PATH) as fp:
+        run_writer(Writer(fp, v), f, rec)
 
 def test_add_info_to_header():
     v = VCF(VCF_PATH)

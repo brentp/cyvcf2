@@ -1,17 +1,17 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
     <title>cyvcf2 API &#8212; cyvcf2 0.11.5 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="prev" title="cyvcf2" href="index.html" />
@@ -33,9 +33,9 @@
             
   <div class="section" id="cyvcf2-api">
 <span id="api"></span><h1>cyvcf2 API<a class="headerlink" href="#cyvcf2-api" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
+<dl class="py class">
 <dt id="cyvcf2.cyvcf2.VCF">
-<em class="property">class </em><code class="sig-prename descclassname">cyvcf2.cyvcf2.</code><code class="sig-name descname">VCF</code><span class="sig-paren">(</span><em class="sig-param">fname</em>, <em class="sig-param">mode='r'</em>, <em class="sig-param">gts012=False</em>, <em class="sig-param">lazy=False</em>, <em class="sig-param">strict_gt=False</em>, <em class="sig-param">samples=None</em>, <em class="sig-param">threads=None</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">cyvcf2.cyvcf2.</code><code class="sig-name descname">VCF</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fname</span></em>, <em class="sig-param"><span class="n">mode</span><span class="o">=</span><span class="default_value">'r'</span></em>, <em class="sig-param"><span class="n">gts012</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">lazy</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">strict_gt</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">samples</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">threads</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF" title="Permalink to this definition">¶</a></dt>
 <dd><p>VCF class holds methods to iterate over and query a VCF.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -54,9 +54,9 @@
 <dd class="field-odd"><p>VCF object for iterating and querying.</p>
 </dd>
 </dl>
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.VCF.add_filter_to_header">
-<code class="sig-name descname">add_filter_to_header</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">adict</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.add_filter_to_header" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_filter_to_header</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em>, <em class="sig-param"><span class="n">adict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.add_filter_to_header" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a FILTER line to the VCF header.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -65,9 +65,9 @@
 </dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.VCF.add_format_to_header">
-<code class="sig-name descname">add_format_to_header</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">adict</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.add_format_to_header" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_format_to_header</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em>, <em class="sig-param"><span class="n">adict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.add_format_to_header" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a FORMAT line to the VCF header.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -76,9 +76,9 @@
 </dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.VCF.add_info_to_header">
-<code class="sig-name descname">add_info_to_header</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">adict</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.add_info_to_header" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_info_to_header</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em>, <em class="sig-param"><span class="n">adict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.add_info_to_header" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a INFO line to the VCF header.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -87,9 +87,9 @@
 </dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.VCF.add_to_header">
-<code class="sig-name descname">add_to_header</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">line</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.add_to_header" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_to_header</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em>, <em class="sig-param"><span class="n">line</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.add_to_header" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a new line to the VCF header.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -98,25 +98,25 @@
 </dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.VCF.close">
-<code class="sig-name descname">close</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.close" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.close" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.VCF.contains">
 <code class="sig-name descname">contains</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.contains" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check if the given ID is in the header.</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.VCF.gen_variants">
-<code class="sig-name descname">gen_variants</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">sites</em>, <em class="sig-param">offset=0</em>, <em class="sig-param">each=1</em>, <em class="sig-param">call_rate=0.8</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.gen_variants" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">gen_variants</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em>, <em class="sig-param"><span class="n">sites</span></em>, <em class="sig-param"><span class="n">offset</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">each</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">call_rate</span><span class="o">=</span><span class="default_value">0.8</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.gen_variants" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.VCF.get_header_type">
-<code class="sig-name descname">get_header_type</code><span class="sig-paren">(</span><em class="sig-param">self, key, order=[BCF_HL_INFO, BCF_HL_FMT]</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.get_header_type" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_header_type</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em>, <em class="sig-param"><span class="n">key</span></em>, <em class="sig-param"><span class="n">order</span><span class="o">=</span><span class="default_value">[BCF_HL_INFO, BCF_HL_FMT]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.get_header_type" title="Permalink to this definition">¶</a></dt>
 <dd><p>Extract a field from the VCF header by id.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -131,43 +131,43 @@
 </dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.VCF.header_iter">
-<code class="sig-name descname">header_iter</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.header_iter" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">header_iter</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.header_iter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Iterate over fields in the HEADER</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.VCF.raw_header">
 <code class="sig-name descname">raw_header</code><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.raw_header" title="Permalink to this definition">¶</a></dt>
 <dd><p>string of the raw header from the VCF</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.VCF.relatedness">
 <code class="sig-name descname">relatedness</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">int n_variants=35000</em>, <em class="sig-param">int gap=30000</em>, <em class="sig-param">float min_af=0.04</em>, <em class="sig-param">float max_af=0.8</em>, <em class="sig-param">float linkage_max=0.2</em>, <em class="sig-param">min_depth=8</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.relatedness" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.VCF.samples">
 <code class="sig-name descname">samples</code><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.samples" title="Permalink to this definition">¶</a></dt>
 <dd><p>list of samples pulled from the VCF.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.VCF.seqnames">
 <code class="sig-name descname">seqnames</code><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.seqnames" title="Permalink to this definition">¶</a></dt>
 <dd><p>list of chromosomes in the VCF</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.VCF.set_index">
-<code class="sig-name descname">set_index</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">index_path=''</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.set_index" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">set_index</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em>, <em class="sig-param"><span class="n">index_path</span><span class="o">=</span><span class="default_value">''</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.set_index" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.VCF.set_samples">
-<code class="sig-name descname">set_samples</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">samples</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.set_samples" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">set_samples</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em>, <em class="sig-param"><span class="n">samples</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.VCF.set_samples" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set the samples to be pulled from the VCF; this must be called before any iteration.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -178,12 +178,12 @@
 
 </dd></dl>
 
-<dl class="class">
+<dl class="py class">
 <dt id="cyvcf2.cyvcf2.Variant">
-<em class="property">class </em><code class="sig-prename descclassname">cyvcf2.cyvcf2.</code><code class="sig-name descname">Variant</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Variant" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">cyvcf2.cyvcf2.</code><code class="sig-name descname">Variant</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Variant" title="Permalink to this definition">¶</a></dt>
 <dd><p>Variant represents a single VCF Record.</p>
 <p>It is created internally by iterating over a VCF.</p>
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.INFO">
 <code class="sig-name descname">INFO</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.INFO" title="Permalink to this definition">¶</a></dt>
 <dd><p>a dictionary-like field that provides access to the VCF INFO field.</p>
@@ -194,70 +194,70 @@
 </dl>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.ALT">
 <code class="sig-name descname">ALT</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.ALT" title="Permalink to this definition">¶</a></dt>
 <dd><p>the list of alternate alleles.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.CHROM">
 <code class="sig-name descname">CHROM</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.CHROM" title="Permalink to this definition">¶</a></dt>
 <dd><p>chromosome of the variant.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.FILTER">
 <code class="sig-name descname">FILTER</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.FILTER" title="Permalink to this definition">¶</a></dt>
 <dd><p>the value of FILTER from the VCF field.</p>
 <p>a value of PASS in the VCF will give None for this function</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.FORMAT">
 <code class="sig-name descname">FORMAT</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.FORMAT" title="Permalink to this definition">¶</a></dt>
 <dd><p>VCF FORMAT field for this variant.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.ID">
 <code class="sig-name descname">ID</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.ID" title="Permalink to this definition">¶</a></dt>
 <dd><p>the value of ID from the VCF field.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.QUAL">
 <code class="sig-name descname">QUAL</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.QUAL" title="Permalink to this definition">¶</a></dt>
 <dd><p>the float value of QUAL from the VCF field.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.REF">
 <code class="sig-name descname">REF</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.REF" title="Permalink to this definition">¶</a></dt>
 <dd><p>the reference allele.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.aaf">
 <code class="sig-name descname">aaf</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.aaf" title="Permalink to this definition">¶</a></dt>
 <dd><p>alternate allele frequency across samples in this VCF.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.call_rate">
 <code class="sig-name descname">call_rate</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.call_rate" title="Permalink to this definition">¶</a></dt>
 <dd><p>proprtion of samples that were not UKNOWN.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.end">
 <code class="sig-name descname">end</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.end" title="Permalink to this definition">¶</a></dt>
 <dd><p>end of the variant. the INFO field is parsed for SVs.</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.Variant.format">
-<code class="sig-name descname">format</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">field</em>, <em class="sig-param">vtype=None</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.format" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">format</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em>, <em class="sig-param"><span class="n">field</span></em>, <em class="sig-param"><span class="n">vtype</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.format" title="Permalink to this definition">¶</a></dt>
 <dd><p>format returns a numpy array for the requested field.</p>
 <p>The numpy array shape will match the requested field. E.g. if the fields
 has number=3, then the shape will be (n_samples, 3).</p>
@@ -274,7 +274,7 @@ has number=3, then the shape will be (n_samples, 3).</p>
 </dl>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.genotypes">
 <code class="sig-name descname">genotypes</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.genotypes" title="Permalink to this definition">¶</a></dt>
 <dd><p>genotypes returns a list for each sample Indicating the allele and phasing.</p>
@@ -282,159 +282,159 @@ has number=3, then the shape will be (n_samples, 3).</p>
 while [1, 2, False] corresponds to 1/2</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.gt_alt_depths">
 <code class="sig-name descname">gt_alt_depths</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_alt_depths" title="Permalink to this definition">¶</a></dt>
 <dd><p>get the count of alternate reads as a numpy array.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.gt_alt_freqs">
 <code class="sig-name descname">gt_alt_freqs</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_alt_freqs" title="Permalink to this definition">¶</a></dt>
 <dd><p>get the freq of alternate reads as a numpy array.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.gt_bases">
 <code class="sig-name descname">gt_bases</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_bases" title="Permalink to this definition">¶</a></dt>
 <dd><p>numpy array indicating the alleles in each sample.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.gt_depths">
 <code class="sig-name descname">gt_depths</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_depths" title="Permalink to this definition">¶</a></dt>
 <dd><p>get the read-depth for each sample as a numpy array.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.gt_phases">
 <code class="sig-name descname">gt_phases</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_phases" title="Permalink to this definition">¶</a></dt>
 <dd><p>get a boolean indicating wether each sample is phased as a numpy array.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.gt_phred_ll_het">
 <code class="sig-name descname">gt_phred_ll_het</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_phred_ll_het" title="Permalink to this definition">¶</a></dt>
 <dd><p>get the PL of het for each sample as a numpy array.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.gt_phred_ll_homalt">
 <code class="sig-name descname">gt_phred_ll_homalt</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_phred_ll_homalt" title="Permalink to this definition">¶</a></dt>
 <dd><p>get the PL of hom_alt for each sample as a numpy array.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.gt_phred_ll_homref">
 <code class="sig-name descname">gt_phred_ll_homref</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_phred_ll_homref" title="Permalink to this definition">¶</a></dt>
 <dd><p>get the PL of Hom ref for each sample as a numpy array.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.gt_quals">
 <code class="sig-name descname">gt_quals</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_quals" title="Permalink to this definition">¶</a></dt>
 <dd><p>get the GQ for each sample as a numpy array.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.gt_ref_depths">
 <code class="sig-name descname">gt_ref_depths</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_ref_depths" title="Permalink to this definition">¶</a></dt>
 <dd><p>get the count of reference reads as a numpy array.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.gt_types">
 <code class="sig-name descname">gt_types</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.gt_types" title="Permalink to this definition">¶</a></dt>
 <dd><p>gt_types returns a numpy array indicating the type of each sample.</p>
 <p>HOM_REF=0, HET=1. For <cite>gts012=True</cite> HOM_ALT=2, UKNOWN=3</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.is_deletion">
 <code class="sig-name descname">is_deletion</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.is_deletion" title="Permalink to this definition">¶</a></dt>
 <dd><p>boolean indicating if the variant is a deletion.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.is_indel">
 <code class="sig-name descname">is_indel</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.is_indel" title="Permalink to this definition">¶</a></dt>
 <dd><p>boolean indicating if the variant is an indel.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.is_snp">
 <code class="sig-name descname">is_snp</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.is_snp" title="Permalink to this definition">¶</a></dt>
 <dd><p>boolean indicating if the variant is a SNP.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.is_sv">
 <code class="sig-name descname">is_sv</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.is_sv" title="Permalink to this definition">¶</a></dt>
 <dd><p>boolean indicating if the variant is an SV.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.is_transition">
 <code class="sig-name descname">is_transition</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.is_transition" title="Permalink to this definition">¶</a></dt>
 <dd><p>boolean indicating if the variant is a transition.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.num_called">
 <code class="sig-name descname">num_called</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.num_called" title="Permalink to this definition">¶</a></dt>
 <dd><p>number of samples that were not UKNOWN.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.num_het">
 <code class="sig-name descname">num_het</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.num_het" title="Permalink to this definition">¶</a></dt>
 <dd><p>number heterozygous samples at this variant.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.num_hom_alt">
 <code class="sig-name descname">num_hom_alt</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.num_hom_alt" title="Permalink to this definition">¶</a></dt>
 <dd><p>number homozygous alternate samples at this variant.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.num_hom_ref">
 <code class="sig-name descname">num_hom_ref</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.num_hom_ref" title="Permalink to this definition">¶</a></dt>
 <dd><p>number homozygous reference samples at this variant.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.num_unknown">
 <code class="sig-name descname">num_unknown</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.num_unknown" title="Permalink to this definition">¶</a></dt>
 <dd><p>number unknown samples at this variant.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.ploidy">
 <code class="sig-name descname">ploidy</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.ploidy" title="Permalink to this definition">¶</a></dt>
 <dd><p>get the ploidy of each sample for the given record.</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.Variant.set_format">
 <code class="sig-name descname">set_format</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">name</em>, <em class="sig-param">ndarray data</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.set_format" title="Permalink to this definition">¶</a></dt>
 <dd><p>set the format field given by name..
 data must be a numpy array of type float or int</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.Variant.set_pos">
 <code class="sig-name descname">set_pos</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">int pos0</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.set_pos" title="Permalink to this definition">¶</a></dt>
 <dd><p>set the POS to the given 0-based position</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.start">
 <code class="sig-name descname">start</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.start" title="Permalink to this definition">¶</a></dt>
 <dd><p>0-based start of the variant.</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Variant.var_type">
 <code class="sig-name descname">var_type</code><a class="headerlink" href="#cyvcf2.cyvcf2.Variant.var_type" title="Permalink to this definition">¶</a></dt>
 <dd><p>type of variant (snp/indel/sv)</p>
@@ -442,7 +442,7 @@ data must be a numpy array of type float or int</p>
 
 </dd></dl>
 
-<dl class="class">
+<dl class="py class">
 <dt id="cyvcf2.cyvcf2.Writer">
 <em class="property">class </em><code class="sig-prename descclassname">cyvcf2.cyvcf2.</code><code class="sig-name descname">Writer</code><span class="sig-paren">(</span><em class="sig-param">fname</em>, <em class="sig-param">VCF tmpl</em>, <em class="sig-param">mode='w'</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Writer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Writer class makes a VCF Writer.</p>
@@ -460,17 +460,17 @@ data must be a numpy array of type float or int</p>
 <dd class="field-odd"><p>VCF object for iterating and querying.</p>
 </dd>
 </dl>
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.Writer.close">
-<code class="sig-name descname">close</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Writer.close" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Writer.close" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.Writer.from_string">
 <code class="sig-name descname">from_string</code><span class="sig-paren">(</span><em class="sig-param">type cls</em>, <em class="sig-param">fname</em>, <em class="sig-param">header_string</em>, <em class="sig-param">mode='w'</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Writer.from_string" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="cyvcf2.cyvcf2.Writer.name">
 <code class="sig-name descname">name</code><a class="headerlink" href="#cyvcf2.cyvcf2.Writer.name" title="Permalink to this definition">¶</a></dt>
 <dd><p>bytes</p>
@@ -481,17 +481,17 @@ data must be a numpy array of type float or int</p>
 </dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.Writer.variant_from_string">
-<code class="sig-name descname">variant_from_string</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">variant_string</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Writer.variant_from_string" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">variant_from_string</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em>, <em class="sig-param"><span class="n">variant_string</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Writer.variant_from_string" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.Writer.write_header">
-<code class="sig-name descname">write_header</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Writer.write_header" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">write_header</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Writer.write_header" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="cyvcf2.cyvcf2.Writer.write_record">
 <code class="sig-name descname">write_record</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">Variant var</em><span class="sig-paren">)</span><a class="headerlink" href="#cyvcf2.cyvcf2.Writer.write_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write the variant to the writer.</p>
@@ -499,7 +499,7 @@ data must be a numpy array of type float or int</p>
 
 </dd></dl>
 
-<dl class="class">
+<dl class="py class">
 <dt id="cyvcf2.cyvcf2.INFO">
 <em class="property">class </em><code class="sig-prename descclassname">cyvcf2.cyvcf2.</code><code class="sig-name descname">INFO</code><a class="headerlink" href="#cyvcf2.cyvcf2.INFO" title="Permalink to this definition">¶</a></dt>
 <dd><p>INFO is create internally by accessing <cite>Variant.INFO</cite></p>
@@ -548,7 +548,7 @@ and values are typed according to what is specified in the VCF header</p>
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
 
 
 
@@ -562,10 +562,10 @@ and values are typed according to what is specified in the VCF header</p>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2016, Brent Pedersen.
+      &copy;2016..2020, Brent Pedersen.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.0.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

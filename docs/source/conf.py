@@ -53,7 +53,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'cyvcf2'
-copyright = u'2016, Brent Pedersen'
+copyright = u'2016..2020, Brent Pedersen'
 author = u'Brent Pedersen'
 
 # The version info for the project you're documenting, acts as replacement for

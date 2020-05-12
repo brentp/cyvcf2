@@ -1202,7 +1202,7 @@ cdef class Variant(object):
             return n
 
     property call_rate:
-        "proprtion of samples that were not UNKNOWN."
+        "proportion of samples that were not UNKNOWN."
         def __get__(self):
             if self.vcf.n_samples > 0:
                 return float(self.num_called) / self.vcf.n_samples

@@ -60,7 +60,7 @@ Modifying Existing Records
 ==========================
 
 `cyvcf2` is optimized for fast reading and extraction from existing files.
-However, it also offers some means of modifying existing VCFs. Here, wrapper
+However, it also offers some means of modifying existing VCFs. Here, we
 show an example of how to annotate variants with the genes that they overlap.
 
 
@@ -74,7 +74,8 @@ show an example of how to annotate variants with the genes that they overlap.
         'Type':'Character', 'Number': '1'})
 
     # create a new vcf Writer using the input vcf as a template.
-    w = Writer(f, vcf)
+    fname = "out.vcf"
+    w = Writer(fname, vcf)
 
     for v in vcf:
         # The get_gene_intersections function is not shown.

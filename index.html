@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>cyvcf2 &#8212; cyvcf2 0.11.5 documentation</title>
+    <title>cyvcf2 &#8212; cyvcf2 0.20.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -84,7 +84,7 @@ the <a class="reference external" href="http://quinlanlab.org/">Quinlan lab</a>.
 <div class="section" id="modifying-existing-records">
 <h1>Modifying Existing Records<a class="headerlink" href="#modifying-existing-records" title="Permalink to this headline">¶</a></h1>
 <p><cite>cyvcf2</cite> is optimized for fast reading and extraction from existing files.
-However, it also offers some means of modifying existing VCFs. Here, wrapper
+However, it also offers some means of modifying existing VCFs. Here, we
 show an example of how to annotate variants with the genes that they overlap.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">cyvcf2</span> <span class="kn">import</span> <span class="n">VCF</span><span class="p">,</span> <span class="n">Writer</span>
 <span class="n">vcf</span> <span class="o">=</span> <span class="n">VCF</span><span class="p">(</span><span class="n">VCF_PATH</span><span class="p">)</span>
@@ -94,7 +94,8 @@ show an example of how to annotate variants with the genes that they overlap.</p
     <span class="s1">&#39;Type&#39;</span><span class="p">:</span><span class="s1">&#39;Character&#39;</span><span class="p">,</span> <span class="s1">&#39;Number&#39;</span><span class="p">:</span> <span class="s1">&#39;1&#39;</span><span class="p">})</span>
 
 <span class="c1"># create a new vcf Writer using the input vcf as a template.</span>
-<span class="n">w</span> <span class="o">=</span> <span class="n">Writer</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">vcf</span><span class="p">)</span>
+<span class="n">fname</span> <span class="o">=</span> <span class="s2">&quot;out.vcf&quot;</span>
+<span class="n">w</span> <span class="o">=</span> <span class="n">Writer</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="n">vcf</span><span class="p">)</span>
 
 <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vcf</span><span class="p">:</span>
     <span class="c1"># The get_gene_intersections function is not shown.</span>

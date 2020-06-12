@@ -1,13 +1,19 @@
-from setuptools import setup, Extension
 import os
 import glob
 import sys
 import subprocess
+import platform
+
 import pkg_resources
+from setuptools import setup, Extension, dist
 
 if sys.version_info.major == 2 and sys.version_info.minor != 7:
     sys.stderr.write("ERROR: cyvcf2 is only for python 2.7 or greater you are running %d.%d\n", (sys.version_info.major, sys.version_info.minor))
     sys.exit(1)
+
+# Install numpy right now
+dist.Distribution().fetch_build_eggs(['numpy'])
+import numpy as np
 
 
 def get_version():
@@ -26,49 +32,51 @@ def get_version():
           raise ValueError("version could not be located")
 
 
-# Temporarily install dependencies required by setup.py before trying to import them.
-# From https://bitbucket.org/dholth/setup-requires
-
-sys.path[0:0] = ['setup-requires']
-pkg_resources.working_set.add_entry('setup-requires')
-
-
-def missing_requirements(specifiers):
-    for specifier in specifiers:
-        try:
-            pkg_resources.require(specifier)
-        except pkg_resources.DistributionNotFound:
-            yield specifier
+def no_cythonize(extensions, **_ignore):
+    for extension in extensions:
+        sources = []
+        for sfile in extension.sources:
+            path, ext = os.path.splitext(sfile)
+            if ext in (".pyx", ".py"):
+                sfile = path + ".c"
+            sources.append(sfile)
+        extension.sources[:] = sources
+    return extensions
 
 
-def install_requirements(specifiers):
-    to_install = list(specifiers)
-    if to_install:
-        cmd = [sys.executable, "-m", "pip", "install",
-            "-t", "setup-requires"] + to_install
-        subprocess.call(cmd)
-
-
-requires = ['cython', 'numpy', 'coloredlogs', 'click']
-install_requirements(missing_requirements(requires))
-
-
-excludes = ['irods', 'plugin']
-
-sources = [x for x in glob.glob('htslib/*.c') if not any(e in x for e in excludes)] + glob.glob('htslib/cram/*.c')
-# these have main()'s
+# Build the Cython extension by statically linking to the bundled htslib
+sources = [
+    x for x in glob.glob('htslib/*.c') 
+    if not any(e in x for e in ['irods', 'plugin'])
+]
+sources += glob.glob('htslib/cram/*.c')
+# Exclude the htslib sources containing main()'s
 sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
 sources.append('cyvcf2/helpers.c')
 
-import numpy as np
-import platform
-from Cython.Distutils import build_ext
-
-cmdclass = {'build_ext': build_ext}
-extension = [Extension("cyvcf2.cyvcf2",
+extensions = [Extension("cyvcf2.cyvcf2",
                         ["cyvcf2/cyvcf2.pyx"] + sources,
                         libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (['crypt'] if platform.system() != 'Darwin' else []),
+                        extra_compile_args=["-Wno-sign-compare", "-Wno-unused-function",
+                            "-Wno-strict-prototypes",
+                            "-Wno-unused-result", "-Wno-discarded-qualifiers"],
                         include_dirs=['htslib', 'cyvcf2', np.get_include()])]
+
+
+CYTHONIZE = bool(int(os.getenv("CYTHONIZE", 0)))
+if CYTHONIZE:
+    try:
+        from Cython.Build import cythonize
+    except ImportError:
+        sys.stderr.write(
+            "Cannot find Cython. Have you installed all the requirements?\n"
+            "Try pip install -r requirements.txt\n"
+        )
+        sys.exit(1)
+    compiler_directives = {"language_level": 2, "embedsignature": True}
+    extensions = cythonize(extensions, compiler_directives=compiler_directives)
+else:
+    extensions = no_cythonize(extensions)
 
 
 setup(
@@ -81,8 +89,7 @@ setup(
     author="Brent Pedersen",
     author_email="bpederse@gmail.com",
     version=get_version(),
-    cmdclass=cmdclass,
-    ext_modules=extension,
+    ext_modules=extensions,
     packages=['cyvcf2', 'cyvcf2.tests'],
     entry_points=dict(
         console_scripts=[
@@ -91,7 +98,7 @@ setup(
     ),
     test_suite='nose.collector',
     tests_require='nose',
-    install_requires=['numpy'],
+    install_requires=['numpy', 'coloredlogs', 'click'],
     include_package_data=True,
     zip_safe=False,
 )

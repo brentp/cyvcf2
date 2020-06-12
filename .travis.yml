@@ -1,10 +1,11 @@
 language: python
-dist: xenial
+dist: bionic
 python:
   - "2.7"
   - "3.5"
   - "3.6"
   - "3.7"
+  - "3.8"
 
 install:
   - sudo apt-get install libcurl4-openssl-dev
@@ -14,7 +15,7 @@ install:
   - ./configure --enable-s3 --disable-lzma --disable-bz2
   - make
   - cd ..
-  - python setup.py install
+  - CYTHONIZE=1 python setup.py install
 
 script:
   - python setup.py test

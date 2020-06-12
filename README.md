@@ -1,6 +1,8 @@
 cyvcf2
 ======
 
+Note: cyvcf2 versions < 0.20.0 require htslib < 1.10. cyvcf2 versions >= 0.20.0 require htslib >= 1.10
+
 <!-- ghp-import -p docs/build/html/ -->
 [![Docs](https://img.shields.io/badge/docs-latest-blue.svg)](http://brentp.github.io/cyvcf2/)
 
@@ -9,7 +11,7 @@ If you use cyvcf2, please cite the [paper](https://academic.oup.com/bioinformati
 
 Fast python **(2 and 3)** parsing of VCF and BCF including region-queries.
 
-[![Build Status](https://travis-ci.org/brentp/cyvcf2.svg?branch=master)](https://travis-ci.org/brentp/cyvcf2)
+[![Build Status](https://travis-ci.com/brentp/cyvcf2.svg?branch=master)](https://travis-ci.com/brentp/cyvcf2)
 
 cyvcf2 is a cython wrapper around [htslib](https://github.com/samtools/htslib) built for fast parsing of [Variant Call Format](https://en.m.wikipedia.org/wiki/Variant_Call_Format) (VCF) files.
 
@@ -68,7 +70,7 @@ for v in vcf('11:435345-556565'):
 Installation
 ============
 
-## pip
+## pip (assuming you have htslib < 1.10 installed)
 ```
 pip install cyvcf2
 ```
@@ -84,7 +86,7 @@ autoconf
 make
 
 cd ..
-pip install -e .
+CYTHONIZE=1 pip install -e .
 ```
 
 On **OSX**, using brew, you may have to set the following as indicated by the brew install:

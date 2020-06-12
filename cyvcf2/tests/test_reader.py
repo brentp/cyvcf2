@@ -1,5 +1,5 @@
 from __future__ import print_function
-from cyvcf2 import VCF, Variant, Writer
+from ..cyvcf2 import VCF, Variant, Writer
 import numpy as np
 import os.path
 from nose.tools import assert_raises
@@ -7,6 +7,11 @@ import tempfile
 import sys
 import os
 import atexit
+try:
+  from pathlib import Path
+except ImportError:
+  from pathlib2 import Path  # python 2 backport
+
 
 HERE = os.path.dirname(__file__)
 VCF_PATH = os.path.join(HERE, "test.vcf.gz")
@@ -20,8 +25,29 @@ except NameError:
     basestring = (str, bytes)
 
 def test_init():
+    # string
     v = VCF(VCF_PATH)
     assert v
+    expected_count = sum(1 for _ in v)
+    v.close()
+
+    # Path
+    v = VCF(Path(VCF_PATH))
+    value = sum(1 for _ in v)
+    assert value == expected_count
+
+    # file descriptor
+    with open(VCF_PATH) as fp:
+        fd = fp.fileno()
+        v = VCF(fd)
+        assert sum(1 for _ in v) == expected_count
+        v.close()  # this should not close the file descriptor originally opened
+
+    # file-like object
+    with open(VCF_PATH) as fp:
+        v = VCF(fp)
+        assert sum(1 for _ in v) == expected_count
+        v.close()  # this should not close the file descriptor originally opened
 
 def test_type():
     vcf = VCF(VCF_PATH)
@@ -237,31 +263,45 @@ def test_writer_from_string():
     w.close()
 
 
-def test_writer():
-
-    v = VCF(VCF_PATH)
-    f = tempfile.mktemp(suffix=".vcf")
-    atexit.register(os.unlink, f)
-
-    o = Writer(f, v)
-    rec = next(v)
+def run_writer(writer, filename, rec):
     rec.INFO["AC"] = "3"
     rec.FILTER = ["LowQual"]
-    o.write_record(rec)
+    writer.write_record(rec)
 
     rec.FILTER = ["LowQual", "VQSRTrancheSNP99.90to100.00"]
-    o.write_record(rec)
-
+    writer.write_record(rec)
 
     rec.FILTER = "PASS"
-    o.write_record(rec)
+    writer.write_record(rec)
 
-    o.close()
+    writer.close()
 
     expected = ["LowQual", "LowQual;VQSRTrancheSNP99.90to100.00", None]
 
-    for i, variant in enumerate(VCF(f)):
+    for i, variant in enumerate(VCF(filename)):
         assert variant.FILTER == expected[i], (variant.FILTER, expected[i])
+
+def test_writer():
+    v = VCF(VCF_PATH)
+    f = tempfile.mktemp(suffix=".vcf")
+    atexit.register(os.unlink, f)
+    rec = next(v)
+
+    # string
+    run_writer(Writer(f, v), f, rec)
+
+    # Path
+    path = Path(f)
+    run_writer(Writer(path, v), f, rec)
+
+    # file descriptor
+    with open(VCF_PATH) as fp:
+        fd = fp.fileno()
+        run_writer(Writer(fd, v), f, rec)
+
+    # file-like object
+    with open(VCF_PATH) as fp:
+        run_writer(Writer(fp, v), f, rec)
 
 def test_add_info_to_header():
     v = VCF(VCF_PATH)
@@ -583,7 +623,7 @@ def test_set_format_float():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     assert vcf.add_format_to_header(dict(ID="PS", Number=1, Type="Float", Description="PS example")) == 0
     v = next(vcf)
-    v.set_format("PS", np.array([0.555, 1.111], dtype=np.float))
+    v.set_format("PS", np.array([0.555, 1.111], dtype=np.float32))
     assert allclose(fmap(float, get_gt_str(v, "PS")), np.array([0.555, 1.111]))
 
     v.set_format("PS", np.array([8.555, 11.111], dtype=np.float64))
@@ -876,18 +916,18 @@ def test_strict_gt_option_flag():
 
     msg = "VCF(gts012=False, strict_gt=False) not working"
     truth_gt_types = (0, 3, 1, 1, 1, 1, 0, 0, 2)
-    assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
-    assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
-    assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
+    assert bool(tuple(variant.gt_bases.tolist()) == truth_gt_bases), '{} [gt_bases]'.format(msg)
+    assert bool(tuple(variant.gt_types.tolist()) == truth_gt_types), '{} [gt_types]'.format(msg)
+    assert bool(tuple(variant.genotypes) == truth_genotypes), '{} (genotypes)'.format(msg)
 
     vcf = VCF(test_vcf, gts012=False, strict_gt=True)
     variant = next(vcf)
 
     msg = "VCF(gts012=False, strict_gt=True) not working"
     truth_gt_types = (0, 3, 1, 1, 2, 2, 2, 2, 2)
-    assert tuple(variant.gt_bases.tolist()) == truth_gt_bases, '{} [gt_bases]'.format(msg)
-    assert tuple(variant.gt_types.tolist()) == truth_gt_types, '{} [gt_types]'.format(msg)
-    assert tuple(variant.genotypes) == truth_genotypes, '{} (genotypes)'.format(msg)
+    assert bool(tuple(variant.gt_bases.tolist()) == truth_gt_bases), '{} [gt_bases]'.format(msg)
+    assert bool(tuple(variant.gt_types.tolist()) == truth_gt_types), '{} [gt_types]'.format(msg)
+    assert bool(tuple(variant.genotypes) == truth_genotypes), '{} (genotypes)'.format(msg)
 
 
     vcf = VCF(test_vcf, gts012=True)

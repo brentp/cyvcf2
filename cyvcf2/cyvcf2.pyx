@@ -167,7 +167,7 @@ cdef class HTSFile:
                 self.fname = to_bytes(b"/dev/stdin") if reading else to_bytes(b"/dev/stdout")
             if self.fname.endswith(b".gz") and self.mode == b"w":
                 self.mode = b"wz"
-            elif self.fname.endswith(b".bcf") and self.mode == b"w":
+            elif self.fname.endswith((b".bcf", b".bcf.gz")) and self.mode == b"w":
                 self.mode = b"wb"
             self.fname = to_bytes(str(fname))
             self.mode = to_bytes(mode)
@@ -433,7 +433,7 @@ cdef class VCF(HTSFile):
             yield from self
             raise StopIteration
 
-        if self.fname.decode(ENC).endswith('.bcf'):
+        if self.fname.decode(ENC).endswith(('.bcf', '.bcf.gz')):
             yield from self._bcf_region(region)
             raise StopIteration
 
@@ -618,7 +618,7 @@ cdef class VCF(HTSFile):
             cdef char **cnames
             cdef int i, n = 0
             cnames = bcf_hdr_seqnames(self.hdr, &n)
-            if n == 0 and self.fname.decode(ENC).endswith('.bcf'):
+            if n == 0 and self.fname.decode(ENC).endswith(('.bcf', '.bcf.gz')):
                 if self.hidx == NULL:
                     self.hidx = bcf_index_load(self.fname)
                 if self.hidx != NULL:

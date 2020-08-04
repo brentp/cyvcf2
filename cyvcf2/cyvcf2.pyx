@@ -1918,7 +1918,7 @@ cdef class Variant(object):
     property FILTER:
         """the value of FILTER from the VCF field.
 
-        a value of PASS in the VCF will give None for this function
+        a value of PASS or '.' in the VCF will give None for this function
         """
         def __get__(self):
             cdef int i

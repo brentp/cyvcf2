@@ -86,6 +86,7 @@ autoconf
 make
 
 cd ..
+pip install -r requirements.txt
 CYTHONIZE=1 pip install -e .
 ```
 

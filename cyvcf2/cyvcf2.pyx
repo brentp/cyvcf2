@@ -154,23 +154,28 @@ cdef class HTSFile:
         cdef hFILE *hf
         self.mode = to_bytes(mode)
         reading = b"r" in self.mode
-        if not reading and b"w" not in self.mode:
+        writing = b"w" in self.mode
+        if not reading and not writing:
             raise IOError("No 'r' or 'w' in mode %s" % str(self.mode))
-        self.from_path = False
-        # for htslib, wbu seems to not work
-        if mode == b"wbu":
-            mode = to_bytes(b"wb0")
-        if isinstance(fname, (basestring, Path)):
-            self.from_path = True
+
+        self.from_path = isinstance(fname, (basestring, Path))
+        if self.from_path:
             self.fname = to_bytes(str(fname))
             if self.fname == b"-":
                 self.fname = to_bytes(b"/dev/stdin") if reading else to_bytes(b"/dev/stdout")
-            if self.fname.endswith(b".gz") and self.mode == b"w":
-                self.mode = b"wz"
-            elif self.fname.endswith((b".bcf", b".bcf.gz")) and self.mode == b"w":
-                self.mode = b"wb"
-            self.fname = to_bytes(str(fname))
-            self.mode = to_bytes(mode)
+            if writing:
+                is_compressed = self.fname.endswith(b".gz")
+                fmt_idx = -2 if is_compressed else -1
+                file_fmt = self.fname.split(b".")[fmt_idx]
+                # bcftools output write mode chars - https://github.com/samtools/bcftools/blob/76392b3014de70b7fa5c6b5c9d5bc47361951770/version.c#L64-L70
+                inferred_mode = "w"
+                if file_fmt == b"bcf" and not is_compressed:
+                    inferred_mode += "bu"
+                if is_compressed:
+                    inferred_mode += "z" if file_fmt == b"vcf" else "b"
+                sys.stderr.write(inferred_mode + "\n")
+                self.mode = to_bytes(inferred_mode)
+
             self.hts = hts_open(self.fname, self.mode)
         # from a file descriptor
         elif isinstance(fname, int):
@@ -2225,6 +2230,14 @@ cdef class Writer(VCF):
         path to file
     tmpl: VCF
         a template to use to create the output header.
+    mode: str
+        Mode to use for writing the file. This parameter is only relevant if writing to
+        stdout. If writing to a file, the mode is inferred from the filename extension.
+        Valid values are:
+          - "wbu": uncompressed BCF
+          - "wb": compressed BCF
+          - "wz": compressed VCF
+          - "w": uncompressed VCF
 
     Returns
     -------

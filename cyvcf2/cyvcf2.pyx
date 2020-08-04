@@ -173,7 +173,7 @@ cdef class HTSFile:
                     inferred_mode += "bu"
                 if is_compressed:
                     inferred_mode += "z" if file_fmt == b"vcf" else "b"
-                sys.stderr.write(inferred_mode + "\n")
+                    
                 self.mode = to_bytes(inferred_mode)
 
             self.hts = hts_open(self.fname, self.mode)

@@ -163,23 +163,10 @@ cdef class HTSFile:
             self.fname = to_bytes(str(fname))
             if self.fname == b"-":
                 self.fname = to_bytes(b"/dev/stdin") if reading else to_bytes(b"/dev/stdout")
-            if writing:
-                is_compressed = self.fname.endswith(b".gz")
-                fmt_idx = -2 if is_compressed else -1
-                file_fmt = self.fname.split(b".")[fmt_idx]
-                # bcftools output write mode chars - https://github.com/samtools/bcftools/blob/76392b3014de70b7fa5c6b5c9d5bc47361951770/version.c#L64-L70
-                inferred_mode = "w"
-                if file_fmt == b"bcf" and not is_compressed:
-                    inferred_mode += "bu"
-                if is_compressed:
-                    inferred_mode += "z" if file_fmt == b"vcf" else "b"
-                    
-                self.mode = to_bytes(inferred_mode)
 
             self.hts = hts_open(self.fname, self.mode)
         # from a file descriptor
         elif isinstance(fname, int):
-            self.mode = to_bytes(mode)
             hf = hdopen(int(fname), self.mode)
             self.hts = hts_hopen(hf, "<file>", self.mode)
             self.fname = None
@@ -187,7 +174,6 @@ cdef class HTSFile:
         elif hasattr(fname, "fileno"):
             if fname.closed:
                 raise IOError('I/O operation on closed file')
-            self.mode = to_bytes(mode)
             hf = hdopen(fname.fileno(), self.mode)
             self.hts = hts_hopen(hf, "<file>", self.mode)
             # .name can be TextIOWrapper
@@ -2231,13 +2217,16 @@ cdef class Writer(VCF):
     tmpl: VCF
         a template to use to create the output header.
     mode: str
-        Mode to use for writing the file. This parameter is only relevant if writing to
-        stdout. If writing to a file, the mode is inferred from the filename extension.
+        Mode to use for writing the file. If `None` (default) is given, the mode is
+        inferred from the filename extension. If stdout ("-") is provided for `fname`
+        and `mode` is left at default, uncompressed VCF will be produced.
         Valid values are:
           - "wbu": uncompressed BCF
           - "wb": compressed BCF
           - "wz": compressed VCF
           - "w": uncompressed VCF
+        Compression level can also be indicated by adding a single integer to one of
+        the compressed modes (e.g. "wz4" for VCF with compressions level 4).
 
     Returns
     -------
@@ -2249,13 +2238,36 @@ cdef class Writer(VCF):
     cdef bint header_written
     cdef const bcf_hdr_t *ohdr
 
-    def __init__(Writer self, fname, VCF tmpl, mode="w"):
+    def __init__(Writer self, fname, VCF tmpl, mode=None):
+        mode = self._infer_file_mode(fname, mode)
         self._open_htsfile(fname, mode)
         bcf_hdr_sync(tmpl.hdr)
         self.ohdr = tmpl.hdr
         self.hdr = bcf_hdr_dup(tmpl.hdr)
         bcf_hdr_sync(self.hdr)
         self.header_written = False
+
+    @staticmethod
+    def _infer_file_mode(fname, mode=None):
+        if mode is not None:
+            return mode
+
+        from_path = isinstance(fname, (basestring, Path))
+        if not from_path:
+            return "w"
+
+        fname = str(fname)
+        is_compressed = fname.endswith(".gz")
+        fmt_idx = -2 if is_compressed else -1
+        file_fmt = fname.split(".")[fmt_idx]
+        # bcftools output write mode chars - https://github.com/samtools/bcftools/blob/76392b3014de70b7fa5c6b5c9d5bc47361951770/version.c#L64-L70
+        inferred_mode = "w"
+        if file_fmt == "bcf" and not is_compressed:
+            inferred_mode += "bu"
+        if is_compressed:
+            inferred_mode += "z" if file_fmt == "vcf" else "b"
+
+        return inferred_mode
 
     @classmethod
     def from_string(Writer cls, fname, header_string, mode="w"):

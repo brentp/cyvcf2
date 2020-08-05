@@ -2217,16 +2217,21 @@ cdef class Writer(VCF):
     tmpl: VCF
         a template to use to create the output header.
     mode: str
-        Mode to use for writing the file. If `None` (default) is given, the mode is
-        inferred from the filename extension. If stdout ("-") is provided for `fname`
-        and `mode` is left at default, uncompressed VCF will be produced.
-        Valid values are:
-          - "wbu": uncompressed BCF
-          - "wb": compressed BCF
-          - "wz": compressed VCF
-          - "w": uncompressed VCF
-        Compression level can also be indicated by adding a single integer to one of
-        the compressed modes (e.g. "wz4" for VCF with compressions level 4).
+        | Mode to use for writing the file. If ``None`` (default) is given, the mode is
+          inferred from the filename extension. If stdout (``"-"``) is provided for ``fname``
+          and ``mode`` is left at default, uncompressed VCF will be produced.
+        | Valid values are:
+        |  - ``"wbu"``: uncompressed BCF
+        |  - ``"wb"``: compressed BCF
+        |  - ``"wz"``: compressed VCF
+        |  - ``"w"``: uncompressed VCF
+        | Compression level can also be indicated by adding a single integer to one of
+          the compressed modes (e.g. ``"wz4"`` for VCF with compressions level 4).
+
+    Note
+    ----
+    File extensions ``.bcf`` and ``.bcf.gz`` will both return compressed BCF. If you
+    want uncompressed BCF you must explicitly provide the appropriate ``mode``.
 
     Returns
     -------
@@ -2262,10 +2267,10 @@ cdef class Writer(VCF):
         file_fmt = fname.split(".")[fmt_idx]
         # bcftools output write mode chars - https://github.com/samtools/bcftools/blob/76392b3014de70b7fa5c6b5c9d5bc47361951770/version.c#L64-L70
         inferred_mode = "w"
-        if file_fmt == "bcf" and not is_compressed:
-            inferred_mode += "bu"
-        if is_compressed:
-            inferred_mode += "z" if file_fmt == "vcf" else "b"
+        if file_fmt == "bcf":
+            inferred_mode += "b"
+        if is_compressed and file_fmt == "vcf":
+            inferred_mode += "z"
 
         return inferred_mode
 

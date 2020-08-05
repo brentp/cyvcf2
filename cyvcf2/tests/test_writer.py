@@ -18,12 +18,21 @@ class TestFileModeInference:
 
         assert actual == expected
 
-    def test_defaultModeWithBcfFname_returnsUncompressedBcf(self):
+    def test_defaultModeWithBcfFname_returnsCompressedBcf(self):
         fname = "test.bcf"
         mode = None
 
         actual = Writer._infer_file_mode(fname, mode)
-        expected = "wbu"
+        expected = "wb"
+
+        assert actual == expected
+
+    def test_defaultModeWithBcfFnameAndUncompressedMode_returnsUncompressedBcf(self):
+        fname = "test.bcf"
+        mode = "wbu"
+
+        actual = Writer._infer_file_mode(fname, mode)
+        expected = mode
 
         assert actual == expected
 

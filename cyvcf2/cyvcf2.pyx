@@ -2038,7 +2038,7 @@ cdef class INFO(object):
 
             ret = bcf_update_info_flag(self.hdr, self.b, to_bytes(key), b"", int(value))
             if ret != 0:
-                raise Exception("not able to set: %s -> %s (%d)" % ((key, value, ret))
+                raise Exception("not able to set: %s -> %s (%d)" % (key, value, ret))
 
             return
         cdef int32_t iint

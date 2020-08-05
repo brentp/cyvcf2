@@ -1,6 +1,6 @@
 from io import StringIO
 
-from cyvcf2 import Writer
+from ..cyvcf2 import Writer
 
 try:
     from pathlib import Path

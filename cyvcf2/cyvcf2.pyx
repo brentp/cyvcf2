@@ -570,7 +570,7 @@ cdef class VCF(HTSFile):
         with nogil:
             b = bcf_init()
             ret = bcf_read(self.hts, self.hdr, b)
-        if ret >= 0 || b->error == BCF_ERR_CTG_UNDEF:
+        if ret >= 0 or b->error == BCF_ERR_CTG_UNDEF:
             return newVariant(b, self)
         else:
             bcf_destroy(b)

@@ -577,7 +577,7 @@ cdef class VCF(HTSFile):
         if  ret == -1:  # end-of-file
             raise StopIteration
         else:  
-            raise Exception("error parsing variant with `htslib::bcf_read` error-code: %d" % (b.err))
+            raise Exception("error parsing variant with `htslib::bcf_read` error-code: %d" % (b.error))
 
 
     property samples:

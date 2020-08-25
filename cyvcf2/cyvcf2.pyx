@@ -570,11 +570,15 @@ cdef class VCF(HTSFile):
         with nogil:
             b = bcf_init()
             ret = bcf_read(self.hts, self.hdr, b)
-        if ret >= 0:
+        if ret >= 0 or b.errcode == BCF_ERR_CTG_UNDEF:
             return newVariant(b, self)
         else:
             bcf_destroy(b)
-        raise StopIteration
+        if  ret == -1:  # end-of-file
+            raise StopIteration
+        else:  
+            raise Exception("error parsing variant with `htslib::bcf_read` error-code: %d" % (b.errcode))
+
 
     property samples:
         "list of samples pulled from the VCF."

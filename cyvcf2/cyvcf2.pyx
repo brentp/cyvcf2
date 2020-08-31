@@ -154,27 +154,19 @@ cdef class HTSFile:
         cdef hFILE *hf
         self.mode = to_bytes(mode)
         reading = b"r" in self.mode
-        if not reading and b"w" not in self.mode:
+        writing = b"w" in self.mode
+        if not reading and not writing:
             raise IOError("No 'r' or 'w' in mode %s" % str(self.mode))
-        self.from_path = False
-        # for htslib, wbu seems to not work
-        if mode == b"wbu":
-            mode = to_bytes(b"wb0")
-        if isinstance(fname, (basestring, Path)):
-            self.from_path = True
+
+        self.from_path = isinstance(fname, (basestring, Path))
+        if self.from_path:
             self.fname = to_bytes(str(fname))
             if self.fname == b"-":
                 self.fname = to_bytes(b"/dev/stdin") if reading else to_bytes(b"/dev/stdout")
-            if self.fname.endswith(b".gz") and self.mode == b"w":
-                self.mode = b"wz"
-            elif self.fname.endswith(b".bcf") and self.mode == b"w":
-                self.mode = b"wb"
-            self.fname = to_bytes(str(fname))
-            self.mode = to_bytes(mode)
+
             self.hts = hts_open(self.fname, self.mode)
         # from a file descriptor
         elif isinstance(fname, int):
-            self.mode = to_bytes(mode)
             hf = hdopen(int(fname), self.mode)
             self.hts = hts_hopen(hf, "<file>", self.mode)
             self.fname = None
@@ -182,7 +174,6 @@ cdef class HTSFile:
         elif hasattr(fname, "fileno"):
             if fname.closed:
                 raise IOError('I/O operation on closed file')
-            self.mode = to_bytes(mode)
             hf = hdopen(fname.fileno(), self.mode)
             self.hts = hts_hopen(hf, "<file>", self.mode)
             # .name can be TextIOWrapper
@@ -433,7 +424,7 @@ cdef class VCF(HTSFile):
             yield from self
             raise StopIteration
 
-        if self.fname.decode(ENC).endswith('.bcf'):
+        if self.fname.decode(ENC).endswith(('.bcf', '.bcf.gz')):
             yield from self._bcf_region(region)
             raise StopIteration
 
@@ -579,11 +570,15 @@ cdef class VCF(HTSFile):
         with nogil:
             b = bcf_init()
             ret = bcf_read(self.hts, self.hdr, b)
-        if ret >= 0:
+        if ret >= 0 or b.errcode == BCF_ERR_CTG_UNDEF:
             return newVariant(b, self)
         else:
             bcf_destroy(b)
-        raise StopIteration
+        if  ret == -1:  # end-of-file
+            raise StopIteration
+        else:  
+            raise Exception("error parsing variant with `htslib::bcf_read` error-code: %d" % (b.errcode))
+
 
     property samples:
         "list of samples pulled from the VCF."
@@ -618,7 +613,7 @@ cdef class VCF(HTSFile):
             cdef char **cnames
             cdef int i, n = 0
             cnames = bcf_hdr_seqnames(self.hdr, &n)
-            if n == 0 and self.fname.decode(ENC).endswith('.bcf'):
+            if n == 0 and self.fname.decode(ENC).endswith(('.bcf', '.bcf.gz')):
                 if self.hidx == NULL:
                     self.hidx = bcf_index_load(self.fname)
                 if self.hidx != NULL:
@@ -1026,9 +1021,8 @@ cdef class Genotypes(object):
         The last column indicates phased (1 is phased, 0 is unphased).
         The other columns indicate the alleles, e.g. [0, 1, 1] is 0|1.
         """
-        cdef np.int16_t* to_return = <np.int16_t *>stdlib.malloc(sizeof(np.int16_t)
-                                                   * self.n_samples
-                                                   * (self.ploidy+1))
+        cdef np.ndarray[np.int16_t, ndim=2] to_return = np.zeros((self.n_samples, self.ploidy + 1),
+                dtype=np.int16)
 
         cdef int ind
         cdef int allele
@@ -1036,18 +1030,10 @@ cdef class Genotypes(object):
 
         for ind in range(self.n_samples):
             for allele in range(self.ploidy):
-                to_return[ind * p + allele] = (self._raw[ind * self.ploidy + allele] >> 1) - 1
-            to_return[ind * p + self.ploidy] = (self._raw[ind * self.ploidy + 1] & 1) == 1
+                to_return[ind, allele] = (self._raw[ind * self.ploidy + allele] >> 1) - 1
+            to_return[ind, self.ploidy] = (self._raw[ind * self.ploidy + 1] & 1) == 1
 
-        cdef np.npy_intp shape[2]
-        shape[0] = self.n_samples
-        shape[1] = self.ploidy + 1
-        return np.PyArray_SimpleNewFromData(
-            2,
-            shape,
-            np.NPY_INT16,
-            to_return
-        )
+        return to_return
 
     def __getitem__(self, int i):
         ## return the Allele objects for the i'th sample.
@@ -1202,7 +1188,7 @@ cdef class Variant(object):
             return n
 
     property call_rate:
-        "proprtion of samples that were not UNKNOWN."
+        "proportion of samples that were not UNKNOWN."
         def __get__(self):
             if self.vcf.n_samples > 0:
                 return float(self.num_called) / self.vcf.n_samples
@@ -1913,7 +1899,7 @@ cdef class Variant(object):
     property FILTER:
         """the value of FILTER from the VCF field.
 
-        a value of PASS in the VCF will give None for this function
+        a value of PASS or '.' in the VCF will give None for this function
         """
         def __get__(self):
             cdef int i
@@ -2047,7 +2033,8 @@ cdef class INFO(object):
 
             ret = bcf_update_info_flag(self.hdr, self.b, to_bytes(key), b"", int(value))
             if ret != 0:
-                raise Exception("not able to set flag", key, value, ret)
+                raise Exception("not able to set: %s -> %s (%d)" % (key, value, ret))
+
             return
         cdef int32_t iint
         cdef float ifloat
@@ -2225,6 +2212,22 @@ cdef class Writer(VCF):
         path to file
     tmpl: VCF
         a template to use to create the output header.
+    mode: str
+        | Mode to use for writing the file. If ``None`` (default) is given, the mode is
+          inferred from the filename extension. If stdout (``"-"``) is provided for ``fname``
+          and ``mode`` is left at default, uncompressed VCF will be produced.
+        | Valid values are:
+        |  - ``"wbu"``: uncompressed BCF
+        |  - ``"wb"``: compressed BCF
+        |  - ``"wz"``: compressed VCF
+        |  - ``"w"``: uncompressed VCF
+        | Compression level can also be indicated by adding a single integer to one of
+          the compressed modes (e.g. ``"wz4"`` for VCF with compressions level 4).
+
+    Note
+    ----
+    File extensions ``.bcf`` and ``.bcf.gz`` will both return compressed BCF. If you
+    want uncompressed BCF you must explicitly provide the appropriate ``mode``.
 
     Returns
     -------
@@ -2236,13 +2239,36 @@ cdef class Writer(VCF):
     cdef bint header_written
     cdef const bcf_hdr_t *ohdr
 
-    def __init__(Writer self, fname, VCF tmpl, mode="w"):
+    def __init__(Writer self, fname, VCF tmpl, mode=None):
+        mode = self._infer_file_mode(fname, mode)
         self._open_htsfile(fname, mode)
         bcf_hdr_sync(tmpl.hdr)
         self.ohdr = tmpl.hdr
         self.hdr = bcf_hdr_dup(tmpl.hdr)
         bcf_hdr_sync(self.hdr)
         self.header_written = False
+
+    @staticmethod
+    def _infer_file_mode(fname, mode=None):
+        if mode is not None:
+            return mode
+
+        from_path = isinstance(fname, (basestring, Path))
+        if not from_path:
+            return "w"
+
+        fname = str(fname)
+        is_compressed = fname.endswith(".gz")
+        fmt_idx = -2 if is_compressed else -1
+        file_fmt = fname.split(".")[fmt_idx]
+        # bcftools output write mode chars - https://github.com/samtools/bcftools/blob/76392b3014de70b7fa5c6b5c9d5bc47361951770/version.c#L64-L70
+        inferred_mode = "w"
+        if file_fmt == "bcf":
+            inferred_mode += "b"
+        if is_compressed and file_fmt == "vcf":
+            inferred_mode += "z"
+
+        return inferred_mode
 
     @classmethod
     def from_string(Writer cls, fname, header_string, mode="w"):

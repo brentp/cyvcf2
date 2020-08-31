@@ -11,7 +11,7 @@ If you use cyvcf2, please cite the [paper](https://academic.oup.com/bioinformati
 
 Fast python **(2 and 3)** parsing of VCF and BCF including region-queries.
 
-[![Build Status](https://travis-ci.org/brentp/cyvcf2.svg?branch=master)](https://travis-ci.org/brentp/cyvcf2)
+[![Build Status](https://travis-ci.com/brentp/cyvcf2.svg?branch=master)](https://travis-ci.com/brentp/cyvcf2)
 
 cyvcf2 is a cython wrapper around [htslib](https://github.com/samtools/htslib) built for fast parsing of [Variant Call Format](https://en.m.wikipedia.org/wiki/Variant_Call_Format) (VCF) files.
 
@@ -86,6 +86,7 @@ autoconf
 make
 
 cd ..
+pip install -r requirements.txt
 CYTHONIZE=1 pip install -e .
 ```
 

@@ -1440,13 +1440,13 @@ cdef class Variant(object):
         elif np.issubdtype(data.dtype, np.bytes_):
             # can pass byte array without any type conversion
             size = data.nbytes
-            bytesp = <char *> data
-            ret = bcf_update_format(self.vcf.hdr, self.b, to_bytes(name), bytesp, size, BCF_HT_STR.cint)
+            bytesp = <char *> data.data
+            ret = bcf_update_format(self.vcf.hdr, self.b, to_bytes(name), bytesp, size, BCF_HT_STR)
         elif np.issubdtype(data.dtype, np.unicode_):
             abytes = np.char.encode(data)
             size = abytes.nbytes
-            bytesp = <char *> abytes
-            ret = bcf_update_format(self.vcf.hdr, self.b, to_bytes(name), bytesp, size, BCF_HT_STR.cint)
+            bytesp = <char *> abytes.data
+            ret = bcf_update_format(self.vcf.hdr, self.b, to_bytes(name), bytesp, size, BCF_HT_STR)
         else:
             raise Exception("format: currently only float, int and string (fixed length np.bytes_ or np.unicode_) numpy arrays are supported. got %s", data.dtype)
         if ret < 0:

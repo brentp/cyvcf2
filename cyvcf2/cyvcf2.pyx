@@ -1831,9 +1831,30 @@ cdef class Variant(object):
             return self.INFO.get(b'SVTYPE') is not None
 
     property CHROM:
-        "chromosome of the variant."
+        """Chromosome of the variant.
+        To set this property, the new chromosome must have a contig entry in the header.
+        
+        Example:
+            >>> vcf = VCF(fname)
+            >>> new_chrom = "NEW"
+            >>> vcf.add_to_header("##contig=<ID={},length=15>".format(new_chrom))
+            >>> variant = next(vcf)
+            >>> # contig is in header
+            >>> variant.CHROM = new_chrom
+            >>> # contig is not in header
+            >>> try:
+            >>>     variant.CHROM = "foo"
+            >>> except ValueError as err:
+            >>>     assert "foo is not defined in the header" in str(err)
+        """
         def __get__(self):
             return bcf_hdr_id2name(self.vcf.hdr, self.b.rid).decode()
+
+        def __set__(self, new_chrom):
+            new_rid = bcf_hdr_id2int(self.vcf.hdr, BCF_DT_CTG, new_chrom.encode())
+            if new_rid < 0:
+                raise ValueError("{} is not defined in the header".format(new_chrom))
+            self.b.rid = new_rid
 
     property var_type:
         "type of variant (snp/indel/sv)"

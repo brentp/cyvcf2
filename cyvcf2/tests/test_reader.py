@@ -887,8 +887,8 @@ def test_set_chrom_when_contig_not_in_header():
     vcf = VCF(test_vcf, gts012=False)
     v = next(vcf)
 
-    with assert_raises(ValueError):
-        v.CHROM = new_chrom
+    v.CHROM = new_chrom
+    assert v.CHROM == new_chrom
 
 def test_set_chrom_after_contig_is_added_to_header():
     test_vcf = '{}/test-strict-gt-option-flag.vcf.gz'.format(HERE)

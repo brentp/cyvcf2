@@ -885,16 +885,23 @@ def test_set_chrom_when_contig_not_in_header():
     test_vcf = '{}/test-strict-gt-option-flag.vcf.gz'.format(HERE)
     new_chrom = "NEW"
     vcf = VCF(test_vcf, gts012=False)
+    original_seqnames = vcf.seqnames
+    assert new_chrom not in original_seqnames
     v = next(vcf)
 
     v.CHROM = new_chrom
     assert v.CHROM == new_chrom
+    expected_seqnames = sorted(original_seqnames + [new_chrom])
+    assert vcf.seqnames == expected_seqnames
 
 def test_set_chrom_after_contig_is_added_to_header():
     test_vcf = '{}/test-strict-gt-option-flag.vcf.gz'.format(HERE)
     new_chrom = "NEW"
     vcf = VCF(test_vcf, gts012=False)
+    original_seqnames = vcf.seqnames
     vcf.add_to_header("##contig=<ID={},length=15>".format(new_chrom))
+    expected_seqnames = sorted(original_seqnames + [new_chrom])
+    assert vcf.seqnames == expected_seqnames
     v = next(vcf)
 
     v.CHROM = new_chrom

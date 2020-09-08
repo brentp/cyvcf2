@@ -295,6 +295,9 @@ cdef class VCF(HTSFile):
         ret = bcf_hdr_sync(self.hdr)
         if ret != 0:
             raise Exception("couldn't add '%s' to header")
+        if line.startswith("##contig"):
+            # need to trigger a refresh of seqnames
+            self._seqnames = []
         return ret
 
     def add_info_to_header(self, adict):
@@ -1842,6 +1845,9 @@ cdef class Variant(object):
                 new_rid = bcf_hdr_id2int(self.vcf.hdr, BCF_DT_CTG, new_chrom.encode())
                 if new_rid < 0:
                     raise ValueError("Unable to add {} to CHROM".format(new_chrom))
+                sys.stderr.write(
+                    "[cyvcf2]: added new contig {} to header".format(new_chrom)
+                )
             self.b.rid = new_rid
 
     property var_type:

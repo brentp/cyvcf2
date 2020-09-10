@@ -1437,7 +1437,7 @@ cdef class Variant(object):
             afloat = data.astype(np.float32).reshape((size,))
             ret = bcf_update_format_float(self.vcf.hdr, self.b, to_bytes(name), &afloat[0], size)
         elif np.issubdtype(data.dtype, np.bytes_):
-            if len(<object>data).shape > 1:
+            if len((<object>data).shape) > 1:
                 raise Exception("Setting string type format fields with number>1 are currently not supported")
             if not data.flags['C_CONTIGUOUS']:
                 data = np.ascontiguousarray(data)

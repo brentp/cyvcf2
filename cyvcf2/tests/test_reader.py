@@ -673,33 +673,13 @@ def test_set_format_str_bytes_first_longer():
     v.set_format("STR", np.array([b'foobar', b'baz']))
     assert np.all(v.format('STR') == np.array(['foobar', 'baz']))
 
-def test_set_format_str_unicode_second_longer():
-    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
-    assert vcf.add_format_to_header(dict(ID="STR", Number=1, Type="String", Description="String example")) == 0
-    v = next(vcf)
-
-    # lower case delta
-    contents = np.array(['foo', '\u03B4'*12])
-    v.set_format("STR", contents)
-    assert np.all(v.format('STR') == contents)
-
-def test_set_format_str_unicode_first_longer():
-    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
-    assert vcf.add_format_to_header(dict(ID="STR", Number=1, Type="String", Description="String example")) == 0
-    v = next(vcf)
-
-    # lower case delta
-    contents = np.array(['\u03B4'*12, 'foo'])
-    v.set_format("STR", contents)
-    assert np.all(v.format('STR') == contents)
-
-def test_set_format_str_unicode_number3():
+def test_set_format_str_bytes_number3():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     assert vcf.add_format_to_header(dict(ID="STR", Number=3, Type="String", Description="String example")) == 0
     v = next(vcf)
 
     # lower case delta
-    contents = np.array([['foo', 'barbaz', 'biz'], ['blub', 'bloop' + '\u03B4'*12, 'blop']])
+    contents = np.array([[b'foo', b'barbaz', b'biz'], [b'blub', b'bloop', b'blop']])
     v.set_format("STR", contents)
     assert np.all(v.format('STR') == contents)
 

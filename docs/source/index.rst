@@ -178,6 +178,10 @@ Tests can be run with:
 
     python setup.py test
 
+Known Limitations
+=================
+`cyvcf2` currently does not support reading VCFs encoded with UTF-8 with non-ASCII characters in the contents of string-typed FORMAT fields.
+
 See Also
 ========
 

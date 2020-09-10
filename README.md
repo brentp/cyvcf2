@@ -4,6 +4,8 @@ cyvcf2
 Note: cyvcf2 versions < 0.20.0 require htslib < 1.10. cyvcf2 versions >= 0.20.0 require htslib >= 1.10
 
 <!-- ghp-import -p docs/build/html/ -->
+The latest documentation for cyvcf2 can be found here:
+
 [![Docs](https://img.shields.io/badge/docs-latest-blue.svg)](http://brentp.github.io/cyvcf2/)
 
 If you use cyvcf2, please cite the [paper](https://academic.oup.com/bioinformatics/article/2971439/cyvcf2)

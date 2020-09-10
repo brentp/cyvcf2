@@ -1423,20 +1423,32 @@ cdef class Variant(object):
 
         cdef np.ndarray[np.float32_t, mode="c"] afloat
         cdef np.ndarray[np.int32_t, mode="c"] aint
+        cdef char *bytesp
 
-        cdef int size = data.shape[0]
-        if len((<object>data).shape) > 1:
-            size *= data.shape[1]
-
+        cdef int size
         cdef int ret
         if np.issubdtype(data.dtype, np.signedinteger) or np.issubdtype(data.dtype, np.unsignedinteger):
+            size = data.shape[0]
+            if len((<object>data).shape) > 1:
+                size *= data.shape[1]
             aint = data.astype(np.int32).reshape((size,))
             ret = bcf_update_format_int32(self.vcf.hdr, self.b, to_bytes(name), &aint[0], size)
         elif np.issubdtype(data.dtype, np.floating):
+            size = data.shape[0]
+            if len((<object>data).shape) > 1:
+                size *= data.shape[1]
             afloat = data.astype(np.float32).reshape((size,))
             ret = bcf_update_format_float(self.vcf.hdr, self.b, to_bytes(name), &afloat[0], size)
+        elif np.issubdtype(data.dtype, np.bytes_):
+            if len((<object>data).shape) > 1:
+                raise Exception("Setting string type format fields with number>1 are currently not supported")
+            if not data.flags['C_CONTIGUOUS']:
+                data = np.ascontiguousarray(data)
+            size = data.nbytes
+            bytesp = <char *>data.data
+            ret = bcf_update_format(self.vcf.hdr, self.b, to_bytes(name), bytesp, size, BCF_HT_STR)
         else:
-            raise Exception("format: currently only float and int numpy arrays are supported. got %s", data.dtype)
+            raise Exception("format: currently only float, int and string (fixed length ASCII np.bytes_) numpy arrays are supported. got %s", data.dtype)
         if ret < 0:
             raise Exception("error (%d) setting format with: %s" % (ret, data[:100]))
 

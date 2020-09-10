@@ -1420,7 +1420,7 @@ cdef class Variant(object):
 
         cdef np.ndarray[np.float32_t, mode="c"] afloat
         cdef np.ndarray[np.int32_t, mode="c"] aint
-        cdef char *bytesp
+        cdef char **bytesp
 
         cdef int size
         cdef int ret
@@ -1438,7 +1438,7 @@ cdef class Variant(object):
             ret = bcf_update_format_float(self.vcf.hdr, self.b, to_bytes(name), &afloat[0], size)
         elif np.issubdtype(data.dtype, np.bytes_):
             size = data.nbytes
-            bytesp = <char *> data.data
+            bytesp = <char **> data.data
             ret = bcf_update_format_char(self.vcf.hdr, self.b, to_bytes(name), bytesp, size)
         else:
             raise Exception("format: currently only float, int and string (fixed length ASCII np.bytes_) numpy arrays are supported. got %s", data.dtype)

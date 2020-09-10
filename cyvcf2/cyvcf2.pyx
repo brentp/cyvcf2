@@ -1420,7 +1420,11 @@ cdef class Variant(object):
 
         cdef np.ndarray[np.float32_t, mode="c"] afloat
         cdef np.ndarray[np.int32_t, mode="c"] aint
-        cdef char **bytesp
+        cdef char *cstr
+        cdef char *achar
+        cdef int shape0
+        cdef int shape1
+        cdef int itemsize
 
         cdef int size
         cdef int ret
@@ -1437,9 +1441,32 @@ cdef class Variant(object):
             afloat = data.astype(np.float32).reshape((size,))
             ret = bcf_update_format_float(self.vcf.hdr, self.b, to_bytes(name), &afloat[0], size)
         elif np.issubdtype(data.dtype, np.bytes_):
-            size = data.nbytes
-            bytesp = <char **> data.data
-            ret = bcf_update_format_char(self.vcf.hdr, self.b, to_bytes(name), bytesp, size)
+            size = data.nbytes + data.size
+            cstr = <char *>stdlib.malloc(size)
+
+            if not data.flags['C_CONTIGUOUS']:
+                data = np.ascontiguousarray(data)
+            achar = <char *>data.data
+            shape0 = data.shape[0]
+            itemsize = data.dtype.itemsize
+            if len((<object>data).shape) > 1:
+                shape1 = data.shape[1]
+                for row in range(shape0):
+                    for col in range(shape1):
+                        # null terminate
+                        cstr[(row*shape1 + col)*(itemsize+1) + itemsize] = 0
+                        # copy the non-null terminated string over
+                        for b in range(itemsize):
+                            cstr[(row*shape1 + col)*(itemsize+1) + b] = achar[(row*shape1 + col)*itemsize + b]
+            else:
+                for row in range(shape0):
+                    # null terminate
+                    cstr[row*(itemsize+1) + itemsize] = 0
+                    # copy the non-null terminated string over
+                    for b in range(itemsize):
+                        cstr[row*(itemsize+1) + b] = achar[row*itemsize + b]
+            ret = bcf_update_format(self.vcf.hdr, self.b, to_bytes(name), cstr, size, BCF_HT_STR)
+            stdlib.free(cstr)
         else:
             raise Exception("format: currently only float, int and string (fixed length ASCII np.bytes_) numpy arrays are supported. got %s", data.dtype)
         if ret < 0:

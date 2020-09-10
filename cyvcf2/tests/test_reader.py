@@ -684,6 +684,17 @@ def test_set_format_str_bytes_number3():
     print('stored data', v.format('STR'))
     assert np.all(v.format('STR') == contents)
 
+def test_set_format_str_bytes_notccontiguougs():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    assert vcf.add_format_to_header(dict(ID="STR", Number=3, Type="String", Description="String example")) == 0
+    v = next(vcf)
+
+    contents = np.array([[b'foo', b'barbaz', b'biz'], [b'blub', b'bloop', b'blop']])
+    v.set_format("STR", np.asfortranarray(contents))
+    print('contents', contents)
+    print('stored data', v.format('STR'))
+    assert np.all(v.format('STR') == contents)
+
 def test_set_gts():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     v = next(vcf)

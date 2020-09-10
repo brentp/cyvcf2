@@ -678,9 +678,10 @@ def test_set_format_str_bytes_number3():
     assert vcf.add_format_to_header(dict(ID="STR", Number=3, Type="String", Description="String example")) == 0
     v = next(vcf)
 
-    # lower case delta
     contents = np.array([[b'foo', b'barbaz', b'biz'], [b'blub', b'bloop', b'blop']])
     v.set_format("STR", contents)
+    print('contents', contents)
+    print('stored data', v.format('STR'))
     assert np.all(v.format('STR') == contents)
 
 def test_set_gts():

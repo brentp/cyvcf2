@@ -180,7 +180,8 @@ Tests can be run with:
 
 Known Limitations
 =================
-`cyvcf2` currently does not support reading VCFs encoded with UTF-8 with non-ASCII characters in the contents of string-typed FORMAT fields.
+* `cyvcf2` currently does not support reading or writing VCFs encoded with UTF-8 with non-ASCII characters in the contents of string-typed FORMAT fields.
+* `cyvcf2` currently does not support writing string type format fields with number>1.
 
 See Also
 ========

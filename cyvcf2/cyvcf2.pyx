@@ -1439,7 +1439,7 @@ cdef class Variant(object):
         elif np.issubdtype(data.dtype, np.bytes_):
             size = data.nbytes
             bytesp = <char *> data.data
-            ret = bcf_update_format(self.vcf.hdr, self.b, to_bytes(name), bytesp, size, BCF_HT_STR)
+            ret = bcf_update_format_char(self.vcf.hdr, self.b, to_bytes(name), bytesp, size)
         else:
             raise Exception("format: currently only float, int and string (fixed length ASCII np.bytes_) numpy arrays are supported. got %s", data.dtype)
         if ret < 0:

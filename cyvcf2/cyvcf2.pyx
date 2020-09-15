@@ -1,4 +1,5 @@
 #cython: profile=False
+#cython:language_level=3
 
 #cython: embedsignature=True
 from __future__ import print_function
@@ -376,6 +377,11 @@ cdef class VCF(HTSFile):
             raise Exception("unable to update to header")
 
     def set_index(self, index_path=""):
+        if index_path.endswith(".tbi"):
+            self.idx = tbx_index_load2(to_bytes(self.fname), to_bytes(index_path))
+            if self.idx != NULL:
+                return
+
         self.hidx = hts_idx_load2(to_bytes(self.fname), to_bytes(index_path))
         if self.hidx == NULL:
             self.idx = tbx_index_load2(to_bytes(self.fname), to_bytes(index_path))

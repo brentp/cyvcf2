@@ -808,6 +808,38 @@ def test_access_genotype():
     v.genotype = gts
     assert "1/0:6728,1:F	0/1:22,1:G" in str(v)
 
+def test_access_genotype_array():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    """
+7	55086956	.	C	G	0	.	.	GT:ADP_ALL:RULE	0/0:6728,1:F	1|1:22,1:G
+7	55086957	.	T	A,C,G	0	.	.	GT:ADP_ALL:RULE	1/2:6768,2,2,1:F2,F3,F4	2|3:1,2,3,4:G2,G3,G4
+7	55086958	.	T	G	0	.	.	GT:ADP_ALL:RULE	0/1/.:6768,2,2,1:F2,F3,F4	0:1,2,3,4:G2,G3,G4
+7	55086959	.	T	G,T	0	.	.	GT:ADP_ALL:RULE	.	0|2:1,2,3,4:G2,G3,G4
+    """
+
+    v = next(vcf)
+    np.testing.assert_array_equal(
+        v.genotype.array(),
+        np.array([[0, 0, 0], [1, 1, 1]], dtype=np.int16)
+    )
+
+    v = next(vcf)
+    np.testing.assert_array_equal(
+        v.genotype.array(),
+        np.array([[1, 2, 0], [2, 3, 1]], dtype=np.int16)
+    )
+
+    v = next(vcf)
+    np.testing.assert_array_equal(
+        v.genotype.array(),
+        np.array([[0, 1, -1, 0], [0, -2, -2, 1]], dtype=np.int16)
+    )
+
+    v = next(vcf)
+    np.testing.assert_array_equal(
+        v.genotype.array(),
+        np.array([[-1, -2, 1], [0, 2, 1]], dtype=np.int16)
+    )
 
 def test_alt_homozygous_gt():
     vcf = VCF(os.path.join(HERE, "test-multiallelic-homozygous-alt.vcf.gz"))

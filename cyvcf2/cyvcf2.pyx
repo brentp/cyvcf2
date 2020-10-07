@@ -1024,13 +1024,14 @@ cdef class Genotypes(object):
             result.append((v >> 1) - 1)
         return result
 
-    def array(Genotypes self):
+    def array(Genotypes self, int fill=-2):
         """
         array returns an int16 numpy array  of shape n_samples, (ploidy + 1).
         The last column indicates phased (1 is phased, 0 is unphased).
         The other columns indicate the alleles, e.g. [0, 1, 1] is 0|1.
-        Unknown alleles are represented by -1 and mixed-ploidy arrays
-        are padded with -2 to indicate non-alleles.
+        Unknown alleles are represented by -1.
+        If a mixture of ploidy levels are present then the array is padded
+        with the `fill` value (default = -2) to indicate non-alleles.
         """
         cdef np.ndarray[np.int16_t, ndim=2] to_return = np.zeros((self.n_samples, self.ploidy + 1),
                 dtype=np.int16)
@@ -1044,7 +1045,7 @@ cdef class Genotypes(object):
             for allele in range(self.ploidy):
                 raw = self._raw[ind * self.ploidy + allele]
                 if raw == bcf_int32_vector_end:
-                    to_return[ind, allele] = -2
+                    to_return[ind, allele] = fill
                 else:
                     to_return[ind, allele] = (raw >> 1) - 1
             to_return[ind, self.ploidy] = (self._raw[ind * self.ploidy + 1] & 1) == 1

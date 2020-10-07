@@ -841,6 +841,12 @@ def test_access_genotype_array():
         np.array([[-1, -2, 1], [0, 2, 1]], dtype=np.int16)
     )
 
+    # test fill value
+    np.testing.assert_array_equal(
+        v.genotype.array(fill=-9),
+        np.array([[-1, -9, 1], [0, 2, 1]], dtype=np.int16)
+    )
+
 def test_alt_homozygous_gt():
     vcf = VCF(os.path.join(HERE, "test-multiallelic-homozygous-alt.vcf.gz"))
     assert vcf is not None

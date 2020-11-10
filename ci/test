@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if (cd ~/ && cyvcf2 --help >/dev/null)
+then
+  echo "cyvcf2 --help: OK"
+else
+  exit 1
+fi
+
+if (cd ~/ && python -c "from cyvcf2 import VCF; VCF('https://github.com/brentp/cyvcf2/raw/master/cyvcf2/tests/test.vcf.gz')")
+then
+  echo "Remote reading: OK"
+else
+  exit 1
+fi

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+yum install -y openssl11-devel
+yum install -y libffi libffi-devel zlib-devel
+yum install -y bzip2-devel bzip2-libs xz-devel xz-libs
+
+python -m pip install pip --upgrade
+
+git submodule init
+git submodule update
+
+curl -O https://www.libssh2.org/download/libssh2-1.9.0.tar.gz
+tar xzf libssh2-1.9.0.tar.gz
+cd libssh2-1.9.0
+./configure --prefix=/root
+make
+make install
+cd ..
+rm -rf libssh2-1.9.0
+
+curl -O https://curl.se/download/curl-7.73.0.tar.gz
+tar xzf curl-7.73.0.tar.gz
+cd curl-7.73.0
+./configure --with-libssh2 --prefix=/root
+make
+make install
+cd ..
+rm -rf curl-7.73.0
+
+cd htslib
+autoheader
+autoconf
+./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2
+make
+
+cd ..
+pip install -r requirements.txt

@@ -31,8 +31,8 @@ jobs:
     python: "3.7"
     env:
       - CIBW_SKIP="pp* cp27-* cp34-* *i686*"
-      - CIBW_BEFORE_BUILD_LINUX="{project}/ci/test"
-      - CIBW_TEST_COMMAND="cyvcf2 --help"
+      - CIBW_BEFORE_BUILD_LINUX="{project}/ci/linux-deps"
+      - CIBW_TEST_COMMAND="{project}/ci/test"
       - CIBW_ENVIRONMENT="CYTHONIZE=1"
     services: docker
     install:

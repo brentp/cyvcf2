@@ -9,6 +9,9 @@ python -m pip install pip --upgrade
 git submodule init
 git submodule update
 
+export LIBRARY_PATH="/usr/lib64/openssl11"
+export C_INCLUDE_PATH="/usr/include/openssl11"
+
 cd htslib
 autoheader
 autoconf

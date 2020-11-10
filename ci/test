@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Exit on first error
+set -e
+
+cyvcf2 --help
+
+python -c "from cyvcf2 import VCF; VCF('https://github.com/brentp/cyvcf2/raw/master/cyvcf2/tests/test.vcf.gz')"

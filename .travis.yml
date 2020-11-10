@@ -31,7 +31,7 @@ jobs:
     python: "3.7"
     env:
       - CIBW_SKIP="pp* cp27-* cp34-* *i686*"
-      - CIBW_BEFORE_BUILD_LINUX="{project}/ci/linux-deps"
+      - CIBW_BEFORE_BUILD_LINUX="{project}/ci/test"
       - CIBW_TEST_COMMAND="cyvcf2 --help"
       - CIBW_ENVIRONMENT="CYTHONIZE=1"
     services: docker
@@ -53,7 +53,7 @@ jobs:
     env:
       - CIBW_SKIP="pp* cp27-* cp34-* *i686*"
       - CIBW_BEFORE_BUILD_MACOS="{project}/ci/osx-deps"
-      - CIBW_TEST_COMMAND="cyvcf2 --help"
+      - CIBW_TEST_COMMAND="{project}/ci/test"
       - CIBW_ENVIRONMENT="CYTHONIZE=1"
       - LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
       - CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"

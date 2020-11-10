@@ -9,9 +9,6 @@ python -m pip install pip --upgrade
 git submodule init
 git submodule update
 
-export LDFLAGS="-L/usr/lib64/openssl11"
-export CPPFLAGS="-I/usr/include/openssl11"
-
 curl -O https://www.libssh2.org/download/libssh2-1.9.0.tar.gz
 tar xzf libssh2-1.9.0.tar.gz
 cd libssh2-1.9.0

@@ -34,7 +34,7 @@ jobs:
       - CIBW_MANYLINUX_X86_64_IMAGE=manylinux2014
       - CIBW_BEFORE_BUILD_LINUX="{project}/ci/linux-deps"
       - CIBW_TEST_COMMAND="{project}/ci/test"
-      - CIBW_ENVIRONMENT="CYTHONIZE=1"
+      - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11'"
     services: docker
     install:
       - python3 -m pip install cibuildwheel

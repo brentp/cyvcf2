@@ -1,7 +1,8 @@
 #!/bin/bash
 
+yum install -y openssl11-devel
 yum install -y libffi libffi-devel zlib-devel libcurl-devel
-yum install -y bzip2-devel bzip2-libs xz-devel xz-libs openssl-devel
+yum install -y bzip2-devel bzip2-libs xz-devel xz-libs
 
 python -m pip install pip --upgrade
 

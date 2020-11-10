@@ -1,8 +1,15 @@
 #!/bin/bash
 
-# Exit on first error
-set -e
+if cyvcf2 --help >/dev/null
+else
+  echo "cyvcf2 --help: OK"
+then
+  exit 1
+fi
 
-cyvcf2 --help
-
-python -c "from cyvcf2 import VCF; VCF('https://github.com/brentp/cyvcf2/raw/master/cyvcf2/tests/test.vcf.gz')"
+if python -c "from cyvcf2 import VCF; VCF('https://github.com/brentp/cyvcf2/raw/master/cyvcf2/tests/test.vcf.gz')"
+else
+  echo "Remote reading: OK"
+then
+  exit 1
+fi

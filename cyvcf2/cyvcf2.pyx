@@ -1429,7 +1429,7 @@ cdef class Variant(object):
     def set_format(self, name, np.ndarray data not None):
         """
         set the format field given by name..
-        data must be a numpy array of type float or int
+        data must be a numpy array of type float, int or string (fixed length ASCII np.bytes_)
         """
         cdef int n_samples = self.vcf.n_samples
         if len(data) % n_samples != 0:
@@ -1452,6 +1452,7 @@ cdef class Variant(object):
             if len((<object>data).shape) > 1:
                 size *= data.shape[1]
             afloat = data.astype(np.float32).reshape((size,))
+            afloat[afloat == np.nan] = bcf_float_missing
             ret = bcf_update_format_float(self.vcf.hdr, self.b, to_bytes(name), &afloat[0], size)
         elif np.issubdtype(data.dtype, np.bytes_):
             if len((<object>data).shape) > 1:

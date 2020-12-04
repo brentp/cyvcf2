@@ -4,9 +4,10 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>cyvcf2 &#8212; cyvcf2 0.20.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cyvcf2 &#8212; cyvcf2 0.30.0 documentation</title>
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
@@ -85,7 +86,8 @@ the <a class="reference external" href="http://quinlanlab.org/">Quinlan lab</a>.
 <h1>Modifying Existing Records<a class="headerlink" href="#modifying-existing-records" title="Permalink to this headline">¶</a></h1>
 <p><cite>cyvcf2</cite> is optimized for fast reading and extraction from existing files.
 However, it also offers some means of modifying existing VCFs. Here, we
-show an example of how to annotate variants with the genes that they overlap.</p>
+show an example of how to modify the INFO field at a locus to annotate
+variants with the genes that they overlap.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">cyvcf2</span> <span class="kn">import</span> <span class="n">VCF</span><span class="p">,</span> <span class="n">Writer</span>
 <span class="n">vcf</span> <span class="o">=</span> <span class="n">VCF</span><span class="p">(</span><span class="n">VCF_PATH</span><span class="p">)</span>
 <span class="c1"># adjust the header to contain the new field</span>
@@ -109,6 +111,7 @@ show an example of how to annotate variants with the genes that they overlap.</p
 <span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">();</span> <span class="n">vcf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </pre></div>
 </div>
+<p>More info on writing vcfs can be found <a class="reference internal" href="writing.html"><span class="doc">here</span></a></p>
 </div>
 <div class="section" id="setting-genotyping-strictness">
 <h1>Setting Genotyping Strictness<a class="headerlink" href="#setting-genotyping-strictness" title="Permalink to this headline">¶</a></h1>
@@ -146,12 +149,20 @@ set to <cite>False</cite> by default) to preserve backwards compatibility.</p>
 </pre></div>
 </div>
 </div>
+<div class="section" id="known-limitations">
+<h1>Known Limitations<a class="headerlink" href="#known-limitations" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><p><cite>cyvcf2</cite> currently does not support reading VCFs encoded with UTF-8 with non-ASCII characters in the contents of string-typed FORMAT fields.</p></li>
+</ul>
+<p>For limitations on writing VCFs, see <a class="reference internal" href="writing.html#limitations-with-writing"><span class="std std-ref">here</span></a></p>
+</div>
 <div class="section" id="see-also">
 <h1>See Also<a class="headerlink" href="#see-also" title="Permalink to this headline">¶</a></h1>
-<p>Pysam also [has a cython wrapper to htslib](<a class="reference external" href="https://github.com/pysam-developers/pysam/blob/master/pysam/cbcf.pyx">https://github.com/pysam-developers/pysam/blob/master/pysam/cbcf.pyx</a>) and one block of code here is taken directly from that library. But, the optimizations that we want for gemini are very specific so we have chosen to create a separate project.</p>
+<p>Pysam also <a class="reference external" href="https://github.com/pysam-developers/pysam/blob/master/pysam/cbcf.pyx">has a cython wrapper to htslib</a> and one block of code here is taken directly from that library. But, the optimizations that we want for gemini are very specific so we have chosen to create a separate project.</p>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="docstrings.html">cyvcf2 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="writing.html">Modifying Existing VCFs</a></li>
 </ul>
 </div>
 </div>
@@ -175,6 +186,7 @@ set to <cite>False</cite> by default) to preserve backwards compatibility.</p>
 <h3>Navigation</h3>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="docstrings.html">cyvcf2 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="writing.html">Modifying Existing VCFs</a></li>
 </ul>
 
 <div class="relations">
@@ -211,7 +223,7 @@ set to <cite>False</cite> by default) to preserve backwards compatibility.</p>
       &copy;2016..2020, Brent Pedersen.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.0.1</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

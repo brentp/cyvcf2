@@ -59,10 +59,12 @@ See the :ref:`api` for detailed documentation, but the most common usage is summ
 Modifying Existing Records
 ==========================
 
+.. this example is also in the writing.rst page
+
 `cyvcf2` is optimized for fast reading and extraction from existing files.
 However, it also offers some means of modifying existing VCFs. Here, we
-show an example of how to annotate variants with the genes that they overlap.
-
+show an example of how to modify the INFO field at a locus to annotate
+variants with the genes that they overlap.
 
 .. code-block:: python
 
@@ -87,6 +89,8 @@ show an example of how to annotate variants with the genes that they overlap.
         w.write_record(v)
 
     w.close(); vcf.close()
+
+More info on writing vcfs can be found :doc:`here <writing>`
 
 Setting Genotyping Strictness
 =============================
@@ -133,13 +137,20 @@ Tests can be run with:
 
     python setup.py test
 
+Known Limitations
+=================
+* `cyvcf2` currently does not support reading VCFs encoded with UTF-8 with non-ASCII characters in the contents of string-typed FORMAT fields.
+
+For limitations on writing VCFs, see :ref:`here <Limitations with writing>`
+
 See Also
 ========
 
-Pysam also [has a cython wrapper to htslib](https://github.com/pysam-developers/pysam/blob/master/pysam/cbcf.pyx) and one block of code here is taken directly from that library. But, the optimizations that we want for gemini are very specific so we have chosen to create a separate project.
+Pysam also `has a cython wrapper to htslib <https://github.com/pysam-developers/pysam/blob/master/pysam/cbcf.pyx>`_ and one block of code here is taken directly from that library. But, the optimizations that we want for gemini are very specific so we have chosen to create a separate project.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    docstrings
+   writing
 

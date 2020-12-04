@@ -67,18 +67,6 @@ def test_format_str():
     f = next(vcf).format("RULE")
     assert list(f) == ['F2,F3,F4', 'G2,G3,G4']
 
-"""
-def test_write_format_str():
-    vcf = VCF(os.path.join(HERE, "test-format-string.vcf"))
-    wtr = Writer("x.vcf", vcf)
-    variant = next(vcf)
-    variant.set_format("TSTRING", np.array(["asdfxx","35\0"]))
-    wtr.write_record(variant)
-    wtr.close()
-    assert "asdfxx" in str(variant), str(variant)
-    assert "35" in str(variant)
-    """
-
 def test_missing_samples():
     samples = ['101976-101976', 'sample_not_in_vcf']
     vcf = VCF(VCF_PATH, gts012=True, samples=samples)
@@ -669,6 +657,31 @@ def test_set_format_int3():
 
     assert np.allclose(v.format("P3"), exp)
 
+def test_set_format_str_bytes_second_longer():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    assert vcf.add_format_to_header(dict(ID="STR", Number=1, Type="String", Description="String example")) == 0
+    v = next(vcf)
+
+    v.set_format("STR", np.array([b'foo', b'barbaz']))
+    assert np.all(v.format('STR') == np.array(['foo', 'barbaz']))
+
+def test_set_format_str_bytes_first_longer():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    assert vcf.add_format_to_header(dict(ID="STR", Number=1, Type="String", Description="String example")) == 0
+    v = next(vcf)
+
+    v.set_format("STR", np.array([b'foobar', b'baz']))
+    assert np.all(v.format('STR') == np.array(['foobar', 'baz']))
+
+def test_set_format_str_bytes_number3():
+    # Confirm currently not supported
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    assert vcf.add_format_to_header(dict(ID="STR", Number=3, Type="String", Description="String example")) == 0
+    v = next(vcf)
+
+    contents = np.array([[b'foo', b'barbaz', b'biz'], [b'blub', b'bloop', b'blop']])
+    assert_raises(Exception, v.set_format, "STR", contents)
+
 def test_set_gts():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     v = next(vcf)
@@ -795,6 +808,44 @@ def test_access_genotype():
     v.genotype = gts
     assert "1/0:6728,1:F	0/1:22,1:G" in str(v)
 
+def test_access_genotype_array():
+    vcf = VCF('{}/test-format-string.vcf'.format(HERE))
+    """
+7	55086956	.	C	G	0	.	.	GT:ADP_ALL:RULE	0/0:6728,1:F	1|1:22,1:G
+7	55086957	.	T	A,C,G	0	.	.	GT:ADP_ALL:RULE	1/2:6768,2,2,1:F2,F3,F4	2|3:1,2,3,4:G2,G3,G4
+7	55086958	.	T	G	0	.	.	GT:ADP_ALL:RULE	0/1/.:6768,2,2,1:F2,F3,F4	0:1,2,3,4:G2,G3,G4
+7	55086959	.	T	G,T	0	.	.	GT:ADP_ALL:RULE	.	0|2:1,2,3,4:G2,G3,G4
+    """
+
+    v = next(vcf)
+    np.testing.assert_array_equal(
+        v.genotype.array(),
+        np.array([[0, 0, 0], [1, 1, 1]], dtype=np.int16)
+    )
+
+    v = next(vcf)
+    np.testing.assert_array_equal(
+        v.genotype.array(),
+        np.array([[1, 2, 0], [2, 3, 1]], dtype=np.int16)
+    )
+
+    v = next(vcf)
+    np.testing.assert_array_equal(
+        v.genotype.array(),
+        np.array([[0, 1, -1, 0], [0, -2, -2, 1]], dtype=np.int16)
+    )
+
+    v = next(vcf)
+    np.testing.assert_array_equal(
+        v.genotype.array(),
+        np.array([[-1, -2, 1], [0, 2, 1]], dtype=np.int16)
+    )
+
+    # test fill value
+    np.testing.assert_array_equal(
+        v.genotype.array(fill=-9),
+        np.array([[-1, -9, 1], [0, 2, 1]], dtype=np.int16)
+    )
 
 def test_alt_homozygous_gt():
     vcf = VCF(os.path.join(HERE, "test-multiallelic-homozygous-alt.vcf.gz"))
@@ -880,6 +931,32 @@ def test_set_pos():
     v.set_pos(22)
     assert v.start == 22
     assert v.POS == 23
+
+def test_set_chrom_when_contig_not_in_header():
+    test_vcf = '{}/test-strict-gt-option-flag.vcf.gz'.format(HERE)
+    new_chrom = "NEW"
+    vcf = VCF(test_vcf, gts012=False)
+    original_seqnames = vcf.seqnames
+    assert new_chrom not in original_seqnames
+    v = next(vcf)
+
+    v.CHROM = new_chrom
+    assert v.CHROM == new_chrom
+    expected_seqnames = sorted(original_seqnames + [new_chrom])
+    assert vcf.seqnames == expected_seqnames
+
+def test_set_chrom_after_contig_is_added_to_header():
+    test_vcf = '{}/test-strict-gt-option-flag.vcf.gz'.format(HERE)
+    new_chrom = "NEW"
+    vcf = VCF(test_vcf, gts012=False)
+    original_seqnames = vcf.seqnames
+    vcf.add_to_header("##contig=<ID={},length=15>".format(new_chrom))
+    expected_seqnames = sorted(original_seqnames + [new_chrom])
+    assert vcf.seqnames == expected_seqnames
+    v = next(vcf)
+
+    v.CHROM = new_chrom
+    assert v.CHROM == new_chrom
 
 def test_set_qual():
     v = VCF(VCF_PATH)
@@ -1048,3 +1125,16 @@ def test_no_seqlen():
     with assert_raises(AttributeError) as ae:
         vcf.seqlens
     assert isinstance(ae.exception, AttributeError)
+
+def test_set_unknown_format():
+    vcf = VCF(VCF_PATH)
+    vcf.add_format_to_header({'ID':'NEW', 'Type':'Float', 'Number':1, 'Description':'...'})
+
+    v = next(vcf)
+    arr = np.array([[1.1] for s in vcf.samples])
+    arr[-1][0] = np.nan
+    v.set_format('NEW', arr)
+    record = str(v)
+    parts = record.split()
+    assert parts[-1][-1] == '.'
+    assert parts[-2][-3:] == '1.1'

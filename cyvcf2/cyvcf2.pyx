@@ -1438,6 +1438,7 @@ cdef class Variant(object):
         cdef np.ndarray[np.float32_t, mode="c"] afloat
         cdef np.ndarray[np.int32_t, mode="c"] aint
         cdef char *bytesp
+        cdef size_t i
 
         cdef int size
         cdef int ret
@@ -1449,10 +1450,13 @@ cdef class Variant(object):
             ret = bcf_update_format_int32(self.vcf.hdr, self.b, to_bytes(name), &aint[0], size)
         elif np.issubdtype(data.dtype, np.floating):
             size = data.shape[0]
+            isnan = np.isnan(data)
             if len((<object>data).shape) > 1:
                 size *= data.shape[1]
             afloat = data.astype(np.float32).reshape((size,))
-            afloat[afloat == np.nan] = bcf_float_missing
+            for i in range(size):
+                if isnan[i]:
+                    bcf_float_set(&afloat[i], bcf_float_missing)
             ret = bcf_update_format_float(self.vcf.hdr, self.b, to_bytes(name), &afloat[0], size)
         elif np.issubdtype(data.dtype, np.bytes_):
             if len((<object>data).shape) > 1:

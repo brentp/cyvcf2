@@ -1450,10 +1450,10 @@ cdef class Variant(object):
             ret = bcf_update_format_int32(self.vcf.hdr, self.b, to_bytes(name), &aint[0], size)
         elif np.issubdtype(data.dtype, np.floating):
             size = data.shape[0]
-            isnan = np.isnan(data)
             if len((<object>data).shape) > 1:
                 size *= data.shape[1]
             afloat = data.astype(np.float32).reshape((size,))
+            isnan = np.isnan(afloat)
             for i in range(size):
                 if isnan[i]:
                     bcf_float_set(&afloat[i], bcf_float_missing)

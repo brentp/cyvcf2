@@ -1125,3 +1125,16 @@ def test_no_seqlen():
     with assert_raises(AttributeError) as ae:
         vcf.seqlens
     assert isinstance(ae.exception, AttributeError)
+
+def test_set_unknown_format():
+    vcf = VCF(VCF_PATH)
+    vcf.add_format_to_header({'ID':'NEW', 'Type':'Float', 'Number':1, 'Description':'...'})
+
+    v = next(vcf)
+    arr = np.array([[1.1] for s in vcf.samples])
+    arr[-1][0] = np.nan
+    v.set_format('NEW', arr)
+    record = str(v)
+    parts = record.split()
+    assert parts[-1][-1] == '.'
+    assert parts[-2][-3:] == '1.1'

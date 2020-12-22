@@ -1,0 +1,34 @@
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Run tests on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        python-version: [3.5, 3.6, 3.7, 3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install
+      run: |
+        sudo apt-get install libcurl4-openssl-dev
+        pip install -r requirements.txt
+        cd htslib
+        autoheader && autoconf
+        ./configure --enable-s3 --disable-lzma --disable-bz2
+        make
+        cd ..
+        CYTHONIZE=1 python setup.py install
+    - name: Test
+      run: |
+        python setup.py test
+

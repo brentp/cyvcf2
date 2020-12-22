@@ -1138,3 +1138,9 @@ def test_set_unknown_format():
     parts = record.split()
     assert parts[-1][-1] == '.'
     assert parts[-2][-3:] == '1.1'
+
+def test_invalid_header():
+    # htslib produces the error "Empty sample name: trailing spaces/tabs in the header line?"
+    p = os.path.join(HERE, "test-invalid-header.vcf")
+    assert os.path.exists(p)
+    assert_raises(Exception, VCF, p)

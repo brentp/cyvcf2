@@ -256,6 +256,8 @@ cdef class VCF(HTSFile):
         cdef bcf_hdr_t *hdr
         self._open_htsfile(fname, mode)
         hdr = self.hdr = bcf_hdr_read(self.hts)
+        if hdr == NULL:
+            raise Exception("cannot parse VCF header")
         if samples is not None:
             self.set_samples(samples)
         self.n_samples = bcf_hdr_nsamples(self.hdr)

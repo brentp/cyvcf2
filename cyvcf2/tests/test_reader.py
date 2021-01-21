@@ -54,6 +54,13 @@ def test_type():
     for v in vcf:
         if len(v.REF) == 1 and len(v.ALT[0]) == 1:
             assert v.var_type == 'snp'
+        if len(v.REF) != 1:
+            if len(v.ALT) == 1:
+                if len(v.REF) == len(v.ALT[0]):
+                    assert v.var_type == 'mnp'
+            if len(v.ALT) != 1:
+                if all([len(x)==len(v.REF) for x in v.ALT]):
+                    assert v.var_type == 'mnp'
         elif v.ALT[0][0] != "<":
             assert v.var_type == 'indel'
         else:

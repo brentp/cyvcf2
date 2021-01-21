@@ -63,16 +63,19 @@ def test_type():
 def test_type_mnp():
     vcf = VCF(VCF_PATH3)
     for v in vcf:
-        if (v.REF, v.ALT[0]) in [("CGT","CGG"), ("AGG","CGA")]:
-            assert v.var_type == 'mnp'
-        if (v.REF, v.ALT[0], v.ALT[1]) in [("TCGGT","GCGGG","GCGGT")]:
-            assert v.var_type == 'mnp'
-        if (v.REF, v.ALT[0], v.ALT[1], v.ALT[2]) in [("GCC","TCC","GCA","GCG")]:
-            assert v.var_type == 'mnp'
-        if (v.REF, v.ALT[0]) in [("GCA","GA")]:
-            assert v.var_type == 'indel'
-        if (v.REF, v.ALT[0], v.ALT[1]) in [("ATTAC","ATAC","AATAC")]:
-            assert v.var_type == 'indel'
+        if len(v.ALT) == 1:
+            if (v.REF, v.ALT[0]) in [("CGT","CGG"), ("AGG","CGA")]:
+                assert v.var_type == 'mnp'
+            if (v.REF, v.ALT[0]) in [("GCA","GA")]:
+                assert v.var_type == 'indel'
+        if len(v.ALT) == 2:
+            if (v.REF, v.ALT[0], v.ALT[1]) in [("TCGGT","GCGGG","GCGGT")]:
+                assert v.var_type == 'mnp'
+            if (v.REF, v.ALT[0], v.ALT[1]) in [("ATTAC","ATAC","AATAC")]:
+                assert v.var_type == 'indel'
+        if len(v.ALT) == 3:
+            if (v.REF, v.ALT[0], v.ALT[1], v.ALT[2]) in [("GCC","TCC","GCA","GCG")]:
+                assert v.var_type == 'mnp'
 
 def test_format_str():
     vcf = VCF(os.path.join(HERE, "test-format-string.vcf"))

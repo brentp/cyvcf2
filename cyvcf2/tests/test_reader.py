@@ -333,7 +333,9 @@ def test_add_flag():
     w.write_record(rec)
     w.close()
 
-    v = next(VCF(f))
+    fh = VCF(f)
+    v = next(fh)
+    fh.close()
     assert v.INFO["myflag"] is True, dict(v.INFO)
 
     f = tempfile.mktemp(suffix=".vcf")
@@ -341,7 +343,10 @@ def test_add_flag():
     w = Writer(f, vcf)
     rec.INFO["myflag"] = False
     w.write_record(rec)
-    v = next(VCF(f))
+    w.close()
+    fh = VCF(f)
+    v = next(fh)
+    fh.close()
     assert_raises(KeyError, v.INFO.__getitem__, "myflag")
 
 

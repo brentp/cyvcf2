@@ -16,6 +16,7 @@ except ImportError:
 HERE = os.path.dirname(__file__)
 VCF_PATH = os.path.join(HERE, "test.vcf.gz")
 VCF_PATH2 = os.path.join(HERE, "test.snpeff.vcf")
+VCF_PATH3 = os.path.join(HERE, "test.mnp.vcf")
 VCF_PHASE_PATH = os.path.join(HERE, "test.comp_het.3.vcf")
 VCF_ALTFREQ_PATH = os.path.join(HERE, "test_gt_alt_freqs.vcf")
 
@@ -54,17 +55,25 @@ def test_type():
     for v in vcf:
         if len(v.REF) == 1 and len(v.ALT[0]) == 1:
             assert v.var_type == 'snp'
-        if len(v.REF) != 1:
-            if len(v.ALT) == 1:
-                if len(v.REF) == len(v.ALT[0]):
-                    assert v.var_type == 'mnp'
-            if len(v.ALT) != 1:
-                if all([len(x)==len(v.REF) for x in v.ALT]):
-                    assert v.var_type == 'mnp'
         elif v.ALT[0][0] != "<":
             assert v.var_type == 'indel'
         else:
             print(v.var_type, v.REF, v.ALT)
+
+def test_type_mnp():
+    vcf = VCF(VCF_PATH3)
+    for v in vcf:
+        if len(v.REF) != 1:
+            if len(v.ALT) == 1:
+                if len(v.REF) == len(v.ALT[0]):
+                    assert v.var_type == 'mnp'
+                else:
+                    assert v.var_type == 'indel'
+            else:
+                if all([len(x)==len(v.REF) for x in v.ALT]):
+                    assert v.var_type == 'mnp'
+                else:
+                    assert v.var_type == 'indel'
 
 def test_format_str():
     vcf = VCF(os.path.join(HERE, "test-format-string.vcf"))

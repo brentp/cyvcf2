@@ -1820,7 +1820,7 @@ cdef class Variant(object):
 
             if len(self.REF) == 1 and not is_sv: return False
 
-            if all([len(x)==len(self.REF) for x in self.b.d.allele]):
+            if all([len(x)==len(self.REF) for x in self.ALT]):
                 if not is_sv:
                     return True
             return False

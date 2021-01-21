@@ -1,3 +1,4 @@
+##fileformat=VCFv4.2
 ##fileDate=20200122
 ##source=freeBayes v1.3.1-dirty
 ##reference=assembly/scaffolds.fasta

@@ -1811,6 +1811,20 @@ cdef class Variant(object):
                     return False
             return self.b.n_allele > 1
 
+    property is_mnp:
+        "boolean indicating if the variant is a MNP."
+        def __get__(self):
+            cdef int i
+            is_sv = self.is_sv
+            if len(self.b.d.allele[0]) == 1 and not is_sv: return False
+
+            if len(self.REF) == 1 and not is_sv: return False
+
+            if all([len(x)==len(self.REF) for x in self.ALT]):
+                if not is_sv:
+                    return True
+            return False
+
     property is_indel:
         "boolean indicating if the variant is an indel."
         def __get__(self):
@@ -1888,6 +1902,8 @@ cdef class Variant(object):
         def __get__(self):
            if self.is_snp:
                return "snp"
+           if self.is_mnp:
+               return "mnp"
            elif self.is_indel:
                return "indel"
            elif self.is_sv:

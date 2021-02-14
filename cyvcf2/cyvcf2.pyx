@@ -587,8 +587,9 @@ cdef class VCF(HTSFile):
             bcf_destroy(b)
         if  ret == -1:  # end-of-file
             raise StopIteration
-        else:  
-            raise Exception("error parsing variant with `htslib::bcf_read` error-code: %d" % (b.errcode))
+        else:
+            raise Exception("error parsing variant with `htslib::bcf_read` error-code: %d and ret: %d" % (
+                b.errcode, ret))
 
 
     property samples:
@@ -1176,7 +1177,7 @@ cdef class Variant(object):
                 else:
                     raise Exception("gt_bases not implemented for ploidy > 2")
 
-            return np.array(bases, np.str)
+            return np.array(bases, str)
 
     def relatedness(self,
                     int32_t[:, ::view.contiguous] ibs,

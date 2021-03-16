@@ -1,6 +1,6 @@
 name: Wheels
 
-on: 
+on:
   push:
     tags:
       - 'v*.*.*'
@@ -58,6 +58,8 @@ jobs:
   build_sdist:
     name: Build source distribution
     runs-on: ubuntu-latest
+    env:
+      CYTHONIZE: 1
     steps:
       - uses: actions/checkout@v2
 

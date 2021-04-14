@@ -58,8 +58,6 @@ jobs:
   build_sdist:
     name: Build source distribution
     runs-on: ubuntu-latest
-    env:
-      CYTHONIZE: 1
     steps:
       - uses: actions/checkout@v2
 
@@ -67,6 +65,19 @@ jobs:
         name: Install Python
         with:
           python-version: "3.7"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install libcurl4-openssl-dev libbz2-dev liblzma-dev
+          git submodule init
+          git submodule update
+          cd htslib
+          autoheader
+          autoconf
+          ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2
+          make
+          cd ..
+          pip install -r requirements.txt
 
       - name: Build sdist
         run: CYTHONIZE=1 python setup.py sdist

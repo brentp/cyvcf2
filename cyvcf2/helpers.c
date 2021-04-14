@@ -2,15 +2,14 @@
 
 int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
     int j = 0, i, k;
-	int missing= 0;
+    int missing= 0;
     for (i = 0; i < ploidy * num_samples; i += ploidy){
 		missing = 0;
 		for (k = 0; k < ploidy; k++) {
-			if (gts[i+k] <= 0) {
+			if (gts[i+k] <= 1) {
 				missing += 1;
 			}
-			//fprintf(stderr, "%d\n", gts[i + k]);
-        }
+                }
 		if (missing == ploidy) {
 			gts[j++] = 2; // unknown
 			continue;
@@ -47,7 +46,7 @@ int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
         else if((a == 1) && (b == 1)) {
             gts[j] = 3; //  HOM_ALT
         }
-        else if((a  != b)) {
+        else if((a != b)) {
             gts[j] = 1; //  HET
         }
         else if((a == b)) {
@@ -66,10 +65,9 @@ int as_gts012(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
     for (i = 0; i < ploidy * num_samples; i += ploidy){
 		missing = 0;
 		for (k = 0; k < ploidy; k++) {
-			if (gts[i+k] <= 0) {
+			if (gts[i+k] <= 1) {
 				missing += 1;
 			}
-			//fprintf(stderr, "%d\n", gts[i + k]);
         }
 		if (missing == ploidy) {
 			gts[j++] = 3; // unknown

@@ -367,6 +367,14 @@ def test_add_flag():
     fh.close()
     assert_raises(KeyError, v.INFO.__getitem__, "myflag")
 
+def test_issue198():
+    vcf = VCF(os.path.join(HERE, "issue_198.vcf"), strict_gt=True)
+    for v in vcf:
+        assert all(v.gt_types == [2]), v.gt_types
+
+    vcf = VCF(os.path.join(HERE, "issue_198.vcf"), strict_gt=False)
+    for v in vcf:
+        assert all(v.gt_types == [0]), v.gt_types
 
 def test_constants():
     v = VCF(VCF_PATH)

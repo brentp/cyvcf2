@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        python-version: [3.5, 3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8]
 
     steps:
     - uses: actions/checkout@v2
@@ -22,6 +22,7 @@ jobs:
       run: |
         sudo apt-get install libcurl4-openssl-dev
         pip install -r requirements.txt
+        pip install nose
         cd htslib
         autoheader && autoconf
         ./configure --enable-s3 --disable-lzma --disable-bz2

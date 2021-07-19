@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
 
 jobs:
   build_wheels:
@@ -50,6 +56,11 @@ jobs:
         LDFLAGS: "-L/usr/local/opt/openssl@1.1/lib"
         CPPFLAGS: "-I/usr/local/opt/openssl@1.1/include"
         PKG_CONFIG_PATH: "/usr/local/opt/openssl@1.1/lib/pkgconfig"
+
+    # Enable tmate debugging of manually-triggered workflows if the input option was provided
+    - name: Setup tmate session
+      if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled }}
+      uses: mxschmitt/action-tmate@v3
 
     - uses: actions/upload-artifact@v2
       with:

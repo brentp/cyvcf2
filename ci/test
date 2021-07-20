@@ -7,7 +7,7 @@ else
   exit 1
 fi
 
-if (cd ~/ && python -c "from cyvcf2 import VCF; VCF('https://github.com/brentp/cyvcf2/raw/master/cyvcf2/tests/test.vcf.gz')")
+if (cd ~/ && python -c "from cyvcf2 import VCF; VCF('https://github.com/brentp/cyvcf2/raw/main/cyvcf2/tests/test.vcf.gz')")
 then
   echo "Remote reading: OK"
 else

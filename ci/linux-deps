@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 yum install -y openssl11-devel
 yum install -y libffi libffi-devel zlib-devel
 yum install -y bzip2-devel bzip2-libs xz-devel xz-libs
@@ -28,8 +30,10 @@ cd ..
 rm -rf curl-7.73.0
 
 cd htslib
-autoheader
-autoconf
+# configure fails with autoconf 2.71 (in /usr/local/bin), so use 2.69 (in /usr/bin)
+/usr/bin/autoconf -V
+/usr/bin/autoheader
+/usr/bin/autoconf
 ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2
 make
 

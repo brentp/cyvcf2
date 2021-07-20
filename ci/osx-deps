@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 python -m pip install pip --upgrade
 
 git submodule init

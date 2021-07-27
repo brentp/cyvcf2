@@ -268,6 +268,18 @@ def test_writer_from_string():
     w.write_record(v)
     w.close()
 
+def test_isa():
+
+    vcf = VCF(os.path.join(HERE, "test.isa.vcf"))
+    for i, v in enumerate(vcf):
+        if i in {0, 1, 2, 3}:
+            assert v.is_indel
+            assert not v.is_snp
+        if i in {4}:
+            assert v.is_snp
+
+
+
 
 def run_writer(writer, filename, rec):
     rec.INFO["AC"] = "3"

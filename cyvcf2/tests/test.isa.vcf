@@ -1,0 +1,10 @@
+##fileformat=VCFv4.2
+##fileDate=20200122
+##contig=<ID=chr1,length=1348724>
+##INFO=<ID=AC,Number=A,Type=Integer,Description="Total number of alternate alleles in called genotypes">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+chr1	146999	.	TCGGT	<NON_REF>	0	.	AC=0
+chr1	146999	.	TCGGT	TGGGG	0	.	AC=0
+chr1	146999	.	T	TG	0	.	AC=0
+chr1	146999	.	TG	T	0	.	AC=0
+chr1	146999	.	T	G	0	.	AC=0

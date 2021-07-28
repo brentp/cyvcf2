@@ -1,3 +1,6 @@
+# v0.30.11
++ bump for CI
+
 # v0.30.10
 + fix is_indel for <NON_REF> (see #217)
 

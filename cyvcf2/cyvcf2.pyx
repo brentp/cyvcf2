@@ -1831,13 +1831,13 @@ cdef class Variant(object):
         def __get__(self):
             cdef int i
             if self.is_sv: return False
-            if len(self.b.d.allele[0]) > 1 and self.b.d.allele[0] != '<': return True
+            if len(self.b.d.allele[0]) > 1 and self.b.d.allele[0] != b'<': return True
 
             if len(self.REF) > 1: return True
 
             for i in range(1, self.b.n_allele):
                 alt = self.b.d.allele[i]
-                if alt[0] == '<': continue
+                if alt[0] == b'<': continue
                 if alt == b".":
                     return True
                 if len(alt) > 1:

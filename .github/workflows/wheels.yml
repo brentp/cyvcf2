@@ -39,7 +39,7 @@ jobs:
       run: |
         python -m cibuildwheel --output-dir wheelhouse
       env:
-        CIBW_SKIP: "pp* cp27-* cp34-* cp35-* *i686*"
+        CIBW_SKIP: "pp* *i686*"
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_BEFORE_BUILD_LINUX: "{project}/ci/linux-deps"
         CIBW_TEST_COMMAND: "{project}/ci/test"
@@ -50,7 +50,7 @@ jobs:
       run: |
         python -m cibuildwheel --output-dir wheelhouse
       env:
-        CIBW_SKIP: "pp* cp27-* cp34-* cp35-* cp310-* *i686*"
+        CIBW_SKIP: "pp* cp310-* *i686*"
         CIBW_ARCHS_MACOS: "x86_64 arm64"
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_BEFORE_BUILD_MACOS: "{project}/ci/osx-deps"

@@ -1995,6 +1995,16 @@ cdef class Variant(object):
             if ret != 0:
                 raise Exception("not able to set filter: %s", filters)
 
+    property FILTERS:
+        """the FILTER values as a list from the VCF field.
+
+        a value '.' in the VCF will return an empty list for this property
+        """
+        def __get__(self):
+            cdef int i
+            cdef int n = self.b.d.n_flt
+            return [from_bytes(bcf_hdr_int2id(self.vcf.hdr, BCF_DT_ID, self.b.d.flt[i])) for i in range(n)]
+
     property QUAL:
         "the float value of QUAL from the VCF field."
         def __get__(self):

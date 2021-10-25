@@ -321,6 +321,36 @@ def test_writer():
     with open(VCF_PATH) as fp:
         run_writer(Writer(fp, v), f, rec)
 
+def test_filters():
+    v = VCF(VCF_PATH)
+    f = tempfile.mktemp(suffix=".vcf")
+    atexit.register(os.unlink, f)
+    rec = next(v)
+
+    writer = Writer(f, v)
+
+    rec.INFO["AC"] = "3"
+    rec.FILTER = ["LowQual"]
+    writer.write_record(rec)
+
+    rec.FILTER = ["LowQual", "VQSRTrancheSNP99.90to100.00"]
+    writer.write_record(rec)
+
+    rec.FILTER = "PASS"
+    writer.write_record(rec)
+
+    rec.FILTER = []
+    writer.write_record(rec)
+
+    writer.close()
+
+    expected_filter = ["LowQual", "LowQual;VQSRTrancheSNP99.90to100.00", None, None]
+    expected_filters = [["LowQual"], ["LowQual", "VQSRTrancheSNP99.90to100.00"], ["PASS"], []]
+
+    for i, variant in enumerate(VCF(f)):
+        assert variant.FILTER == expected_filter[i], (variant.FILTER, expected_filter[i])
+        assert variant.FILTERS == expected_filters[i], (variant.FILTERS, expected_filters[i])
+
 def test_add_info_to_header():
     v = VCF(VCF_PATH)
     v.add_info_to_header({'ID': 'abcdefg', 'Description': 'abcdefg',

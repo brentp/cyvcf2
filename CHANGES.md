@@ -1,3 +1,6 @@
+# v0.30.12
++ add variant.FILTERS (by @tomwhite, #149)
+
 # v0.30.11
 + bump for CI
 

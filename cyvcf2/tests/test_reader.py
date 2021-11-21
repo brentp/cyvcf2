@@ -484,16 +484,17 @@ def test_var_type():
 def _get_line_for(v):
     import gzip
 
-    for i, line in enumerate(gzip.open(VCF_PATH), start=1):
-        line = line.decode()
-        if line[0] == "#": continue
-        toks = line.strip().split("\t")
-        if not (toks[0] == v.CHROM and int(toks[1]) == v.POS): continue
-        if toks[3] != v.REF: continue
-        if toks[4] not in v.ALT: continue
-        return toks
-    else:
-        raise Exception("not found")
+    with gzip.open(VCF_PATH) as f:
+        for i, line in enumerate(f, start=1):
+            line = line.decode()
+            if line[0] == "#": continue
+            toks = line.strip().split("\t")
+            if not (toks[0] == v.CHROM and int(toks[1]) == v.POS): continue
+            if toks[3] != v.REF: continue
+            if toks[4] not in v.ALT: continue
+            return toks
+        else:
+            raise Exception("not found")
 
 
 def _get_samples(v):

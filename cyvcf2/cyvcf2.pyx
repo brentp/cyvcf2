@@ -1024,7 +1024,8 @@ cdef class Genotypes(object):
         cdef int32_t v
         for j in range(self.ploidy):
             v = self._raw[i * self.ploidy + j]
-            result.append((v >> 1) - 1)
+            if v != bcf_int32_vector_end:
+                result.append((v >> 1) - 1)
         return result
 
     def __repr__(self):

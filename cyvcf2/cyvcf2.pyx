@@ -1027,6 +1027,9 @@ cdef class Genotypes(object):
             result.append((v >> 1) - 1)
         return result
 
+    def __repr__(self):
+        return str(self.array())
+
     def array(Genotypes self, int fill=-2):
         """
         array returns an int16 numpy array  of shape n_samples, (ploidy + 1).
@@ -1171,7 +1174,7 @@ cdef class Variant(object):
                         if a >= -1 and b >= -1:
                           bases[j] = d[a] + lookup[phased[j]] + d[b]
                         else:
-                          bases[j] = d[a]
+                          bases[j] = d[max(-1, a)]
                 elif n == 1:
                     bases[j] = d[self._gt_idxs[i]]
                 else:
@@ -1351,9 +1354,10 @@ cdef class Variant(object):
         if self.vcf.n_samples == 0: return None
         cdef int32_t *gts = NULL
         cdef int ndst = 0
-        if bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst) <= 0:
+        cdef int nret = bcf_get_genotypes(self.vcf.hdr, self.b, &gts, &ndst)
+        if nret < 0:
             raise Exception("couldn't get genotypes for variant")
-        return newGenotypes(gts, int(ndst/self.vcf.n_samples), self.vcf.n_samples)
+        return newGenotypes(gts, int(nret/self.vcf.n_samples), self.vcf.n_samples)
 
     @genotype.setter
     def genotype(self, Genotypes g):
@@ -1487,12 +1491,12 @@ cdef class Variant(object):
             if self._gt_types == NULL:
                 self._gt_phased = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples)
                 ngts = bcf_get_genotypes(self.vcf.hdr, self.b, &self._gt_types, &ndst)
-                nper = int(ndst / self.vcf.n_samples)
+                nper = int(ngts / self.vcf.n_samples)
                 self._ploidy = nper
                 self._gt_idxs = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples * nper)
-                if ndst == 0 or nper == 0:
+                if ngts == 0 or nper == 0:
                     return np.array([])
-                for i in range(0, ndst, nper):
+                for i in range(0, ngts, nper):
                     for k in range(i, i + nper):
                         a = self._gt_types[k]
                         if a >= 0:
@@ -1504,9 +1508,9 @@ cdef class Variant(object):
                     j += 1
 
                 if self.vcf.gts012:
-                    n = as_gts012(self._gt_types, self.vcf.n_samples, nper, self.vcf.strict_gt)
+                    n = as_gts(self._gt_types, self.vcf.n_samples, nper, self.vcf.strict_gt, 2, 3)
                 else:
-                    n = as_gts(self._gt_types, self.vcf.n_samples, nper, self.vcf.strict_gt)
+                    n = as_gts(self._gt_types, self.vcf.n_samples, nper, self.vcf.strict_gt, 3, 2)
             cdef np.npy_intp shape[1]
             shape[0] = <np.npy_intp> self.vcf.n_samples
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_types)
@@ -2256,7 +2260,8 @@ cdef inline Variant newVariant(bcf1_t *b, VCF vcf):
     v.vcf = vcf
     v.POS = v.b.pos + 1
     cdef INFO i = INFO.__new__(INFO)
-    i.b, i.hdr = b, vcf.hdr
+    i.b = b 
+    i.hdr = vcf.hdr
     v.INFO = i
     return v
 

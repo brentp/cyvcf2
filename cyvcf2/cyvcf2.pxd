@@ -13,8 +13,7 @@ cdef extern from "relatedness.h":
             int32_t n_samples, double *ab)
 
 cdef extern from "helpers.h":
-    int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt);
-    int as_gts012(int32_t *gts, int num_samples, int ploidy, int strict_gt);
+    int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt, int HOM_ALT, int UNKNOWN);
     int32_t* bcf_hdr_seqlen(const bcf_hdr_t *hdr, int32_t *nseq)
 
 cdef extern from "htslib/kstring.h":

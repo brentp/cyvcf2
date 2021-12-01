@@ -1,31 +1,34 @@
 #include <helpers.h>
 
-int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+
+int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt, int HOM_ALT, int UNKNOWN) {
     int j = 0, i, k;
-    int missing= 0;
+    int missing= 0, found=0;
     for (i = 0; i < ploidy * num_samples; i += ploidy){
 		missing = 0;
+    found = 0;
 		for (k = 0; k < ploidy; k++) {
 			if (gts[i+k] <= 1) {
 				missing += 1;
 			}
-                }
+    }
 		if (missing == ploidy) {
-			gts[j++] = 2; // unknown
+			gts[j++] = UNKNOWN; // unknown
 			continue;
 		} else if ( (missing != 0) && (strict_gt == 1) ) {
-			gts[j++] = 2; // unknown
+			gts[j++] = UNKNOWN; // unknown
 			continue;
 		}
 
-		if(ploidy == 1) {
+		if(ploidy == 1 || gts[i+1] == bcf_int32_vector_end) {
 			int a = bcf_gt_allele(gts[i]);
 			if (a == 0) {
 			   	gts[j++] = 0;
 			} else if (a == 1) {
-				gts[j++] = 3;
+				gts[j++] = HOM_ALT;
 			} else {
-				gts[j++] = 2;
+				gts[j++] = UNKNOWN;
 			}
 			continue;
 		}
@@ -44,77 +47,20 @@ int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
             continue;
         }
         else if((a == 1) && (b == 1)) {
-            gts[j] = 3; //  HOM_ALT
+            gts[j] = HOM_ALT; //  HOM_ALT
         }
         else if((a != b)) {
             gts[j] = 1; //  HET
         }
         else if((a == b)) {
-            gts[j] = 3; //  HOM_ALT
+            gts[j] = HOM_ALT; //  HOM_ALT
         } else {
-            gts[j] = 2; // unknown
+            gts[j] = UNKNOWN; // unknown
         }
         j++;
     }
     return j;
 }
-
-int as_gts012(int32_t *gts, int num_samples, int ploidy, int strict_gt) {
-    int j = 0, i, k;
-	int missing;
-    for (i = 0; i < ploidy * num_samples; i += ploidy){
-		missing = 0;
-		for (k = 0; k < ploidy; k++) {
-			if (gts[i+k] <= 1) {
-				missing += 1;
-			}
-        }
-		if (missing == ploidy) {
-			gts[j++] = 3; // unknown
-			continue;
-		} else if ( (missing != 0) && (strict_gt == 1) ) {
-			gts[j++] = 3; // unknown
-			continue;
-		}
-
-		if(ploidy == 1) {
-			int a = bcf_gt_allele(gts[i]);
-			if (a == 0) {
-			   	gts[j++] = 0;
-			} else if (a == 1) {
-				gts[j++] = 2;
-			} else {
-				gts[j++] = 3;
-			}
-			continue;
-		}
-
-        int a = bcf_gt_allele(gts[i]);
-        int b = bcf_gt_allele(gts[i+1]);
-
-        if((a == 0) && (b == 0)) {
-            gts[j++] = 0; //  HOM_REF
-            continue;
-        }
-        if ((missing > 0) && ((a == 0)  || b == 0)) {
-            gts[j] = 0; // HOM_REF
-        }
-        else if((a == 1) && (b == 1)) {
-            gts[j] = 2; //  HOM_ALT
-        }
-        else if((a  != b)) {
-            gts[j] = 1; //  HET
-        }
-        else if ((a == b)) {
-            gts[j] = 2; //  HOM_ALT
-        } else {
-            gts[j] = 3; // unknown
-        }
-        j++;
-    }
-    return j;
-}
-
 
 KHASH_MAP_INIT_STR(vdict, bcf_idinfo_t)
 typedef khash_t(vdict) vdict_t;

@@ -1228,26 +1228,42 @@ def test_invalid_header():
 
 
 def test_genotypes():
-    vcf = VCF(os.path.join(HERE, "test-genotypes.vcf"))
     """
 . 1
 ./. ./1
 ./. 1
+0/1 0
+0 0/1
      """
     exp_array = [[-1,  0],
-           [-1, -1,  0],
-           [-1, -1,  0]]
+       [-1, -1,  0],
+       [-1, -1,  0],
+       [0, 1,  0],
+       [0, -2, 1],
+       ]
 
-    exp_num = [
-        [0, 0, 1, 1],
-        [0, 1, 1, 0],
-        [0, 0, 1, 1]] 
+    non_strict_exp_num = [
+    [0, 0, 1, 1],
+    [0, 1, 1, 0],
+    [0, 0, 1, 1],
+    [1, 1, 0, 0],
+    [1, 1, 0, 0],
+    ] 
+
+    strict_exp_num = [x[:] for x in non_strict_exp_num]
+    strict_exp_num[1] = [0, 0, 2, 0] # both unknown
+
+    for strict_gt in (False, True):
+        vcf = VCF(os.path.join(HERE, "test-genotypes.vcf"), strict_gt=strict_gt)
+
+        exp_num = strict_exp_num if strict_gt else non_strict_exp_num
 
 
-    for i, v in enumerate(vcf):
-        obs = [v.num_hom_ref, v.num_het, v.num_unknown, v.num_hom_alt]
-        assert obs == exp_num[i]
+        for i, v in enumerate(vcf):
+            #if i != 3: continue
+            obs = [v.num_hom_ref, v.num_het, v.num_unknown, v.num_hom_alt]
+            assert obs == exp_num[i], ("error with num_*")
 
-
-        a = v.genotype.array()[0] # only 0'th item
-        assert (a == exp_array[i]).all()
+            a = v.genotype.array()[0] # only 0'th item
+            print("i:", i, " a:", v.genotype.array()[0], " exp:", exp_array[i])
+            assert (a == exp_array[i]).all(), " error with array"

@@ -6,32 +6,32 @@ int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt, int HOM_ALT
     int j = 0, i, k;
     int missing= 0, found=0;
     for (i = 0; i < ploidy * num_samples; i += ploidy){
-		missing = 0;
+        missing = 0;
     found = 0;
-		for (k = 0; k < ploidy; k++) {
-			if (gts[i+k] <= 1) {
-				missing += 1;
-			}
-    }
-		if (missing == ploidy) {
-			gts[j++] = UNKNOWN; // unknown
-			continue;
-		} else if ( (missing != 0) && (strict_gt == 1) ) {
-			gts[j++] = UNKNOWN; // unknown
-			continue;
-		}
+        for (k = 0; k < ploidy; k++) {
+            if bcf_gt_is_missing(gts[i+k])  {
+                missing += 1;
+            }
+        }
+        if (missing == ploidy) {
+            gts[j++] = UNKNOWN; // unknown
+            continue;
+        } else if ( (missing != 0) && (strict_gt == 1) ) {
+            gts[j++] = UNKNOWN; // unknown
+            continue;
+        }
 
-		if(ploidy == 1 || gts[i+1] == bcf_int32_vector_end) {
-			int a = bcf_gt_allele(gts[i]);
-			if (a == 0) {
-			   	gts[j++] = 0;
-			} else if (a == 1) {
-				gts[j++] = HOM_ALT;
-			} else {
-				gts[j++] = UNKNOWN;
-			}
-			continue;
-		}
+        if(ploidy == 1 || gts[i+1] == bcf_int32_vector_end) {
+            int a = bcf_gt_allele(gts[i]);
+            if (a == 0) {
+                   gts[j++] = 0;
+            } else if (a == 1) {
+                gts[j++] = HOM_ALT;
+            } else {
+                gts[j++] = UNKNOWN;
+            }
+            continue;
+        }
 
         int a = bcf_gt_allele(gts[i]);
         int b = bcf_gt_allele(gts[i+1]);
@@ -82,9 +82,9 @@ int32_t* bcf_hdr_seqlen(const bcf_hdr_t *hdr, int32_t *nseq)
         int j;
         if (lens[tid] > 0 && sscanf(kh_val(d, k).hrec[0]->vals[lens[tid]],"%d",&j) )
             lens[tid] = j;
-	if(lens[tid] > 0){
-	  found++;
-	}
+    if(lens[tid] > 0){
+      found++;
+    }
     }
     *nseq = m;
     // found is used to check that we actually got the lengths.

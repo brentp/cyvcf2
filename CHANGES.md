@@ -1,3 +1,9 @@
+# v0.30.13
++ fixes for mixed ploidy samples affecting `variant.num_het`,
+  `variant.num_hom_ref`, etc. Also affects `variant.genotypes` and
+  `variant.genotype` (see #227. Thanks @davmlaw and  @grahamgower for
+  test-cases and insight.)
+
 # v0.30.12
 + add variant.FILTERS (by @tomwhite, #149)
 

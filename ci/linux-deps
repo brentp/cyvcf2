@@ -29,6 +29,13 @@ make install
 cd ..
 rm -rf curl-7.73.0
 
+curl -L -o libdeflate-v1.8.tar.gz https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.8.tar.gz
+tar xzf libdeflate-v1.8.tar.gz
+cd libdeflate-1.8
+make
+make install PREFIX=/root
+cd ..
+
 cd htslib
 # configure fails with autoconf 2.71 (in /usr/local/bin), so use 2.69 (in /usr/bin)
 /usr/bin/autoconf -V

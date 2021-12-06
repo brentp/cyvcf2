@@ -13,6 +13,13 @@ brew install autoconf@2.69 && \
 brew link --overwrite autoconf@2.69 && \
 autoconf -V
 
+curl -L -o libdeflate-v1.8.tar.gz https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.8.tar.gz
+tar xzf libdeflate-v1.8.tar.gz
+cd libdeflate-1.8
+make
+make install
+cd ..
+
 cd htslib
 autoheader
 autoconf

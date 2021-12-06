@@ -11,6 +11,7 @@ try:
   from pathlib import Path
 except ImportError:
   from pathlib2 import Path  # python 2 backport
+import warnings
 
 
 HERE = os.path.dirname(__file__)
@@ -87,11 +88,17 @@ def test_format_str():
 
 def test_missing_samples():
     samples = ['101976-101976', 'sample_not_in_vcf']
-    vcf = VCF(VCF_PATH, gts012=True, samples=samples)
+    with warnings.catch_warnings(record=True) as w:
+        vcf = VCF(VCF_PATH, gts012=True, samples=samples)
+        assert len(w) == 1
+        assert "not all requested samples found" in str(w[-1].message)
     assert len(vcf.samples) == 1
     vcf.close()
     samples = '101976-101976,sample_not_in_vcf'
-    vcf = VCF(VCF_PATH, gts012=True, samples=samples)
+    with warnings.catch_warnings(record=True) as w:
+        vcf = VCF(VCF_PATH, gts012=True, samples=samples)
+        assert len(w) == 1
+        assert "not all requested samples found" in str(w[-1].message)
     assert len(vcf.samples) == 1
 
 def test_ibd():
@@ -104,7 +111,11 @@ def test_ibd():
 
 def test_relatedness():
     vcf = VCF(VCF_PATH, gts012=True)
-    df = vcf.relatedness(gap=0, linkage_max=2)
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("ignore", category=DeprecationWarning)
+        df = vcf.relatedness(gap=0, linkage_max=2)
+        assert len(w) == 1
+        assert "tested:" in str(w[-1].message)
     assert "ibs0" in df, df
     assert "rel" in df
     #vcf = VCF(VCF_PATH, gts012=True)
@@ -643,13 +654,24 @@ def test_bcf():
     viter = vcf("1:69260-69438")
     sys.stderr.write("\nOK\n")
     sys.stderr.flush()
-    l = list(viter)
+    with warnings.catch_warnings(record=True) as w:
+        l = list(viter)
+        assert len(w) == 1
+        assert "no intervals found" in str(w[-1].message)
     assert len(l) == 0, len(l)
 
     iter = vcf("chr1:69260-69438")
     l = list(iter)
     assert len(l) == 2, len(l)
 
+def test_vcf_no_intervals():
+    vcf = VCF('{}/test.vcf.gz'.format(HERE))
+    viter = vcf("not_a_chrom")
+    with warnings.catch_warnings(record=True) as w:
+        l = list(viter)
+        assert len(w) == 1
+        assert "no intervals found" in str(w[-1].message)
+    assert len(l) == 0, len(l)
 
 def test_issue12():
     fields = "ADP_ALL ADPD ADPO ADP_PASS ADPR AFR AMBIG BMF_PASS BMF_QUANT AF_FAILED FA_FAILED FM_FAILED FP_FAILED FR_FAILED MD_FAILED IMPROPER MQ_FAILED OVERLAP PV_FAILED QSS".split()
@@ -1013,7 +1035,10 @@ def test_set_chrom_when_contig_not_in_header():
     assert new_chrom not in original_seqnames
     v = next(vcf)
 
-    v.CHROM = new_chrom
+    with warnings.catch_warnings(record=True) as w:
+        v.CHROM = new_chrom
+        assert len(w) == 1
+        assert "added new contig" in str(w[-1].message)
     assert v.CHROM == new_chrom
     expected_seqnames = sorted(original_seqnames + [new_chrom])
     assert vcf.seqnames == expected_seqnames

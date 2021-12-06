@@ -12,6 +12,7 @@ import numpy as np
 from array import array
 import math
 import ctypes
+import warnings
 try:
   from pathlib import Path
 except ImportError:
@@ -350,12 +351,12 @@ cdef class VCF(HTSFile):
 
         ret = bcf_hdr_set_samples(self.hdr, <const char *>samples, 0)
         assert ret >= 0, ("error setting samples", ret)
+        self.n_samples = bcf_hdr_nsamples(self.hdr)
         if ret != 0 and samples != "-":
             s = from_bytes(samples).split(",")
-            if ret < len(s):
-                sys.stderr.write("warning: not all requested samples found in VCF\n")
+            if self.n_samples < len(s):
+                warnings.warn("not all requested samples found in VCF")
 
-        self.n_samples = bcf_hdr_nsamples(self.hdr)
 
     def update(self, id, type, number, description):
         """Update the header with an INFO field of the given parameters.
@@ -400,7 +401,7 @@ cdef class VCF(HTSFile):
 
         itr = bcf_itr_querys(self.hidx, self.hdr, to_bytes(region))
         if itr == NULL:
-            sys.stderr.write("no intervals found for %s at %s\n" % (self.fname, region))
+            warnings.warn("no intervals found for %s at %s" % (self.fname, region))
             raise StopIteration
         try:
             while True:
@@ -409,10 +410,8 @@ cdef class VCF(HTSFile):
                 if ret < 0:
                     bcf_destroy(b)
                     break
-                if bcf_subset_format(self.hdr, b) != 0:
-                    sys.stderr.write("could not subset variant")
-                    bcf_destroy(b)
-                    break
+                ret = bcf_subset_format(self.hdr, b)
+                assert ret == 0, ("could not subset variant", self.fname, region)
                 yield newVariant(b, self)
         finally:
             if itr != NULL:
@@ -454,7 +453,7 @@ cdef class VCF(HTSFile):
             itr = tbx_itr_querys(self.idx, cregion)
 
         if itr == NULL:
-            sys.stderr.write("no intervals found for %s at %s\n" % (self.fname, region))
+            warnings.warn("no intervals found for %s at %s" % (self.fname, region))
             raise StopIteration
 
         try:
@@ -905,7 +904,7 @@ cdef class VCF(HTSFile):
             nv += 1
             if nv == n_variants:
                 break
-        sys.stderr.write("tested: %d variants out of %d\n" % (nv, nvt))
+        warnings.warn("tested: %d variants out of %d" % (nv, nvt))
         return self._relatedness_finish(ibs, n, hets)
 
     cdef dict _relatedness_finish(self,
@@ -929,7 +928,7 @@ cdef class VCF(HTSFile):
         for sj in range(ns):
             sample_j = samples[sj]
             if _hets[sj] == 0:
-                print("peddy: no hets found for sample %s\n" % sample_j, file=sys.stderr)
+                warnings.warn("peddy: no hets found for sample %s" % sample_j)
             for sk in range(sj, ns):
                 if sj == sk: continue
                 sample_k = samples[sk]
@@ -1898,9 +1897,7 @@ cdef class Variant(object):
                 new_rid = bcf_hdr_id2int(self.vcf.hdr, BCF_DT_CTG, new_chrom.encode())
                 if new_rid < 0:
                     raise ValueError("Unable to add {} to CHROM".format(new_chrom))
-                sys.stderr.write(
-                    "[cyvcf2]: added new contig {} to header".format(new_chrom)
-                )
+                warnings.warn("added new contig {} to header".format(new_chrom))
             self.b.rid = new_rid
 
     property var_type:

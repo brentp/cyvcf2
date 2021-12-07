@@ -1,8 +1,5 @@
 from __future__ import print_function
-from ..cyvcf2 import VCF, Variant, Writer
-import numpy as np
 import os.path
-from nose.tools import assert_raises
 import tempfile
 import sys
 import os
@@ -12,6 +9,11 @@ try:
 except ImportError:
   from pathlib2 import Path  # python 2 backport
 import warnings
+
+import numpy as np
+import pytest
+
+from ..cyvcf2 import VCF, Variant, Writer
 
 
 HERE = os.path.dirname(__file__)
@@ -213,7 +215,8 @@ def test_phases():
     assert not any(v.gt_phases)
 
 def test_bad_init():
-    assert_raises(Exception, VCF, "XXXXX")
+    with pytest.raises(Exception):
+        VCF("XXXXX")
 
 def test_samples():
     v = VCF(VCF_PATH)
@@ -225,7 +228,8 @@ def test_next():
     assert isinstance(variant, Variant)
 
 def test_variant():
-    assert_raises(TypeError, Variant)
+    with pytest.raises(TypeError):
+        Variant()
 
 def test_info_dict():
     v = VCF(VCF_PATH)
@@ -258,7 +262,8 @@ def test_attrs():
 def test_empty():
     p = os.path.join(HERE, "empty.vcf")
     assert os.path.exists(p)
-    assert_raises(IOError, VCF, p)
+    with pytest.raises(IOError):
+        VCF(p)
 
 def test_format_field():
     vcf = VCF(VCF_PATH)
@@ -417,7 +422,8 @@ def test_add_flag():
     fh = VCF(f)
     v = next(fh)
     fh.close()
-    assert_raises(KeyError, v.INFO.__getitem__, "myflag")
+    with pytest.raises(KeyError):
+        v.INFO["myflag"]
 
 def test_issue198():
     vcf = VCF(os.path.join(HERE, "issue_198.vcf"), strict_gt=True)
@@ -474,7 +480,7 @@ def test_seqnames():
 
 def test_different_index():
     b = VCF('{}/test.snpeff.bcf'.format(HERE), threads=3)
-    b.set_index("cyvcf2/tests/test-diff.csi")
+    b.set_index("{}/test-diff.csi".format(HERE))
     s = 0
     for r in b("chr1:69427-69429"):
         s += 1
@@ -532,7 +538,8 @@ def test_header_info():
     assert "Description" in csq
 
 
-    assert_raises(KeyError, v.__getitem__, b'XXXXX')
+    with pytest.raises(KeyError):
+        v[b'XXXXX']
 
 def test_snpeff_header():
     v = VCF(VCF_PATH2)
@@ -686,7 +693,8 @@ def test_issue12():
         vals = v.format("RVF")
         assert vals.dtype in (np.float32, np.float64)
 
-    assert_raises(KeyError, v.format, "RULE")
+    with pytest.raises(KeyError):
+        v.format("RULE")
 
 def test_gt_bases_nondiploid():
     """Ensure gt_bases works with more complex base representations.
@@ -720,7 +728,7 @@ def test_set_format_int_a():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     assert vcf.add_format_to_header(dict(ID="PI", Number=1, Type="Integer", Description="Int example")) == 0
     v = next(vcf)
-    v.set_format("PI", np.array([5, 1], dtype=np.int))
+    v.set_format("PI", np.array([5, 1], dtype=int))
     assert allclose(fmap(float, get_gt_str(v, "PI")), [5, 1])
 
 def test_set_format_int_b():
@@ -745,7 +753,7 @@ def test_set_format_int3():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
     assert vcf.add_format_to_header(dict(ID="P3", Number=3, Type="Integer", Description="Int example")) == 0
     v = next(vcf)
-    exp = np.array([[1, 11, 111], [2, 22, 222]], dtype=np.int)
+    exp = np.array([[1, 11, 111], [2, 22, 222]], dtype=int)
     v.set_format("P3", exp)
     res = get_gt_str(v, "P3")
     assert res == ["1,11,111", "2,22,222"], (res, str(v))
@@ -775,7 +783,8 @@ def test_set_format_str_bytes_number3():
     v = next(vcf)
 
     contents = np.array([[b'foo', b'barbaz', b'biz'], [b'blub', b'bloop', b'blop']])
-    assert_raises(Exception, v.set_format, "STR", contents)
+    with pytest.raises(Exception):
+        v.set_format("STR", contents)
 
 def test_set_gts():
     vcf = VCF('{}/test-format-string.vcf'.format(HERE))
@@ -1064,7 +1073,7 @@ def test_set_qual():
     variant.QUAL = 30.0
     assert variant.QUAL == 30.0
 
-    with assert_raises(TypeError):
+    with pytest.raises(TypeError):
         variant.QUAL = "30.0"
 
     variant.QUAL = None
@@ -1166,7 +1175,8 @@ def test_closed_iter():
     vcf = VCF(path, gts012=True, strict_gt=False)
     vcf.close()
 
-    assert_raises(Exception, next, vcf)
+    with pytest.raises(Exception):
+        next(vcf)
 
 def test_issue72():
     path = os.path.join(HERE, "test-alt-repr.vcf")
@@ -1228,9 +1238,8 @@ def test_no_seqlen():
     vcf_path = os.path.join(HERE, "no-seq-len.vcf")
     vcf = VCF(vcf_path)
     assert vcf.seqnames == ["3"]
-    with assert_raises(AttributeError) as ae:
+    with pytest.raises(AttributeError):
         vcf.seqlens
-    assert isinstance(ae.exception, AttributeError)
 
 def test_set_unknown_format():
     vcf = VCF(VCF_PATH)
@@ -1249,7 +1258,8 @@ def test_invalid_header():
     # htslib produces the error "Empty sample name: trailing spaces/tabs in the header line?"
     p = os.path.join(HERE, "test-invalid-header.vcf")
     assert os.path.exists(p)
-    assert_raises(Exception, VCF, p)
+    with pytest.raises(Exception):
+        VCF(p)
 
 
 def test_genotypes():

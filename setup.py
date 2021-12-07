@@ -96,8 +96,6 @@ setup(
             'cyvcf2 = cyvcf2.__main__:cli',
         ],
     ),
-    test_suite='nose.collector',
-    tests_require='nose',
     install_requires=['numpy', 'coloredlogs', 'click'],
     include_package_data=True,
     zip_safe=False,

@@ -1,7 +1,6 @@
 import numpy as np
 from cyvcf2 import VCF, Variant, Writer
 import os.path
-from nose.tools import assert_raises
 
 HERE = os.path.dirname(__file__)
 HEM_PATH = os.path.join(HERE, "test-hemi.vcf")

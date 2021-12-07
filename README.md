@@ -107,10 +107,10 @@ For pkg-config to find openssl you may need to set:
 Testing
 =======
 
-Tests can be run with:
+Install `pytest`, then tests can be run with:
 
 ```
-python setup.py test
+pytest
 ```
 
 CLI

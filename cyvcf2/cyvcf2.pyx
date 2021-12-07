@@ -1704,8 +1704,8 @@ cdef class Variant(object):
         def __get__(self):
             if self.vcf.n_samples == 0:
                 return []
-            t = np.array(self.gt_depths, np.float)
-            a = np.array(self.gt_alt_depths, np.float)
+            t = np.array(self.gt_depths, float)
+            a = np.array(self.gt_alt_depths, float)
 
             # for which samples are the alt or total depths unknown?
             tU = t < 0

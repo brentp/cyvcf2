@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
 
     steps:
     - uses: actions/checkout@v2
@@ -23,14 +23,14 @@ jobs:
         sudo apt-get update
         sudo apt-get install libcurl4-openssl-dev
         pip install -r requirements.txt
-        pip install nose
+        pip install pytest pytest-cov
         cd htslib
         autoheader && autoconf
         ./configure --enable-s3 --disable-lzma --disable-bz2
         make
         cd ..
-        CYTHONIZE=1 python setup.py install
+        CYTHONIZE=1 python setup.py build_ext -i
     - name: Test
       run: |
-        python setup.py test
+        pytest --cov cyvcf2 --cov-report term-missing
 

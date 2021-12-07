@@ -54,9 +54,15 @@ sources += glob.glob('htslib/cram/*.c')
 sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
 sources.append('cyvcf2/helpers.c')
 
+extra_libs = []
+if platform.system() != 'Darwin':
+    extra_libs.append('crypt')
+if bool(int(os.getenv("LIBDEFLATE", 0))):
+    extra_libs.append('deflate')
+
 extensions = [Extension("cyvcf2.cyvcf2",
                         ["cyvcf2/cyvcf2.pyx"] + sources,
-                        libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (['crypt'] if platform.system() != 'Darwin' else []),
+                        libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + extra_libs,
                         extra_compile_args=["-Wno-sign-compare", "-Wno-unused-function",
                             "-Wno-strict-prototypes",
                             "-Wno-unused-result", "-Wno-discarded-qualifiers"],

@@ -1,3 +1,8 @@
+# v0.30.14
++ use warnings instead of sys.stderr (#229 from @grahamgower)
++ use libdeflate in wheel build (#231 from @grahamgower)
++ use pytest instead of nose and update numpy stuff (#232 from @grahamgower)
+
 # v0.30.13
 + fixes for mixed ploidy samples affecting `variant.num_het`,
   `variant.num_hom_ref`, etc. Also affects `variant.genotypes` and

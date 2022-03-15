@@ -1302,3 +1302,17 @@ def test_genotypes():
             a = v.genotype.array()[0] # only 0'th item
             print("i:", i, " a:", v.genotype.array()[0], " exp:", exp_array[i])
             assert (a == exp_array[i]).all(), " error with array"
+
+def test_issue236():
+
+
+    for strict_gt in (False, True):
+        res = [[], []]
+
+        for gts in (False, True):
+            vcf = VCF(os.path.join(HERE, "test-genotypes.vcf"), gts012=gts, strict_gt=strict_gt)
+            for v in vcf:
+                res[int(gts)].append(v.num_unknown)
+
+        assert res[0] == res[1]
+        assert len(res[0]) > 0

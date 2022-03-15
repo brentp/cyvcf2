@@ -1274,9 +1274,9 @@ cdef class Variant(object):
             if self._gt_types == NULL:
                 self.gt_types
             cdef int n = 0, i = 0
+            cdef int unknown = 3 if self.vcf.gts012 else 2
             for i in range(self.vcf.n_samples):
-                if self._gt_types[i] == 2:
-                    n+=1
+                n += (self._gt_types[i] == unknown)
             return n
 
     property FORMAT:

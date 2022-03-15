@@ -1,3 +1,6 @@
+# v0.30.15
++ fix num_unknown when gts012=True (#236)
+
 # v0.30.14
 + use warnings instead of sys.stderr (#229 from @grahamgower)
 + use libdeflate in wheel build (#231 from @grahamgower)

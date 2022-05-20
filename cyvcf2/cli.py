@@ -14,7 +14,7 @@ LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
 def print_header(vcf_obj, include, exclude, samples=None):
     """Print the header of a vcf obj
-    
+
     Parameters
     ----------
     vcf_obj: cyvcf2.VCF
@@ -27,7 +27,12 @@ def print_header(vcf_obj, include, exclude, samples=None):
     """
     if not samples is None:
         vcf_obj.set_samples(samples)
-    
+
+    if include:
+        include_list = ['ID='+inc+','for inc in include]
+    if exclude:
+        exclude_list = ['ID='+exc+','for exc in exclude]
+
     for header_line in vcf_obj.raw_header.split('\n'):
         if len(header_line) == 0:
             continue
@@ -35,21 +40,21 @@ def print_header(vcf_obj, include, exclude, samples=None):
         if 'INFO' not in header_line:
             pass
         elif include:
-            print_line = any('ID='+inc+','for inc in include)
+            print_line = sum(map(header_line.count, include_list))
         elif exclude:
-            print_line = not any('ID='+exc+','for exc in exclude)
+            print_line = not sum(map(header_line.count, exclude_list))
         if print_line:
             click.echo(header_line)
 
 def print_variant(variant, include, exclude):
     """Print a vcf variant
-    
+
     Parameters
     ----------
     variant: cyvcf2.Variant
     include: tuple
         set of strings with info fields that should be included
-    include: tuple
+    exclude: tuple
         set of strings with info fields that should be included
     """
     if include:
@@ -61,11 +66,11 @@ def print_variant(variant, include, exclude):
         for exc in exclude:
             if variant.INFO.get(exc):
                 del variant.INFO[exc]
-                
+
     print_string = str(variant).rstrip()
     click.echo(print_string)
-        
-    
+
+
 
 @click.command()
 @click.argument('vcf',
@@ -104,7 +109,7 @@ def print_variant(variant, include, exclude):
     help="Set the level of log output.",
     show_default=True,
 )
-@click.option('--silent', 
+@click.option('--silent',
     is_flag=True,
     help='Skip printing of vcf.'
 )
@@ -129,7 +134,7 @@ def cyvcf2(context, vcf, include, exclude, chrom, start, end, loglevel, silent,
             region = "{0}:{1}-{2}".format(chrom, start, end)
 
     vcf_obj = VCF(vcf)
-    
+
     for inclusion in include:
         if vcf_obj.contains(inclusion):
             log.info("Including %s in output", inclusion)
@@ -143,7 +148,7 @@ def cyvcf2(context, vcf, include, exclude, chrom, start, end, loglevel, silent,
         else:
             log.warning("%s does not exist in header", exclusion)
             context.abort()
-    
+
     if individual:
         # Check if the choosen individuals exists in vcf
         test = True
@@ -157,7 +162,7 @@ def cyvcf2(context, vcf, include, exclude, chrom, start, end, loglevel, silent,
         individual = list(individual)
     else:
         individual = None
-    
+
     # Set individual to be empty list to skip all genotypes
     if no_inds:
         individual = []
@@ -173,12 +178,10 @@ def cyvcf2(context, vcf, include, exclude, chrom, start, end, loglevel, silent,
     except Exception as err:
         log.warning(err)
         context.abort()
-    
+
     if nr_variants is None:
         log.info("No variants in vcf")
         return
-    
+
     log.info("{0} variants parsed".format(nr_variants+1))
     log.info("Time to parse variants: {0}".format(datetime.now() - start_parsing))
-        
-    

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -e
+
+git submodule init
+git submodule update
+
+# configure fails with autoconf 2.71, so downgrade
+# see https://github.com/asdf-vm/asdf-erlang/issues/195
+brew install autoconf@2.69 && \
+brew link --overwrite autoconf@2.69 && \
+autoconf -V
+
+cd htslib
+autoheader
+autoconf
+./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --without-libdeflate
+make

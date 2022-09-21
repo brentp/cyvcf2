@@ -2,8 +2,6 @@
 
 set -e
 
-python -m pip install pip --upgrade
-
 git submodule init
 git submodule update
 
@@ -25,6 +23,3 @@ autoheader
 autoconf
 ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2
 make
-
-cd ..
-pip install -r requirements.txt

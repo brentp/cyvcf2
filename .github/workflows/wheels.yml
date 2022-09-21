@@ -46,18 +46,38 @@ jobs:
         CIBW_ENVIRONMENT: "CYTHONIZE=1 LIBDEFLATE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib'"
         CIBW_REPAIR_WHEEL_COMMAND_LINUX: LD_LIBRARY_PATH='/root/lib' auditwheel repair -w {dest_dir} {wheel}
 
-    - name: Build wheels for Mac OS
+    - name: Build wheels for Mac OS x86
       if: matrix.os == 'macos-latest'
       run: |
         python -m cibuildwheel --output-dir wheelhouse
       env:
         CIBW_SKIP: "pp* *i686*"
-        CIBW_ARCHS_MACOS: "x86_64 arm64"
+        CIBW_ARCHS_MACOS: "x86_64"
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_BEFORE_BUILD_MACOS: "{project}/ci/osx-deps"
         CIBW_TEST_COMMAND: "{project}/ci/test"
-        CIBW_TEST_SKIP: "*-macosx_arm64"
         CIBW_ENVIRONMENT: "CYTHONIZE=1 LIBDEFLATE=1 C_INCLUDE_PATH='/usr/local/include' LIBRARY_PATH='/usr/local/lib'"
+        # https://cibuildwheel.readthedocs.io/en/stable/faq/#macos-passing-dyld_library_path-to-delocate
+        CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+          DYLD_LIBRARY_PATH=/usr/local/lib delocate-listdeps {wheel} &&
+          DYLD_LIBRARY_PATH=/usr/local/lib delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}
+        LDFLAGS: "-L/usr/local/opt/openssl@1.1/lib"
+        CPPFLAGS: "-I/usr/local/opt/openssl@1.1/include"
+        PKG_CONFIG_PATH: "/usr/local/opt/openssl@1.1/lib/pkgconfig"
+
+    - name: Build wheels for Mac OS arm64
+      # don't build with libdeflate, see https://github.com/brentp/cyvcf2/issues/252
+      if: matrix.os == 'macos-latest'
+      run: |
+        python -m cibuildwheel --output-dir wheelhouse
+      env:
+        CIBW_SKIP: "pp* *i686*"
+        CIBW_ARCHS_MACOS: "arm64"
+        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+        CIBW_BEFORE_BUILD_MACOS: "{project}/ci/osx-arm64-deps"
+        CIBW_TEST_COMMAND: "{project}/ci/test"
+        CIBW_TEST_SKIP: "*-macosx_arm64"
+        CIBW_ENVIRONMENT: "CYTHONIZE=1 C_INCLUDE_PATH='/usr/local/include' LIBRARY_PATH='/usr/local/lib'"
         # https://cibuildwheel.readthedocs.io/en/stable/faq/#macos-passing-dyld_library_path-to-delocate
         CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
           DYLD_LIBRARY_PATH=/usr/local/lib delocate-listdeps {wheel} &&

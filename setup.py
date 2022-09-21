@@ -5,14 +5,12 @@ import subprocess
 import platform
 
 import pkg_resources
-from setuptools import setup, Extension, dist
+from setuptools import setup, Extension
 
 if sys.version_info.major == 2 and sys.version_info.minor != 7:
     sys.stderr.write("ERROR: cyvcf2 is only for python 2.7 or greater you are running %d.%d\n", (sys.version_info.major, sys.version_info.minor))
     sys.exit(1)
 
-# Install numpy right now
-dist.Distribution().fetch_build_eggs(['numpy'])
 import numpy as np
 
 

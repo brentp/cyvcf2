@@ -6,8 +6,6 @@ yum install -y openssl11-devel
 yum install -y libffi libffi-devel zlib-devel
 yum install -y bzip2-devel bzip2-libs xz-devel xz-libs
 
-python -m pip install pip --upgrade
-
 git submodule init
 git submodule update
 
@@ -43,6 +41,3 @@ cd htslib
 /usr/bin/autoconf
 ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2
 make
-
-cd ..
-pip install -r requirements.txt

@@ -606,6 +606,7 @@ cdef class VCF(HTSFile):
              return from_bytes(s.s)
 
     property seqlens:
+        "list of chromosome lengths, if defined in the VCF header"
         def __get__(self):
             if len(self._seqlens) > 0: return self._seqlens
             cdef int32_t nseq;

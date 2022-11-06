@@ -131,11 +131,11 @@ or via bioconda.
 Testing
 =======
 
-Tests can be run with:
+Install `pytest`, then tests can be run with:
 
 .. code-block:: bash
 
-    python setup.py test
+    pytest
 
 Known Limitations
 =================

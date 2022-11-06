@@ -1,18 +1,20 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Modifying Existing VCFs &#8212; cyvcf2 0.30.0 documentation</title>
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Modifying Existing VCFs &#8212; cyvcf2 0.30.18 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
-    <script src="_static/language_data.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="prev" title="cyvcf2 API" href="docstrings.html" />
@@ -32,12 +34,12 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="modifying-existing-vcfs">
-<h1>Modifying Existing VCFs<a class="headerlink" href="#modifying-existing-vcfs" title="Permalink to this headline">¶</a></h1>
+  <section id="modifying-existing-vcfs">
+<h1>Modifying Existing VCFs<a class="headerlink" href="#modifying-existing-vcfs" title="Permalink to this heading">¶</a></h1>
 <p><cite>cyvcf2</cite> is optimized for fast reading and extraction from existing files.
 However, it also offers some means of modifying existing VCFs.</p>
-<div class="section" id="modifying-the-info-field">
-<h2>Modifying the INFO field<a class="headerlink" href="#modifying-the-info-field" title="Permalink to this headline">¶</a></h2>
+<section id="modifying-the-info-field">
+<h2>Modifying the INFO field<a class="headerlink" href="#modifying-the-info-field" title="Permalink to this heading">¶</a></h2>
 <p>Here, we show an example of how to modify the INFO field at a locus to annotate
 variants with the genes that they overlap.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">cyvcf2</span> <span class="kn">import</span> <span class="n">VCF</span><span class="p">,</span> <span class="n">Writer</span>
@@ -63,9 +65,9 @@ variants with the genes that they overlap.</p>
 <span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">();</span> <span class="n">vcf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="modifying-genotypes-and-the-format-field">
-<h2>Modifying genotypes and the FORMAT field<a class="headerlink" href="#modifying-genotypes-and-the-format-field" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="modifying-genotypes-and-the-format-field">
+<h2>Modifying genotypes and the FORMAT field<a class="headerlink" href="#modifying-genotypes-and-the-format-field" title="Permalink to this heading">¶</a></h2>
 <p>Here is an example where we filter some calls from records in a VCF. This demonstrates
 how to add to the FORMAT field and how to modify genotypes at a locus.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">cyvcf2</span> <span class="kn">import</span> <span class="n">VCF</span><span class="p">,</span> <span class="n">Writer</span>
@@ -109,15 +111,15 @@ how to add to the FORMAT field and how to modify genotypes at a locus.</p>
 <span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">();</span> <span class="n">vcf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="known-limitations-with-writing-vcfs">
-<span id="limitations-with-writing"></span><h2>Known Limitations with Writing VCFs<a class="headerlink" href="#known-limitations-with-writing-vcfs" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="known-limitations-with-writing-vcfs">
+<span id="limitations-with-writing"></span><h2>Known Limitations with Writing VCFs<a class="headerlink" href="#known-limitations-with-writing-vcfs" title="Permalink to this heading">¶</a></h2>
 <ul class="simple">
 <li><p><cite>cyvcf2</cite> currently does not support writing VCFs encoded with UTF-8 with non-ASCII characters in the contents of string-typed FORMAT fields.</p></li>
 <li><p><cite>cyvcf2</cite> currently does not support writing string type format fields with number&gt;1.</p></li>
 </ul>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -153,12 +155,12 @@ how to add to the FORMAT field and how to modify genotypes at a locus.</p>
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -175,7 +177,7 @@ how to add to the FORMAT field and how to modify genotypes at a locus.</p>
       &copy;2016..2020, Brent Pedersen.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.1</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.3.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

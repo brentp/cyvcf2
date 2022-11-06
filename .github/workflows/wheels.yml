@@ -113,6 +113,7 @@ jobs:
           git submodule init
           git submodule update
           cd htslib
+          git submodule update --init --recursive
           autoheader
           autoconf
           ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2

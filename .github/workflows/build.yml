@@ -24,7 +24,9 @@ jobs:
         sudo apt-get install libcurl4-openssl-dev
         pip install -r requirements.txt
         pip install pytest pytest-cov
+        git submodule update --init --recursive
         cd htslib
+        git submodule update --init --recursive
         autoheader && autoconf
         ./configure --enable-s3 --disable-lzma --disable-bz2
         make

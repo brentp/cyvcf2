@@ -1083,6 +1083,8 @@ cdef class Variant(object):
     INFO: `INFO`
        a dictionary-like field that provides access to the VCF INFO field.
 
+    POS: the 1-based variant start.
+
     """
     cdef bcf1_t *b
     cdef VCF vcf

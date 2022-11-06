@@ -44,10 +44,11 @@ def no_cythonize(extensions, **_ignore):
 
 # Build the Cython extension by statically linking to the bundled htslib
 sources = [
-    x for x in glob.glob('htslib/*.c') 
+    x for x in glob.glob('htslib/*.c')
     if not any(e in x for e in ['irods', 'plugin'])
 ]
 sources += glob.glob('htslib/cram/*.c')
+sources += glob.glob('htslib/htscodecs/htscodecs/*.c')
 # Exclude the htslib sources containing main()'s
 sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
 sources.append('cyvcf2/helpers.c')

@@ -8,6 +8,7 @@ yum install -y bzip2-devel bzip2-libs xz-devel xz-libs
 
 git submodule init
 git submodule update
+git submodule update --init --recursive
 
 curl -O https://www.libssh2.org/download/libssh2-1.9.0.tar.gz
 tar xzf libssh2-1.9.0.tar.gz

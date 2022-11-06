@@ -4,6 +4,7 @@ set -e
 
 git submodule init
 git submodule update
+git submodule update --init --recursive
 
 # configure fails with autoconf 2.71, so downgrade
 # see https://github.com/asdf-vm/asdf-erlang/issues/195

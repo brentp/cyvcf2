@@ -1614,7 +1614,7 @@ cdef class Variant(object):
                 return gls
 
     property gt_ref_depths:
-        """get the count of reference reads as a numpy array."""
+        """get the count of reference reads for a diploid sample as a numpy array."""
         def __get__(self):
             cdef int ndst, nret = 0, n, i, j = 0, nper = 0
             if self.vcf.n_samples == 0:
@@ -1655,7 +1655,7 @@ cdef class Variant(object):
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_ref_depths)
 
     property gt_alt_depths:
-        """get the count of alternate reads as a numpy array."""
+        """get the count of alternate reads for a diploid sample as a numpy array."""
         def __get__(self):
             cdef int ndst, nret = 0, n, i, j = 0, k = 0, nper = 0
             if self.vcf.n_samples == 0:
@@ -1703,7 +1703,7 @@ cdef class Variant(object):
             return np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT32, self._gt_alt_depths)
 
     property gt_alt_freqs:
-        """get the freq of alternate reads as a numpy array."""
+        """get the freq of alternate reads for a diploid sample as a numpy array."""
         def __get__(self):
             if self.vcf.n_samples == 0:
                 return []
@@ -1757,7 +1757,7 @@ cdef class Variant(object):
             return a
 
     property gt_depths:
-        """get the read-depth for each sample as a numpy array."""
+        """get the read-depth for diploid samples as a numpy array."""
         def __get__(self):
             if self.vcf.n_samples == 0:
                 return []

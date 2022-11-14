@@ -18,7 +18,7 @@ Fast python **(2 and 3)** parsing of VCF and BCF including region-queries.
 
 cyvcf2 is a cython wrapper around [htslib](https://github.com/samtools/htslib) built for fast parsing of [Variant Call Format](https://en.m.wikipedia.org/wiki/Variant_Call_Format) (VCF) files.
 
-Attributes like `variant.gt_ref_depths` return a numpy array directly so they are immediately ready for downstream use.
+Attributes like `variant.gt_ref_depths` work for diploid samples and return a numpy array directly so they are immediately ready for downstream use.
 **note** that the array is backed by the underlying C data, so, once `variant` goes out of scope. The array will contain nonsense.
 To persist a copy, use: `cpy = np.array(variant.gt_ref_depths)` instead of just `arr = variant.gt_ref_depths`.
 

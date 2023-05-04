@@ -1495,7 +1495,7 @@ cdef class Variant(object):
                 self._gt_phased = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples)
                 ngts = bcf_get_genotypes(self.vcf.hdr, self.b, &self._gt_types, &ndst)
                 if ngts < 0:
-                    raise Exception(f"error parsing genotypes")
+                    raise Exception("error parsing genotypes")
                 nper = int(ngts / self.vcf.n_samples)
                 self._ploidy = nper
                 self._gt_idxs = <int *>stdlib.malloc(sizeof(int) * self.vcf.n_samples * nper)

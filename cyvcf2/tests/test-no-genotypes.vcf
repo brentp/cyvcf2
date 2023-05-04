@@ -3,8 +3,4 @@
 ##FORMAT=<ID=PL,Number=G,Type=Integer,Description="Normalized, Phred-scaled likelihoods for genotypes as defined in the VCF specification">
 ##contig=<ID=1,length=249250621,assembly=b37>
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	samplea	sampleb
-1	8466747	.	A	C	.	PASS	.	GT:PL	.:.	1:36,0
-1	8466747	.	A	C	.	PASS	.	GT:PL	./.:.	./1:36,0,40
 1	8466747	.	A	T	.	PASS	.	PL	.	36,0
-1	8466747	.	A	T	.	PASS	.	GT	0/1	0
-1	8466747	.	A	T	.	PASS	.	GT	0	0/1

@@ -1316,3 +1316,10 @@ def test_issue236():
 
         assert res[0] == res[1]
         assert len(res[0]) > 0
+
+
+def test_issue17_no_gt():
+    vcf = VCF(os.path.join(HERE, "test-no-genotypes.vcf"))
+    with pytest.raises(Exception):
+        for v in vcf:
+            v.num_called  # Used to give segmentation fault

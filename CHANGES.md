@@ -1,3 +1,6 @@
+# v0.30.19
++ raise exception (instead of segfault) when calling num_called, etc. on variant without genotypes (#262 from @davmlaw)
+
 # v0.30.15
 + fix num_unknown when gts012=True (#236)
 

@@ -1320,10 +1320,6 @@ def test_issue236():
 
 def test_issue17_no_gt():
     vcf = VCF(os.path.join(HERE, "test-no-genotypes.vcf"))
-    for v in vcf:
-        try:
+    with pytest.raises(Exception):
+        for v in vcf:
             v.num_called  # Used to give segmentation fault
-        except:
-            pass
-
-    assert True

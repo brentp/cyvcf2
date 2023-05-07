@@ -113,6 +113,7 @@ jobs:
           git submodule init
           git submodule update
           cd htslib
+          git checkout 1.15.1
           git submodule update --init --recursive
           autoheader
           autoconf

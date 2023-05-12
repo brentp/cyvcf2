@@ -27,6 +27,7 @@ jobs:
         git submodule update --init --recursive
         cd htslib
         git checkout 1.15.1
+        git submodule update --init --recursive
         autoheader && autoconf
         ./configure --enable-s3 --disable-lzma --disable-bz2
         make

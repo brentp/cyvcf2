@@ -5,17 +5,17 @@ on: [push, pull_request]
 jobs:
   build:
     name: Run tests on Python ${{ matrix.python-version }}
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install
@@ -26,8 +26,7 @@ jobs:
         pip install pytest pytest-cov
         git submodule update --init --recursive
         cd htslib
-        git checkout 1.15.1
-        autoheader && autoconf
+        autoheader && autoconf && autoreconf --install
         ./configure --enable-s3 --disable-lzma --disable-bz2
         make
         cd ..

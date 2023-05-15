@@ -113,13 +113,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install libcurl4-openssl-dev libbz2-dev liblzma-dev libssl-dev
-          git submodule init
-          git submodule update
-          cd htslib
           git checkout 1.15.1
           git submodule update --init --recursive
-          autoheader
-          autoconf
+          cd htslib
+          autoheader && autoconf && autoreconf --install
           ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2
           make
           cd ..

@@ -101,6 +101,7 @@ setup(
             'cyvcf2 = cyvcf2.__main__:cli',
         ],
     ),
+    python_requires=">=3.7",
     install_requires=['numpy', 'coloredlogs', 'click'],
     include_package_data=True,
     zip_safe=False,

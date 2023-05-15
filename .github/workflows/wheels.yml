@@ -113,7 +113,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install libcurl4-openssl-dev libbz2-dev liblzma-dev libssl-dev
-          git checkout 1.15.1
           git submodule update --init --recursive
           cd htslib
           autoheader && autoconf && autoreconf --install

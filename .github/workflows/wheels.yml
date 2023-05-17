@@ -38,7 +38,7 @@ jobs:
         python -m pip install -U cibuildwheel
 
     - name: Build wheels for Linux
-      if: matrix.os == 'ubuntu-18.04'
+      if: matrix.os == 'ubuntu-20.04'
       run: |
         python -m cibuildwheel --output-dir wheelhouse
       env:

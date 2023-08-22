@@ -10,3 +10,5 @@ include htslib/*.h
 include htslib/htslib/*.h
 include htslib/cram/*.c
 include htslib/cram/*.h
+include htslib/htscodecs/htscodecs/*.h
+include htslib/htscodecs/htscodecs/*.c

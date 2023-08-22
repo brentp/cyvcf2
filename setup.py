@@ -48,7 +48,12 @@ sources = [
     if not any(e in x for e in ['irods', 'plugin'])
 ]
 sources += glob.glob('htslib/cram/*.c')
-sources += glob.glob('htslib/htscodecs/htscodecs/*.c')
+sources += ['htslib/htscodecs/htscodecs/%s' % s for s in ['rle.c', 'arith_dynamic.c', 'pack.c', 'utils.c',
+                                                          'htscodecs.c', 'fqzcomp_qual.c',
+                                                          'rANS_static.c',
+                                                          'rANS_static4x16pr.c'
+                                                          ]]
+
 # Exclude the htslib sources containing main()'s
 sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
 sources.append('cyvcf2/helpers.c')
@@ -65,7 +70,8 @@ extensions = [Extension("cyvcf2.cyvcf2",
                         extra_compile_args=["-Wno-sign-compare", "-Wno-unused-function",
                             "-Wno-strict-prototypes",
                             "-Wno-unused-result", "-Wno-discarded-qualifiers"],
-                        include_dirs=['htslib', 'cyvcf2', np.get_include()])]
+                        library_dirs=['htslib', 'htslib/htscodecs/htscodecs'],
+                        include_dirs=['htslib', 'cyvcf2', 'htslib/htscodecs/htscodecs', np.get_include()])]
 
 
 CYTHONIZE = bool(int(os.getenv("CYTHONIZE", 0)))

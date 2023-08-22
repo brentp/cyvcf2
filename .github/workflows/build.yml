@@ -28,7 +28,7 @@ jobs:
         cd htslib
         autoheader && autoconf && autoreconf --install
         ./configure --enable-s3 --disable-lzma --disable-bz2
-        make
+        make version.h && make
         cd ..
         CYTHONIZE=1 python setup.py build_ext -i
     - name: Test

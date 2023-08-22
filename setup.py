@@ -51,7 +51,12 @@ sources += glob.glob('htslib/cram/*.c')
 sources += ['htslib/htscodecs/htscodecs/%s' % s for s in ['rle.c', 'arith_dynamic.c', 'pack.c', 'utils.c',
                                                           'htscodecs.c', 'fqzcomp_qual.c',
                                                           'rANS_static.c',
-                                                          'rANS_static4x16pr.c'
+                                                          'rANS_static4x16pr.c',
+                                                          'rANS_static32x16pr.c',
+                                                          'rANS_static32x16pr_avx2.c',
+                                                          'rANS_static32x16pr_avx512.c',
+                                                          'rANS_static32x16pr_sse4.c',
+                                                          'rANS_static32x16pr_neon.c',
                                                           ]]
 
 # Exclude the htslib sources containing main()'s

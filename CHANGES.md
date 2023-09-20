@@ -1,3 +1,6 @@
+# v0.30.23
++ set samples to empty when given empty list.
+
 # v0.30.19
 + raise exception (instead of segfault) when calling num_called, etc. on variant without genotypes (#262 from @davmlaw)
 

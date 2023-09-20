@@ -342,14 +342,19 @@ cdef class VCF(HTSFile):
         samples: list
             list of samples to extract.
         """
+        cdef bint is_null = 0
         if samples is None:
             samples = "-".encode()
         if isinstance(samples, list):
             samples = to_bytes(",".join(samples))
+            is_null = len(samples) == 0
         else:
             samples = to_bytes(samples)
 
-        ret = bcf_hdr_set_samples(self.hdr, <const char *>samples, 0)
+        if is_null:
+            ret = bcf_hdr_set_samples(self.hdr, NULL, 0)
+        else:
+            ret = bcf_hdr_set_samples(self.hdr, <const char *>samples, 0)
         assert ret >= 0, ("error setting samples", ret)
         self.n_samples = bcf_hdr_nsamples(self.hdr)
         if ret != 0 and samples != "-":

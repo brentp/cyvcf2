@@ -559,7 +559,7 @@ cdef class VCF(HTSFile):
     contains = __contains__
 
     def __dealloc__(self):
-        if self.hts != NULL and self.hdr != NULL:
+        if self.hdr != NULL:
             bcf_hdr_destroy(self.hdr)
             self.hdr = NULL
         self.close()

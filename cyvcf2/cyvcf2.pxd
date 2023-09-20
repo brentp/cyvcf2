@@ -23,6 +23,7 @@ cdef extern from "htslib/kstring.h":
         char *s;
 
     char *ks_release(kstring_t *s)
+    void ks_free(kstring_t *s)
 
 cdef extern from "htslib/hfile.h":
     ctypedef struct hFILE:

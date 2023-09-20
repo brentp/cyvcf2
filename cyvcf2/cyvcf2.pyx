@@ -603,12 +603,15 @@ cdef class VCF(HTSFile):
             return [str(self.hdr.samples[i].decode('utf-8')) for i in range(self.n_samples)]
 
     property raw_header:
-         "string of the raw header from the VCF"
-         def __get__(self):
-             cdef kstring_t s
-             s.s, s.l, s.m = NULL, 0, 0
-             bcf_hdr_format(self.hdr, 0, &s)
-             return from_bytes(s.s)
+        "string of the raw header from the VCF"
+        def __get__(self):
+            cdef kstring_t s
+            s.s, s.l, s.m = NULL, 0, 0
+            bcf_hdr_format(self.hdr, 0, &s)
+
+            python_str = str(from_bytes(s.s))
+            ks_free(&s)
+            return python_str
 
     property seqlens:
         "list of chromosome lengths, if defined in the VCF header"

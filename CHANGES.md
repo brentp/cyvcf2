@@ -1,3 +1,6 @@
+# v0.30.24
++ fix memory leak in raw_header (#281)
+
 # v0.30.23
 + set samples to empty when given empty list.
 + Prevent memory leak if user calls VCF.close() (#280)

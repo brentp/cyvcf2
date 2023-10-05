@@ -1,0 +1,2 @@
+docker build -f Dockerfile.python-3.8-slim .
+docker build -f Dockerfile.python-3.8-alpine .

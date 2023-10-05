@@ -1,0 +1,14 @@
+FROM python:3.8-alpine
+
+RUN apk --no-cache add build-base
+RUN apk --no-cache add curl-dev
+RUN apk --no-cache add openssl-dev
+RUN apk --no-cache add zlib-dev
+RUN apk --no-cache add bzip2-dev
+RUN apk --no-cache add xz-dev
+
+#RUN apk --no-cache add libressl-dev
+
+COPY requirements.txt .
+
+RUN pip install -r requirements.txt

@@ -1,0 +1,27 @@
+FROM python:3.8-slim
+
+RUN apt-get update
+
+# Feel my pain...
+RUN apt-get -y install g++
+RUN apt-get -y install libssl-dev libnode-dev
+RUN apt-get -y install zlib1g-dev
+RUN apt-get -y install libbz2-dev
+RUN apt-get -y install libcurl4-openssl-dev
+RUN apt-get -y install liblzma-dev
+
+WORKDIR /cyvcf2
+
+COPY requirements.txt .
+
+RUN pip install -r requirements.txt
+
+
+# Getting confused now...
+
+RUN pip install pytest
+RUN apt-get -y install git
+
+RUN git clone -b 'v0.20.0' --single-branch --depth 1 https://github.com/brentp/cyvcf2.git
+RUN cd cyvcf2
+RUN pytest

@@ -12,9 +12,7 @@ RUN apt-get -y install liblzma-dev
 
 WORKDIR /cyvcf2
 
-COPY requirements.txt .
-
-RUN pip install -r requirements.txt
+RUN pip install cyvcf2==0.20.0
 
 
 # Getting confused now...

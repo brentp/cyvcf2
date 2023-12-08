@@ -93,36 +93,36 @@ cdef extern from "htslib/vcf.h":
     hts_itr_t *bcf_itr_querys(hts_idx_t *, void *, char *);
 
 
-    const int BCF_DT_ID = 0;
-    const int BCF_DT_CTG = 1
-    const int BCF_DT_SAMPLE = 2;
+    cdef extern const int BCF_DT_ID;
+    cdef extern const int BCF_DT_CTG;
+    cdef extern const int BCF_DT_SAMPLE;
 
-    uint32_t bcf_float_missing = 0x7F800001;
+    cdef extern uint32_t bcf_float_missing;
 
-    const int BCF_ERR_CTG_UNDEF = 1
+    cdef extern const int BCF_ERR_CTG_UNDEF;
 
 
-    const int BCF_BT_NULL   = 0
-    const int BCF_BT_INT8   = 1
-    const int BCF_BT_INT16  = 2
-    const int BCF_BT_INT32  = 3
-    const int BCF_BT_FLOAT  = 5
-    const int BCF_BT_CHAR   = 7
+    cdef extern const int BCF_BT_NULL;
+    cdef extern const int BCF_BT_INT8;
+    cdef extern const int BCF_BT_INT16;
+    cdef extern const int BCF_BT_INT32;
+    cdef extern const int BCF_BT_FLOAT;
+    cdef extern const int BCF_BT_CHAR;
 
-    const int bcf_str_missing = 0x07
-    const int bcf_str_vector_end = 0
+    cdef extern const int bcf_str_missing;
+    cdef extern const int bcf_str_vector_end;
 
-    const int INT8_MIN = -128
-    const int INT16_MIN = -32768
-    const int INT32_MIN = -2147483648
+    cdef extern const int INT8_MIN;
+    cdef extern const int INT16_MIN;
+    cdef extern const int INT32_MIN;
 
-    const int bcf_int8_vector_end  = -127
-    const int bcf_int16_vector_end  = -32767
-    const int bcf_int32_vector_end  = -2147483647
+    cdef extern const int bcf_int8_vector_end;
+    cdef extern const int bcf_int16_vector_end;
+    cdef extern const int bcf_int32_vector_end;
 
-    const int bcf_int8_missing  = INT8_MIN 
-    const int bcf_int16_missing  = INT16_MIN 
-    const int32_t bcf_int32_missing  = INT32_MIN
+    cdef extern const int bcf_int8_missing;
+    cdef extern const int bcf_int16_missing;
+    cdef extern const int32_t bcf_int32_missing;
 
     ctypedef union uv1:
         int32_t i; # integer value
@@ -179,17 +179,17 @@ cdef extern from "htslib/vcf.h":
     ctypedef struct bcf_idpair_t:
         pass
 
-    const int BCF_HL_FLT  = 0 # header line
-    const int BCF_HL_INFO = 1
-    const int BCF_HL_FMT  = 2
-    const int BCF_HL_CTG  = 3
-    const int BCF_HL_STR  = 4 # structured header line TAG=<A=..,B=..>
-    const int BCF_HL_GEN  = 5 # generic header line
+    cdef extern const int BCF_HL_FLT; # header line
+    cdef extern const int BCF_HL_INFO;
+    cdef extern const int BCF_HL_FMT;
+    cdef extern const int BCF_HL_CTG;
+    cdef extern const int BCF_HL_STR; # structured header line TAG=<A=..,B=..>
+    cdef extern const int BCF_HL_GEN; # generic header line
 
-    const int BCF_HT_FLAG = 0 # header type
-    const int BCF_HT_INT  = 1
-    const int BCF_HT_REAL = 2
-    const int BCF_HT_STR  = 3
+    cdef extern const int BCF_HT_FLAG; # header type
+    cdef extern const int BCF_HT_INT;
+    cdef extern const int BCF_HT_REAL;
+    cdef extern const int BCF_HT_STR;
 
     ctypedef struct bcf_hrec_t:
         int type;       # One of the BCF_HL_* type

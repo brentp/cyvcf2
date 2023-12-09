@@ -2404,7 +2404,7 @@ cdef class Writer(VCF):
         if not self.header_written:
             self.write_header()
         if var.b.errcode == BCF_ERR_CTG_UNDEF:
-            h = bcf_hdr_id2hrec(self.ohdr, BCF_DT_CTG, 0, var.b.rid)
+            h = bcf_hdr_id2hrec(bcf_hdr_dup(self.ohdr), BCF_DT_CTG, 0, var.b.rid)
             if h == NULL:
                 raise Exception("contig %d unknown and not found in header" % var.b.rid)
             if bcf_hdr_add_hrec(self.hdr, h) < 0:

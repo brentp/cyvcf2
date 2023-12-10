@@ -4,7 +4,6 @@ import sys
 import subprocess
 import platform
 
-import pkg_resources
 from setuptools import setup, Extension
 
 if sys.version_info.major == 2 and sys.version_info.minor != 7:

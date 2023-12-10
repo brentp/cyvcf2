@@ -407,7 +407,7 @@ cdef class VCF(HTSFile):
         itr = bcf_itr_querys(self.hidx, self.hdr, to_bytes(region))
         if itr == NULL:
             warnings.warn("no intervals found for %s at %s" % (self.fname, region))
-            raise StopIteration
+            return
         try:
             while True:
                 b = bcf_init()
@@ -437,11 +437,11 @@ cdef class VCF(HTSFile):
         """
         if not region:
             yield from self
-            raise StopIteration
+            return
 
         if self.fname.decode(ENC).endswith(('.bcf', '.bcf.gz')):
             yield from self._bcf_region(region)
-            raise StopIteration
+            return
 
         if self.idx == NULL:
             self.idx = tbx_index_load(to_bytes(self.fname))
@@ -459,7 +459,7 @@ cdef class VCF(HTSFile):
 
         if itr == NULL:
             warnings.warn("no intervals found for %s at %s" % (self.fname, region))
-            raise StopIteration
+            return
 
         try:
             while 1:
@@ -2404,7 +2404,7 @@ cdef class Writer(VCF):
         if not self.header_written:
             self.write_header()
         if var.b.errcode == BCF_ERR_CTG_UNDEF:
-            h = bcf_hdr_id2hrec(self.ohdr, BCF_DT_CTG, 0, var.b.rid)
+            h = bcf_hdr_id2hrec(bcf_hdr_dup(self.ohdr), BCF_DT_CTG, 0, var.b.rid)
             if h == NULL:
                 raise Exception("contig %d unknown and not found in header" % var.b.rid)
             if bcf_hdr_add_hrec(self.hdr, h) < 0:

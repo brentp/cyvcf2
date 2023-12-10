@@ -1,0 +1,20 @@
+ARG PYTHON_VERSION=slim 
+
+FROM python:${PYTHON_VERSION}
+
+WORKDIR /workspace
+
+RUN apt-get update && apt-get install --no-install-recommends -y autoconf automake gcc \
+    libcurl4-openssl-dev make git libc6-dev zlib1g-dev libssl-dev liblzma-dev libbz2-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
+# build htslib
+RUN cd htslib && autoheader && autoconf && autoreconf --install && \
+    ./configure --enable-s3 --disable-lzma --disable-bz2 && make
+
+RUN pip install -r requirements.txt && pip install pytest pytest-cov
+
+# build cyvcf2
+RUN CYTHONIZE=1 python setup.py build_ext -i

@@ -1,13 +1,19 @@
-import os
+import ctypes
 import glob
+import os
+import shutil
 import sys
 import subprocess
-import platform
 
-from setuptools import setup, Extension
+from setuptools import setup, Extension, Command
+from setuptools.command.build_ext import build_ext
+from setuptools.command.sdist import sdist
 
 if sys.version_info.major == 2 and sys.version_info.minor != 7:
-    sys.stderr.write("ERROR: cyvcf2 is only for python 2.7 or greater you are running %d.%d\n", (sys.version_info.major, sys.version_info.minor))
+    sys.stderr.write(
+        "ERROR: cyvcf2 is only for python 2.7 or greater you are running %d.%d\n",
+        (sys.version_info.major, sys.version_info.minor),
+    )
     sys.exit(1)
 
 import numpy as np
@@ -18,15 +24,17 @@ def get_version():
     import ast
 
     with open(os.path.join("cyvcf2", "__init__.py"), "r") as init_file:
-      module = ast.parse(init_file.read())
+        module = ast.parse(init_file.read())
 
-    version = (ast.literal_eval(node.value) for node in ast.walk(module)
-         if isinstance(node, ast.Assign)
-         and node.targets[0].id == "__version__")
+    version = (
+        ast.literal_eval(node.value)
+        for node in ast.walk(module)
+        if isinstance(node, ast.Assign) and node.targets[0].id == "__version__"
+    )
     try:
-      return next(version)
+        return next(version)
     except StopIteration:
-          raise ValueError("version could not be located")
+        raise ValueError("version could not be located")
 
 
 def no_cythonize(extensions, **_ignore):
@@ -41,30 +49,186 @@ def no_cythonize(extensions, **_ignore):
     return extensions
 
 
+def check_libhts():
+    try:
+        ctypes.CDLL("libhts.so")
+        return True
+    except Exception:
+        return False
+
+
+def check_libdeflate():
+    try:
+        ctypes.CDLL("libdeflate.so")
+        return True
+    except Exception:
+        return False
+
+
+def build_htslib(htslib_configure_options, static_mode):
+    current_directory = os.getcwd()
+    os.chdir(os.path.join(current_directory, "htslib"))
+
+    if os.path.exists("config.status"):
+        print("# cyvcf2: config.status exists, skip configure htslib")
+    else:
+        subprocess.run(["autoreconf", "-i"], check=True)
+
+        configure_args = ["./configure"]
+        if static_mode:
+            configure_args.append("CFLAGS=-fPIC")
+        if htslib_configure_options:
+            configure_args.extend(htslib_configure_options.split())
+
+        subprocess.run(configure_args, check=True)
+    subprocess.run(["make"], check=True)
+
+    os.chdir(current_directory)
+
+
+def pre_sdist():
+    current_directory = os.getcwd()
+    os.chdir(os.path.join(current_directory, "htslib"))
+
+    # generate version.h
+    subprocess.run(["make", "htscodecs/htscodecs/version.h"], check=True)
+
+    # remove redundant file
+    redudant_files = ["htscodecs.mk"]
+    for redudant_file in redudant_files:
+        if os.path.exists(redudant_file):
+            os.remove(redudant_file)
+
+    os.chdir(current_directory)
+
+
+class cyvcf2_build_ext(build_ext):
+    def run(self):
+        print("# cyvcf2: htslib mode is {}".format(CYVCF2_HTSLIB_MODE))
+        if CYVCF2_HTSLIB_MODE == "BUILTIN" or not check_libhts():
+            print(
+                "# cyvcf2: htslib configure options is {}".format(
+                    CYVCF2_HTSLIB_CONFIGURE_OPTIONS
+                )
+            )
+            build_htslib(
+                CYVCF2_HTSLIB_CONFIGURE_OPTIONS, CYVCF2_HTSLIB_MODE == "BUILTIN"
+            )
+
+        if CYVCF2_HTSLIB_MODE == "BUILTIN":
+            # add htslib linked libraries
+            # libcrypto is bundled with libssl, capabale to replace libssl
+            all_dynamic_libs = {
+                "z",
+                "bz2",
+                "lzma",
+                "curl",
+                "deflate",
+                "crypto",
+                "crypt",
+            }
+
+            extra_libs = []
+            # read the htslib config.status file to get the linked libraries
+            with open("htslib/config.status", "r") as f:
+                for line in f:
+                    if 'S["static_LIBS"]' in line:
+                        linked_libs_str = line.split("=")[1].strip()[1:-1]
+                        print("# cyvcf2: htslib librarys is {}".format(linked_libs_str))
+                        linked_libs = linked_libs_str.split()
+                        for lib in linked_libs:
+                            if lib[2:] in all_dynamic_libs:  # remove -l prefix
+                                extra_libs.append(lib[2:])
+
+            self.extensions[0].libraries = self.extensions[0].libraries + extra_libs
+
+        super().run()
+
+
+class cyvcf2_sdist(sdist):
+    def run(self):
+        pre_sdist()
+
+        super().run()
+
+
+class clean_ext(Command):
+    description = "clean up Cython temporary files and htslib build files"
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        print("cleaning build files")
+        if os.path.exists("build"):
+            shutil.rmtree("build")
+
+        if os.path.exists("cyvcf2.egg-info"):
+            shutil.rmtree("cyvcf2.egg-info")
+
+        print("cleaning Cython temporary files")
+        cyvcf2_c_path = os.path.join("cyvcf2", "cyvcf2.c")
+        if os.path.exists(cyvcf2_c_path):
+            os.remove(cyvcf2_c_path)
+
+        so_files = glob.glob("cyvcf2/cyvcf2.cpython-*.so")
+        for file in so_files:
+            os.remove(file)
+
+        print("cleaning htslib build files")
+        current_directory = os.getcwd()
+        os.chdir(os.path.join(current_directory, "htslib"))
+        subprocess.run(["make", "distclean"], check=True)
+        os.chdir(current_directory)  # 返回上一级目录
+
+
+# How to link against HTSLIB
+# BUILTIN:  build and static link against htslib from
+#           builtin htslib code (default)
+# EXTERNAL: use shared libhts.so compiled outside of
+#           cyvcf2
+CYVCF2_HTSLIB_MODE = os.environ.get("CYVCF2_HTSLIB_MODE", "BUILTIN")
+CYVCF2_HTSLIB_CONFIGURE_OPTIONS = os.environ.get(
+    "CYVCF2_HTSLIB_CONFIGURE_OPTIONS", None
+)
+
+htslib_objects = []
+htslib_librarys = []
+htslib_library_dirs = []
+
+if CYVCF2_HTSLIB_MODE == "BUILTIN":
+    htslib_objects = ["htslib/libhts.a"]
+else:
+    htslib_librarys = ["hts"]
+    if not check_libhts():
+        htslib_library_dirs = ["htslib"]
+
+htslib_include_dirs = ["htslib", "htslib/htslib"]
+
 # Build the Cython extension by statically linking to the bundled htslib
-sources = [
-    x for x in glob.glob('htslib/*.c')
-    if not any(e in x for e in ['irods', 'plugin'])
+sources = ["cyvcf2/cyvcf2.pyx", "cyvcf2/helpers.c"]
+
+extensions = [
+    Extension(
+        "cyvcf2.cyvcf2",
+        sources,
+        extra_objects=htslib_objects,
+        libraries=htslib_librarys,
+        extra_compile_args=[
+            "-Wno-sign-compare",
+            "-Wno-unused-function",
+            "-Wno-strict-prototypes",
+            "-Wno-unused-result",
+            "-Wno-discarded-qualifiers",
+        ],
+        include_dirs=["cyvcf2", np.get_include()] + htslib_include_dirs,
+        library_dirs=htslib_library_dirs,
+    )
 ]
-sources += glob.glob('htslib/cram/*.c')
-sources += glob.glob('htslib/htscodecs/htscodecs/*.c')
-# Exclude the htslib sources containing main()'s
-sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
-sources.append('cyvcf2/helpers.c')
-
-extra_libs = []
-if platform.system() != 'Darwin':
-    extra_libs.append('crypt')
-if bool(int(os.getenv("LIBDEFLATE", 0))):
-    extra_libs.append('deflate')
-
-extensions = [Extension("cyvcf2.cyvcf2",
-                        ["cyvcf2/cyvcf2.pyx"] + sources,
-                        libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + extra_libs,
-                        extra_compile_args=["-Wno-sign-compare", "-Wno-unused-function",
-                            "-Wno-strict-prototypes",
-                            "-Wno-unused-result", "-Wno-discarded-qualifiers"],
-                        include_dirs=['htslib', 'cyvcf2', np.get_include()])]
 
 
 CYTHONIZE = bool(int(os.getenv("CYTHONIZE", 0)))
@@ -94,14 +258,19 @@ setup(
     author_email="bpederse@gmail.com",
     version=get_version(),
     ext_modules=extensions,
-    packages=['cyvcf2', 'cyvcf2.tests'],
+    packages=["cyvcf2"],
     entry_points=dict(
         console_scripts=[
-            'cyvcf2 = cyvcf2.__main__:cli',
+            "cyvcf2 = cyvcf2.__main__:cli",
         ],
     ),
     python_requires=">=3.7",
-    install_requires=['numpy', 'coloredlogs', 'click'],
+    install_requires=["numpy", "coloredlogs", "click"],
     include_package_data=True,
     zip_safe=False,
+    cmdclass={
+        "clean_ext": clean_ext,
+        "build_ext": cyvcf2_build_ext,
+        "sdist": cyvcf2_sdist,
+    },
 )

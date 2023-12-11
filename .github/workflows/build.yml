@@ -44,11 +44,11 @@ jobs:
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
-        submodules: true
+        submodules: recursive
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install
@@ -57,12 +57,7 @@ jobs:
         sudo apt-get install libcurl4-openssl-dev
         pip install -r requirements.txt
         pip install pytest pytest-cov
-        git submodule update --init --recursive
-        cd htslib
-        autoheader && autoconf && autoreconf --install
-        ./configure --enable-s3 --disable-lzma --disable-bz2
-        make
-        cd ..
+        CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-s3 --disable-lzma --disable-bz2" \
         CYTHONIZE=1 python setup.py build_ext -i
     - name: Test
       run: |

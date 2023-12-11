@@ -1,12 +1,18 @@
-include cyvcf2/tests/*
 include LICENSE
+include *.md
 include cyvcf2/*.pyx
 include cyvcf2/*.pxd
-include cyvcf2/*.c
-include cyvcf2/*.h
-include *.md
-include htslib/*.c
-include htslib/*.h
-include htslib/htslib/*.h
-include htslib/cram/*.c
-include htslib/cram/*.h
+include cyvcf2/*.[ch]
+
+# exclude tests from pypi because no data file
+prune cyvcf2/tests
+
+# htslib
+include htslib/LICENSE htslib/README
+recursive-include htslib *.[ch]
+exclude htslib/*config*.h
+
+include htslib/configure.ac htslib/m4/*.m4 htslib/*.in
+include htslib/configure htslib/version.sh
+include htslib/Makefile htslib/*.mk
+exclude htslib/config.mk htslib/htscodecs.mk

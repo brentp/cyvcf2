@@ -31,7 +31,7 @@ jobs:
     - uses: actions/setup-python@v4
       name: Install Python
       with:
-        python-version: "3.7"
+        python-version: "3.12"
 
     - name: Install cibuildwheel
       run: |
@@ -91,7 +91,7 @@ jobs:
 
     # Enable tmate debugging of manually-triggered workflows if the input option was provided
     - name: Setup tmate session
-      if: ${{ always() && github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled }}
+      if: ${{ always() && github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled == 'true' }}
       uses: mxschmitt/action-tmate@v3
 
     - uses: actions/upload-artifact@v2
@@ -104,10 +104,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         name: Install Python
         with:
-          python-version: "3.7"
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |

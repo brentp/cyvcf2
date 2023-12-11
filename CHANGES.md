@@ -1,3 +1,6 @@
+# v0.30.25
++ bump to get new release for CI/wheel fixes. thanks to @graphenn (#286) and @oyvinev (#297)
+
 # v0.30.24
 + fix memory leak in raw_header (#281)
 

@@ -10,7 +10,7 @@ git submodule init
 git submodule update
 git submodule update --init --recursive
 
-curl -O https://www.libssh2.org/download/libssh2-1.9.0.tar.gz
+curl -L -O https://www.libssh2.org/download/libssh2-1.9.0.tar.gz
 tar xzf libssh2-1.9.0.tar.gz
 cd libssh2-1.9.0
 ./configure --prefix=/root
@@ -19,7 +19,7 @@ make install
 cd ..
 rm -rf libssh2-1.9.0
 
-curl -O https://curl.se/download/curl-7.73.0.tar.gz
+curl -L -O https://curl.se/download/curl-7.73.0.tar.gz
 tar xzf curl-7.73.0.tar.gz
 cd curl-7.73.0
 ./configure --with-libssh2 --prefix=/root

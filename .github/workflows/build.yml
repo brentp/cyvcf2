@@ -73,9 +73,7 @@ jobs:
             libbz2-dev libdeflate-dev
       - name: Install macOS build prerequisites
         if: runner.os == 'macOS'
-        # same MACOSX_DEPLOYMENT_TARGET with python
         run: |
-          export MACOSX_DEPLOYMENT_TARGET=10.9
           brew install automake libdeflate
 
       - name: Install
@@ -83,7 +81,7 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov
           CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate" \
-            CYTHONIZE=1 python setup.py build_ext -i
+            CYTHONIZE=1 MACOSX_DEPLOYMENT_TARGET=10.9 python setup.py build_ext -i
 
       - name: Test
         run: |

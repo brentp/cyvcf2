@@ -182,7 +182,7 @@ class clean_ext(Command):
         current_directory = os.getcwd()
         os.chdir(os.path.join(current_directory, "htslib"))
         subprocess.run(["make", "distclean"], check=True)
-        os.chdir(current_directory)  # 返回上一级目录
+        os.chdir(current_directory)
 
 
 # How to link against HTSLIB

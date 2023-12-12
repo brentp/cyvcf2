@@ -3,13 +3,13 @@ name: Build
 on: [push, pull_request]
 
 jobs:
-  docker-build-and-test:
-    name: Docker Build and Test on ${{ matrix.platform }}
+  docker-build:
+    name: Docker Run Test on ${{ matrix.platform }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
         platform:
-          - linux/amd64
+          # No need to test on amd64
           - linux/arm64
 
     steps:
@@ -23,13 +23,13 @@ jobs:
       - name: Docker Build and Push
         uses: docker/build-push-action@v5
         with:
-          context: .  
+          context: .
           file: ./ci/Dockerfile.test
           platforms: ${{ matrix.platform }}
           tags: cyvcf2:test
           push: false
           load: true
-          build-args: |  
+          build-args: |
             PYTHON_VERSION=slim
 
       - name: Docker Run Tests
@@ -57,34 +57,85 @@ jobs:
             python-version: "3.11"
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-  
-    - name: Install Linux build prerequisites
-      if:   runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends libcurl4-openssl-dev zlib1g-dev libssl-dev liblzma-dev \
-          libbz2-dev libdeflate-dev
-    
-    - name: Install macOS build prerequisites
-      if:   runner.os == 'macOS'
-      run: |
-        brew install automake libdeflate
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install
-      run: |
-        pip install -r requirements.txt
-        pip install pytest pytest-cov
-        CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate" \
-          CYTHONIZE=1 python setup.py build_ext -i
+      - name: Install Linux build prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libcurl4-openssl-dev zlib1g-dev libssl-dev liblzma-dev \
+            libbz2-dev libdeflate-dev
+      - name: Install macOS build prerequisites
+        if: runner.os == 'macOS'
+        # same MACOSX_DEPLOYMENT_TARGET with python
+        run: |
+          export MACOSX_DEPLOYMENT_TARGET=10.9
+          brew install automake libdeflate
 
-    - name: Test
-      run: |
-        pytest --cov cyvcf2 --cov-report term-missing
+      - name: Install
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+          CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate" \
+            CYTHONIZE=1 python setup.py build_ext -i
 
+      - name: Test
+        run: |
+          pytest --cov cyvcf2 --cov-report term-missing
+
+  sdist:
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      matrix:
+        os: [ubuntu]
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install sdist prerequisites
+        run: |
+          pip install -r requirements.txt
+          pip install oldest-supported-numpy
+
+      - name: Create source distribution
+        run: CYTHONIZE=1 python setup.py sdist
+
+      - name: Install Linux build prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libcurl4-openssl-dev zlib1g-dev libssl-dev liblzma-dev \
+            libbz2-dev libdeflate-dev
+
+      - name: Build (via sdist tarball)
+        run: pip install --verbose --no-deps --no-binary='cyvcf2' cyvcf2-*.tar.gz
+        working-directory: dist
+
+      - name: Install test prerequisites
+        run: |
+          pip install pytest pytest-cov
+
+      - name: Test
+        run: |
+          pytest --import-mode importlib --cov cyvcf2 --cov-report term-missing
+
+      - name: Upload sdist tarball
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v3
+        with:
+          name: sdist
+          path: dist/cyvcf2-*.tar.gz
+          retention-days: 7

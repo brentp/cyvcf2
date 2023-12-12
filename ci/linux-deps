@@ -1,44 +1,44 @@
 #!/bin/bash
 
-set -e
+# Configure the libraries needed to build wheel packages on linux.
+# This script is designed to be used by cibuildwheel as CIBW_BEFORE_ALL_LINUX
 
-yum install -y openssl11-devel
-yum install -y libffi libffi-devel zlib-devel
-yum install -y bzip2-devel bzip2-libs xz-devel xz-libs
+set -euo pipefail
 
-git submodule init
-git submodule update
-git submodule update --init --recursive
+# dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-curl -L -O https://www.libssh2.org/download/libssh2-1.9.0.tar.gz
-tar xzf libssh2-1.9.0.tar.gz
-cd libssh2-1.9.0
-./configure --prefix=/root
-make
-make install
-cd ..
-rm -rf libssh2-1.9.0
+source /etc/os-release
 
-curl -L -O https://curl.se/download/curl-7.73.0.tar.gz
-tar xzf curl-7.73.0.tar.gz
-cd curl-7.73.0
-./configure --with-libssh2 --prefix=/root
-make
-make install
-cd ..
-rm -rf curl-7.73.0
+echo "manylinux image woking on $ID"
 
-curl -L -o libdeflate-v1.8.tar.gz https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.8.tar.gz
-tar xzf libdeflate-v1.8.tar.gz
-cd libdeflate-1.8
-make
-make install PREFIX=/root
-cd ..
+# Install cyvcf2 development files.
+case "$ID" in
+alpine)
+    apk add --no-cache xz-dev curl-dev
 
-cd htslib
-# configure fails with autoconf 2.71 (in /usr/local/bin), so use 2.69 (in /usr/bin)
-/usr/bin/autoconf -V
-/usr/bin/autoheader
-/usr/bin/autoconf
-./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2
-make
+    LIBDEFLATE_VERSION=1.19
+    curl -L -o libdeflate-v"$LIBDEFLATE_VERSION".tar.gz https://github.com/ebiggers/libdeflate/archive/refs/tags/v"$LIBDEFLATE_VERSION".tar.gz
+    tar xzf libdeflate-v"$LIBDEFLATE_VERSION".tar.gz
+    cd libdeflate-"$LIBDEFLATE_VERSION"
+    cmake -B build && cmake --build build
+    cd ./build/ && make install
+    cd ../..
+    ;;
+
+centos)
+    yum install -y bzip2-devel xz-devel libcurl-devel openssl-devel
+
+    LIBDEFLATE_VERSION=1.19
+    curl -L -o libdeflate-v"$LIBDEFLATE_VERSION".tar.gz https://github.com/ebiggers/libdeflate/archive/refs/tags/v"$LIBDEFLATE_VERSION".tar.gz
+    tar xzf libdeflate-v"$LIBDEFLATE_VERSION".tar.gz
+    cd libdeflate-"$LIBDEFLATE_VERSION"
+    cmake -B build && cmake --build build
+    cd ./build/ && make install
+    cd ../..
+    ;;
+
+*)
+    echo "$0: unexpected Linux distribution: '$ID'" >&2
+    exit 1
+    ;;
+esac

@@ -5,126 +5,86 @@ on:
     branches:
       - main
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
       debug_enabled:
-        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        description: "Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)"
         required: false
         default: false
   schedule:
     # run weekly on a Monday
-    - cron: '0 0 * * 1'
+    - cron: "0 0 * * 1"
 
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}-latest
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-latest]
+        os: [ubuntu, macos]
+        python-version: ["3.12"]
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-    - uses: actions/setup-python@v4
-      name: Install Python
-      with:
-        python-version: "3.12"
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install cibuildwheel
-      run: |
-        python -m pip install -U cibuildwheel
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
 
-    - name: Build wheels for Linux
-      if: matrix.os == 'ubuntu-20.04'
-      run: |
-        python -m cibuildwheel --output-dir wheelhouse
-      env:
-        CIBW_SKIP: "pp* *i686* *musllinux*"
-        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-        CIBW_BEFORE_BUILD_LINUX: "{project}/ci/linux-deps"
-        CIBW_TEST_COMMAND: "{project}/ci/test"
-        CIBW_ENVIRONMENT: "CYTHONIZE=1 LIBDEFLATE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib'"
-        CIBW_REPAIR_WHEEL_COMMAND_LINUX: LD_LIBRARY_PATH='/root/lib' auditwheel repair -w {dest_dir} {wheel}
+      - name: Build wheels for Linux
+        uses: pypa/cibuildwheel@v2.16.2
+        if: runner.os == 'Linux'
+        with:
+          package-dir: .
+          output-dir: wheelhouse
+          config-file: "{package}/pyproject.toml"
+        env:
+          CIBW_SKIP: "pp* *i686*"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_1
+          CIBW_ARCHS_LINUX: auto64 aarch64
+          CIBW_BEFORE_BUILD_LINUX: "{project}/ci/linux-deps"
+          CIBW_TEST_COMMAND: "{project}/ci/test"
+          CIBW_ENVIRONMENT: >-
+            CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate"
+            CYTHONIZE=1
 
-    - name: Build wheels for Mac OS x86
-      if: matrix.os == 'macos-latest'
-      run: |
-        python -m cibuildwheel --output-dir wheelhouse
-      env:
-        CIBW_SKIP: "pp* *i686*"
-        CIBW_ARCHS_MACOS: "x86_64"
-        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-        CIBW_BEFORE_BUILD_MACOS: "{project}/ci/osx-deps"
-        CIBW_TEST_COMMAND: "{project}/ci/test"
-        CIBW_ENVIRONMENT: "CYTHONIZE=1 LIBDEFLATE=1 C_INCLUDE_PATH='/usr/local/include' LIBRARY_PATH='/usr/local/lib'"
-        # https://cibuildwheel.readthedocs.io/en/stable/faq/#macos-passing-dyld_library_path-to-delocate
-        CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-          DYLD_LIBRARY_PATH=/usr/local/lib delocate-listdeps {wheel} &&
-          DYLD_LIBRARY_PATH=/usr/local/lib delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}
-        LDFLAGS: "-L/usr/local/opt/openssl@1.1/lib"
-        CPPFLAGS: "-I/usr/local/opt/openssl@1.1/include"
-        PKG_CONFIG_PATH: "/usr/local/opt/openssl@1.1/lib/pkgconfig"
+      # Enable tmate debugging of manually-triggered workflows if the input option was provided
+      - name: Setup tmate session
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled == 'true' }}
+        uses: mxschmitt/action-tmate@v3
 
-    - name: Build wheels for Mac OS arm64
-      # don't build with libdeflate, see https://github.com/brentp/cyvcf2/issues/252
-      if: matrix.os == 'macos-latest'
-      run: |
-        python -m cibuildwheel --output-dir wheelhouse
-      env:
-        CIBW_SKIP: "pp* *i686*"
-        CIBW_ARCHS_MACOS: "arm64"
-        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-        CIBW_BEFORE_BUILD_MACOS: "{project}/ci/osx-arm64-deps"
-        CIBW_TEST_COMMAND: "{project}/ci/test"
-        CIBW_TEST_SKIP: "*-macosx_arm64"
-        CIBW_ENVIRONMENT: "CYTHONIZE=1 C_INCLUDE_PATH='/usr/local/include' LIBRARY_PATH='/usr/local/lib'"
-        # https://cibuildwheel.readthedocs.io/en/stable/faq/#macos-passing-dyld_library_path-to-delocate
-        CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-          DYLD_LIBRARY_PATH=/usr/local/lib delocate-listdeps {wheel} &&
-          DYLD_LIBRARY_PATH=/usr/local/lib delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}
-        LDFLAGS: "-L/usr/local/opt/openssl@1.1/lib"
-        CPPFLAGS: "-I/usr/local/opt/openssl@1.1/include"
-        PKG_CONFIG_PATH: "/usr/local/opt/openssl@1.1/lib/pkgconfig"
-
-    # Enable tmate debugging of manually-triggered workflows if the input option was provided
-    - name: Setup tmate session
-      if: ${{ always() && github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled == 'true' }}
-      uses: mxschmitt/action-tmate@v3
-
-    - uses: actions/upload-artifact@v2
-      with:
-        path: ./wheelhouse/*.whl
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheelhouse/*.whl
 
   build_sdist:
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
         name: Install Python
         with:
           python-version: "3.12"
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install libcurl4-openssl-dev libbz2-dev liblzma-dev libssl-dev
-          git submodule update --init --recursive
-          cd htslib
-          autoheader && autoconf && autoreconf --install
-          ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2
-          make
-          cd ..
           pip install -r requirements.txt
 
       - name: Build sdist
         run: CYTHONIZE=1 python setup.py sdist
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: dist/*.tar.gz
 
@@ -134,7 +94,7 @@ jobs:
     # upload to PyPI on every tag starting with 'v'
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: artifact
           path: dist

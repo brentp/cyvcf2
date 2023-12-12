@@ -125,7 +125,6 @@ class cyvcf2_build_ext(build_ext):
                 "curl",
                 "deflate",
                 "crypto",
-                "crypt",
             }
 
             extra_libs = []

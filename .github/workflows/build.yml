@@ -108,7 +108,6 @@ jobs:
       - name: Install sdist prerequisites
         run: |
           pip install -r requirements.txt
-          pip install oldest-supported-numpy
 
       - name: Create source distribution
         run: CYTHONIZE=1 python setup.py sdist

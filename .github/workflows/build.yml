@@ -69,19 +69,20 @@ jobs:
       if:   runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends libcurl4-openssl-dev
+        sudo apt-get install -y --no-install-recommends libcurl4-openssl-dev zlib1g-dev libssl-dev liblzma-dev \
+          libbz2-dev libdeflate-dev
     
     - name: Install macOS build prerequisites
       if:   runner.os == 'macOS'
       run: |
-        brew install automake
+        brew install automake libdeflate
 
     - name: Install
       run: |
         pip install -r requirements.txt
         pip install pytest pytest-cov
-        CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-s3 --disable-lzma --disable-bz2" \
-        CYTHONIZE=1 python setup.py build_ext -i
+        CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate" \
+          CYTHONIZE=1 python setup.py build_ext -i
 
     - name: Test
       run: |

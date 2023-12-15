@@ -1,5 +1,6 @@
 cython>=0.23.3
-oldest-supported-numpy
 coloredlogs
 click
 setuptools
+numpy; os_name == 'nt'  
+oldest-supported-numpy; os_name != 'nt'

@@ -1,6 +1,7 @@
 import ctypes
 import glob
 import os
+import platform
 import shutil
 import sys
 import subprocess
@@ -50,16 +51,18 @@ def no_cythonize(extensions, **_ignore):
 
 
 def check_libhts():
-    try:
-        ctypes.CDLL("libhts.so")
-        return True
-    except Exception:
-        return False
+    os_type = platform.system()
+    if os_type == "Linux":
+        lib_name = "libhts.so"
+    elif os_type == "Darwin":  # macOS
+        lib_name = "libhts.dylib"
+    elif os_type == "Windows":
+        lib_name = "hts-3.dll"
+    else:
+        return False  # Unsupported OS
 
-
-def check_libdeflate():
     try:
-        ctypes.CDLL("libdeflate.so")
+        ctypes.CDLL(lib_name)
         return True
     except Exception:
         return False
@@ -106,6 +109,12 @@ class cyvcf2_build_ext(build_ext):
     def run(self):
         print("# cyvcf2: htslib mode is {}".format(CYVCF2_HTSLIB_MODE))
         if CYVCF2_HTSLIB_MODE == "BUILTIN" or not check_libhts():
+            if platform.system() == "Windows":
+                # Windows htslib can't be built internall
+                raise RuntimeError(
+                    "Required library 'hts-3.dll' not found. Please install htslib first."
+                )
+
             print(
                 "# cyvcf2: htslib configure options is {}".format(
                     CYVCF2_HTSLIB_CONFIGURE_OPTIONS
@@ -129,7 +138,7 @@ class cyvcf2_build_ext(build_ext):
 
             extra_libs = []
             # read the htslib config.status file to get the linked libraries
-            with open("htslib/config.status", "r") as f:
+            with open(os.path.join("htslib", "config.status"), "r") as f:
                 for line in f:
                     if 'S["static_LIBS"]' in line:
                         linked_libs_str = line.split("=")[1].strip()[1:-1]
@@ -146,6 +155,9 @@ class cyvcf2_build_ext(build_ext):
 
 class cyvcf2_sdist(sdist):
     def run(self):
+        if platform.system() == "Windows":
+            raise RuntimeError("cyvcf2 Can't build sdist on Windows")
+
         pre_sdist()
 
         super().run()
@@ -174,15 +186,16 @@ class clean_ext(Command):
         if os.path.exists(cyvcf2_c_path):
             os.remove(cyvcf2_c_path)
 
-        so_files = glob.glob("cyvcf2/cyvcf2.cpython-*.so")
-        for file in so_files:
+        lib_files = glob.glob("cyvcf2/cyvcf2.cpython-*")
+        for file in lib_files:
             os.remove(file)
 
-        print("cleaning htslib build files")
-        current_directory = os.getcwd()
-        os.chdir(os.path.join(current_directory, "htslib"))
-        subprocess.run(["make", "distclean"], check=True)
-        os.chdir(current_directory)
+        if platform.system() != "Windows":
+            print("cleaning htslib build files")
+            current_directory = os.getcwd()
+            os.chdir(os.path.join(current_directory, "htslib"))
+            subprocess.run(["make", "distclean"], check=True)
+            os.chdir(current_directory)
 
 
 # How to link against HTSLIB
@@ -190,7 +203,20 @@ class clean_ext(Command):
 #           builtin htslib code (default)
 # EXTERNAL: use shared libhts.so compiled outside of
 #           cyvcf2
-CYVCF2_HTSLIB_MODE = os.environ.get("CYVCF2_HTSLIB_MODE", "BUILTIN")
+if platform.system() == "Windows":
+    # can't static link to htslib on Windows
+    htslib_mode_default = "EXTERNAL"
+else:
+    htslib_mode_default = "BUILTIN"
+
+CYVCF2_HTSLIB_MODE = os.environ.get("CYVCF2_HTSLIB_MODE", htslib_mode_default)
+
+if platform.system() == "Windows" and CYVCF2_HTSLIB_MODE == "BUILTIN":
+    print(
+        "# cyvcf2 WARNING: The use of cyvcf2 on Windows is experimental. It will not work when statically linked to htslib. Fallback to htslib EXTERNAL mode"
+    )
+    CYVCF2_HTSLIB_MODE = "EXTERNAL"
+
 CYVCF2_HTSLIB_CONFIGURE_OPTIONS = os.environ.get(
     "CYVCF2_HTSLIB_CONFIGURE_OPTIONS", None
 )

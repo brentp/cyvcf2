@@ -18,43 +18,71 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}-latest
+    name: Build wheels for  ${{ matrix.python-version }}-${{ matrix.buildplat[1] }}
+    runs-on: ${{ matrix.buildplat[0] }}
     strategy:
       matrix:
-        os: [ubuntu, macos]
-        python-version: ["3.12"]
+        buildplat:
+          - [ubuntu-22.04, manylinux_x86_64]
+          - [ubuntu-22.04, musllinux_x86_64]
+          - [ubuntu-22.04, manylinux_aarch64]
+          - [ubuntu-22.04, musllinux_aarch64]
+          # macOS build arm64 on x86_64 with cross-compiler
+          - [macos-12, macosx_x86_64]
+        python-version: [pp310, cp37, cp38, cp39, cp310, cp311, cp312]
+        exclude:
+          # pp310, cp37, cp38 on musllinux is not support
+          - buildplat: [ubuntu-22.04, musllinux_x86_64]
+            python-version: cp37
+          - buildplat: [ubuntu-22.04, musllinux_x86_64]
+            python-version: cp38
+          - buildplat: [ubuntu-22.04, musllinux_x86_64]
+            python-version: pp310
+          - buildplat: [ubuntu-22.04, musllinux_aarch64]
+            python-version: cp37
+          - buildplat: [ubuntu-22.04, musllinux_aarch64]
+            python-version: cp38
+          - buildplat: [ubuntu-22.04, musllinux_aarch64]
+            python-version: pp310
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@v3
 
-      - name: Build wheels for Linux
+      - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.2
-        if: runner.os == 'Linux'
         with:
           package-dir: .
           output-dir: wheelhouse
           config-file: "{package}/pyproject.toml"
         env:
-          CIBW_SKIP: "pp* *i686*"
+          # select
+          CIBW_BUILD: ${{ matrix.python-version }}-${{ matrix.buildplat[1] }}
+
+          # linux
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_1
+          # manylinux2014 can't build on aarch64
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_2
+          CIBW_MUSLLINUX_AARCH64_IMAGE: musllinux_1_2
           CIBW_ARCHS_LINUX: auto64 aarch64
           CIBW_BEFORE_BUILD_LINUX: "{project}/ci/linux-deps"
-          CIBW_TEST_COMMAND: "{project}/ci/test"
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: 'LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib64" && auditwheel repair -w {dest_dir} {wheel}'
+
+          # macos
+          CIBW_ARCHS_MACOS: auto64 arm64
+          CIBW_BEFORE_BUILD_MACOS: "{project}/ci/osx-deps"
+
+          # build
           CIBW_ENVIRONMENT: >-
             CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate"
             CYTHONIZE=1
+          CIBW_TEST_COMMAND: "{project}/ci/test"
 
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
       - name: Setup tmate session
@@ -67,7 +95,7 @@ jobs:
 
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -90,7 +118,7 @@ jobs:
 
   upload_pypi:
     needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     # upload to PyPI on every tag starting with 'v'
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
     steps:

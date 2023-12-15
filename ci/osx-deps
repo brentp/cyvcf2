@@ -1,26 +1,26 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
-git submodule init
-git submodule update
-git submodule update --init --recursive
+export DYLD_LIBRARY_PATH=/usr/local/lib
+# same with python
+export MACOSX_DEPLOYMENT_TARGET=10.9
 
-# configure fails with autoconf 2.71, so downgrade
-# see https://github.com/asdf-vm/asdf-erlang/issues/195
-brew install autoconf@2.69 && \
-brew link --overwrite autoconf@2.69 && \
-autoconf -V
+brew install automake
+brew unlink xz
 
-curl -L -o libdeflate-v1.8.tar.gz https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.8.tar.gz
-tar xzf libdeflate-v1.8.tar.gz
-cd libdeflate-1.8
-make
-make install
-cd ..
+# build liblzma and libdelfate for muti arch
 
-cd htslib
-autoheader
-autoconf
-./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2
-make
+XZ_VERSION=5.4.5
+curl -L -o xz-$XZ_VERSION.tar.gz "https://github.com/tukaani-project/xz/releases/download/v$XZ_VERSION/xz-$XZ_VERSION.tar.gz"
+tar -xf xz-$XZ_VERSION.tar.gz
+cd xz-$XZ_VERSION
+cmake -B build && cmake --build build
+cd ./build && make install
+
+LIBDEFLATE_VERSION=1.19
+curl -L -o libdeflate-v"$LIBDEFLATE_VERSION".tar.gz https://github.com/ebiggers/libdeflate/archive/refs/tags/v"$LIBDEFLATE_VERSION".tar.gz
+tar xzf libdeflate-v"$LIBDEFLATE_VERSION".tar.gz
+cd libdeflate-"$LIBDEFLATE_VERSION"
+cmake -B build && cmake --build build
+cd ./build && make install

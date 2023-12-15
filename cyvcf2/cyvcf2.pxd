@@ -3,6 +3,9 @@ import numpy as np
 cimport numpy as np
 np.import_array()
 
+cdef extern from "string.h":  
+    void* memcpy(void* dest, const void* src, size_t n)
+
 cdef extern from "relatedness.h":
     int related(int *gt_types, double *asum, int32_t *N, int32_t *ibs0,
                 int32_t *ibs2, int32_t n_samples)

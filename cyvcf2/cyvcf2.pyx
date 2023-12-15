@@ -124,6 +124,24 @@ def r_(int32_t[::view.contiguous] a_gts, int32_t[::view.contiguous] b_gts, float
     return r_unphased(&a_gts[0], &b_gts[0], f, n_samples)
 
 
+cdef char* pystring_to_cstring(str py_string):
+    # Convert Python string to byte string using UTF-8 encoding
+    cdef bytes byte_string = py_string.encode('utf-8')  # Convert Python string to bytes
+    # Convert Python bytes to a C-compatible pointer
+    cdef const char* byte_string_ptr = byte_string
+
+    # Allocate memory for C string with size equal to byte string length plus null terminator
+    cdef size_t length = len(byte_string) + 1  # Plus 1 for the null terminator
+    cdef char* c_string = <char*>stdlib.malloc(length)
+    # return NULL if memory allocation fails
+    if c_string == NULL:
+        return c_string
+    # Copy byte string to C string using memcpy and add null terminator
+    memcpy(c_string, byte_string_ptr, length - 1)  # Use memcpy to copy bytes to C string
+    c_string[length - 1] = b'\0'  # Add null terminator to the end of the C string
+    return c_string
+
+
 cdef set_constants(VCF v):
     v.HOM_REF = 0
     v.HET = 1
@@ -199,12 +217,14 @@ cdef class HTSFile:
                     "%s is not valid text_format or binary_format (format: %s mode: %s)" % (fname, self.hts.format.format, mode)
                 )
 
-    def close(self):
+    cdef _c_close(self):
         if self.hts != NULL:
             if self.from_path:
                 hts_close(self.hts)
             self.hts = NULL
 
+    def close(self):
+        self._c_close()
 
 cdef class VCF(HTSFile):
     """
@@ -567,7 +587,9 @@ cdef class VCF(HTSFile):
         if self.hdr != NULL:
             bcf_hdr_destroy(self.hdr)
             self.hdr = NULL
-        self.close()
+
+        # Shouldn't call Python-space functions here
+        self._c_close()
         if self.idx != NULL:
             tbx_destroy(self.idx)
         if self.hidx != NULL:
@@ -2379,19 +2401,29 @@ cdef class Writer(VCF):
     def variant_from_string(self, variant_string):
         cdef bcf1_t *b = bcf_init()
         cdef kstring_t s
-        tmp = to_bytes(variant_string)
-        s.s = tmp
-        s.l = len(variant_string)
-        s.m = len(variant_string)
+
+        # vcf_parse may realloc s.s, so the memory must be created by malloc
+        s.s = pystring_to_cstring(variant_string)
+        if s.s == NULL:
+            bcf_destroy(b)
+            raise MemoryError("Failed to allocate memory")
+
+        # plus 1 for '\0' of cstring
+        s.l = len(variant_string) + 1
+        s.m = len(variant_string) + 1
+
         ret = vcf_parse(&s, self.hdr, b)
         if ret > 0:
             bcf_destroy(b)
+            ks_free(&s)
             raise Exception("error parsing:" + variant_string + " return value:" + ret)
 
         var = newVariant(b, self)
         if var.b.errcode == BCF_ERR_CTG_UNDEF:
             self.add_to_header("##contig=<ID=%s>" % var.CHROM)
             var.b.errcode = 0
+        
+        ks_free(&s)
         return var
 
     def write_header(Writer self):

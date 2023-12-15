@@ -77,7 +77,7 @@ def build_htslib(htslib_configure_options, static_mode):
     else:
         subprocess.run(["autoreconf", "-i"], check=True)
 
-        configure_args = ["configure"]
+        configure_args = ["./configure"]
         if static_mode:
             configure_args.append("CFLAGS=-fPIC")
         if htslib_configure_options:

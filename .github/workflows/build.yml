@@ -111,7 +111,7 @@ jobs:
           pytest --cov cyvcf2 --cov-report term-missing
 
   windows_build:
-    name: Run tests on Python windows
+    name: Run tests on Python windows-2022 MSYS2 UCRT64
     runs-on: windows-2022
     defaults:
       run:

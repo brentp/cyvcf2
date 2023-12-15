@@ -1,0 +1,15 @@
+ARG PYTHON_VERSION=alpine 
+
+FROM python:${PYTHON_VERSION}
+
+WORKDIR /workspace
+
+RUN apk add --no-cache build-base autoconf automake git xz-dev curl-dev libdeflate-dev bzip2-dev
+
+COPY . .
+
+RUN pip install -r requirements.txt && pip install pytest pytest-cov
+
+# build cyvcf2
+RUN CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate" \
+    CYTHONIZE=1 python setup.py build_ext -i

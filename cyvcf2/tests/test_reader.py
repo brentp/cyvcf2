@@ -1,5 +1,6 @@
 from __future__ import print_function
 import os.path
+import platform
 import tempfile
 import sys
 import os
@@ -965,12 +966,19 @@ def test_alt_homozygous_gt():
     assert v.gt_bases[0] == '<*:DEL>/<*:DEL>'
 
 def test_write_missing_contig():
-    input_vcf = VCF('{}/seg.vcf.gz'.format(HERE))
-    output_vcf = Writer('/dev/null', input_vcf)
+    input_vcf = VCF("{}/seg.vcf.gz".format(HERE))
+    if platform.system() == "Windows":
+        output_vcf = "__o.vcf"
+    else:
+        output_vcf = "/dev/null"
+    output_vcf = Writer(output_vcf, input_vcf)
     for v in input_vcf:
-        v.genotypes = [[1,1,False]]
+        v.genotypes = [[1, 1, False]]
         output_vcf.write_record(v)
     output_vcf.close()
+
+    if platform.system() == "Windows":
+        os.unlink("__o.vcf")
 
 def test_set_samples():
     vcf = VCF(VCF_PATH)
@@ -1000,9 +1008,14 @@ def test_issue44():
     #           "./."            "."          ".|."           "0|0"
     expected = [[-1, -1, False], [-1, False], [-1, -1, True], [0, 0, True]]
     #print("", file=sys.stderr)
-    for i, v in enumerate(VCF('__o.vcf')):
+
+    t = VCF('__o.vcf')
+    for i, v in enumerate(t):
         #print(v.genotypes, file=sys.stderr)
         assert v.genotypes == [expected[i]], (i, v.genotypes, expected[i])
+
+    # file should be closed before delete
+    t.close()
     os.unlink("__o.vcf")
 
 def test_id_field_updates():

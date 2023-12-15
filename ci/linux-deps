@@ -13,16 +13,15 @@ echo "manylinux image woking on $ID"
 
 # Install cyvcf2 development files.
 case "$ID" in
-alpine)
-    apk add --no-cache xz-dev curl-dev
+almalinux)
+    dnf install -y bzip2-devel xz-devel libcurl-devel openssl-devel openblas-devel epel-release
 
-    LIBDEFLATE_VERSION=1.19
-    curl -L -o libdeflate-v"$LIBDEFLATE_VERSION".tar.gz https://github.com/ebiggers/libdeflate/archive/refs/tags/v"$LIBDEFLATE_VERSION".tar.gz
-    tar xzf libdeflate-v"$LIBDEFLATE_VERSION".tar.gz
-    cd libdeflate-"$LIBDEFLATE_VERSION"
-    cmake -B build && cmake --build build
-    cd ./build/ && make install
-    cd ../..
+    # packages at epel
+    dnf install -y libdeflate-devel
+    ;;
+
+alpine)
+    apk add --no-cache xz-dev curl-dev libdeflate-dev
     ;;
 
 centos)

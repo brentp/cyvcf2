@@ -4,13 +4,24 @@ on: [push, pull_request]
 
 jobs:
   docker-build:
-    name: Docker Run Test on ${{ matrix.platform }}
-    runs-on: ubuntu-latest
+    name: Docker Run Test on ${{ matrix.platform }}-${{ matrix.python_tag_type }}
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         platform:
-          # No need to test on amd64
+          - linux/amd64
           - linux/arm64
+        python_tag_type:
+          - slim
+          - alpine
+        exclude:
+          # amd64 with glibc have full direct test
+          - platform: linux/amd64
+            python_tag_type: slim
+
+          # test alpine only on amd64
+          - platform: linux/arm64
+            python_tag_type: alpine
 
     steps:
       - uses: actions/checkout@v4
@@ -20,40 +31,44 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Docker Build and Push
+
+      - name: Docker Build
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./ci/Dockerfile.test
+          file: ./ci/Dockerfile.${{ matrix.python_tag_type }}.test
           platforms: ${{ matrix.platform }}
-          tags: cyvcf2:test
+          tags: cyvcf2:${{ matrix.python_tag_type }}-test
           push: false
           load: true
           build-args: |
-            PYTHON_VERSION=slim
+            PYTHON_VERSION=${{ matrix.python_tag_type }}
 
       - name: Docker Run Tests
         run: |
-          docker run --rm --platform ${{ matrix.platform }} cyvcf2:test pytest --cov cyvcf2 --cov-report term-missing
+          docker run --rm --platform ${{ matrix.platform }} cyvcf2:${{ matrix.python_tag_type }}-test pytest --cov cyvcf2 --cov-report term-missing
 
   build:
     name: Run tests on Python ${{ matrix.python-version }} ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu, macos]
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        os: [ubuntu-22.04, macos-12]
+        python-version:
+          ["pypy3.10", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
         exclude:
-          # Run only the latest versions on macOS
-          - os: macos
+          # Run only the latest versions on macOS and windows
+          - os: macos-12
+            python-version: "pypy3.10"
+          - os: macos-12
             python-version: "3.7"
-          - os: macos
+          - os: macos-12
             python-version: "3.8"
-          - os: macos
+          - os: macos-12
             python-version: "3.9"
-          - os: macos
+          - os: macos-12
             python-version: "3.10"
-          - os: macos
+          - os: macos-12
             python-version: "3.11"
 
     steps:
@@ -65,12 +80,20 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Set macOS env
+        if: runner.os == 'macOS'
+        run: |
+          # building options
+          echo "MACOSX_DEPLOYMENT_TARGET=10.9" >> "$GITHUB_ENV"
+          echo "ARCHFLAGS=-arch x86_64" >> "$GITHUB_ENV"
+
       - name: Install Linux build prerequisites
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libcurl4-openssl-dev zlib1g-dev libssl-dev liblzma-dev \
             libbz2-dev libdeflate-dev
+
       - name: Install macOS build prerequisites
         if: runner.os == 'macOS'
         run: |
@@ -81,17 +104,70 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov
           CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate" \
-            CYTHONIZE=1 MACOSX_DEPLOYMENT_TARGET=10.9 python setup.py build_ext -i
+            CYTHONIZE=1 python setup.py build_ext -i
+
+      - name: Test
+        run: |
+          pytest --cov cyvcf2 --cov-report term-missing
+
+  windows_build:
+    name: Run tests on Python windows
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: "Setup MSYS2"
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          path-type: inherit
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-make
+            mingw-w64-ucrt-x86_64-libdeflate
+            mingw-w64-ucrt-x86_64-xz
+            mingw-w64-ucrt-x86_64-curl
+            mingw-w64-ucrt-x86_64-zlib
+            mingw-w64-ucrt-x86_64-bzip2
+            mingw-w64-ucrt-x86_64-tools-git
+            mingw-w64-ucrt-x86_64-python-pkgconfig
+            mingw-w64-ucrt-x86_64-pkg-config
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-python-pip
+            make
+            automake
+            autoconf
+            git
+
+      - name: Install Windows build prerequisites
+        run: |
+          cd htslib
+          autoreconf -i
+          ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate
+          make
+          make install
+
+      - name: Install
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+          CYTHONIZE=1 python setup.py build_ext -i
 
       - name: Test
         run: |
           pytest --cov cyvcf2 --cov-report term-missing
 
   sdist:
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        os: [ubuntu]
         python-version: ["3.12"]
 
     steps:

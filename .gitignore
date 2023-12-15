@@ -19,3 +19,4 @@ _templates
 setup-requires/*
 .cache/v/cache/lastfailed
 .idea
+**/__pycache__

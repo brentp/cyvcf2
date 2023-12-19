@@ -266,6 +266,8 @@ if CYTHONIZE:
             "Try pip install -r requirements.txt\n"
         )
         sys.exit(1)
+    if os.path.exists('htslib/config.status') and CYVCF2_HTSLIB_MODE == "BUILTIN":
+        os.unlink('htslib/config.status')
     compiler_directives = {"language_level": 2, "embedsignature": True}
     extensions = cythonize(extensions, compiler_directives=compiler_directives)
 else:

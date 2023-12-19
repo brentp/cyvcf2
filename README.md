@@ -14,7 +14,7 @@ If you use cyvcf2, please cite the [paper](https://academic.oup.com/bioinformati
 Fast python **(2 and 3)** parsing of VCF and BCF including region-queries.
 
 
-[![Build Status](https://github.com/brentp/cyvcf2/workflows/Build/badge.svg)](https://github.com/brentp/cyvcf2/actions?query=workflow%3ABuild)
+[![Build](https://github.com/brentp/cyvcf2/actions/workflows/build.yml/badge.svg)](https://github.com/brentp/cyvcf2/actions/workflows/build.yml)
 
 cyvcf2 is a cython wrapper around [htslib](https://github.com/samtools/htslib) built for fast parsing of [Variant Call Format](https://en.m.wikipedia.org/wiki/Variant_Call_Format) (VCF) files.
 
@@ -79,15 +79,10 @@ pip install cyvcf2
 
 ```
 git clone --recursive https://github.com/brentp/cyvcf2
-cd cyvcf2/htslib
-autoheader
-autoconf
-./configure --enable-libcurl
-make
-
-cd ..
 pip install -r requirements.txt
-CYTHONIZE=1 pip install -e .
+CYVCF2_HTSLIB_MODE=BUILTIN CYTHONIZE=1 python setup.py install
+# or to use a system htslib.so
+CYVCF2_HTSLIB_MODE=EXTERNAL python setup.py install
 ```
 
 On **OSX**, using brew, you may have to set the following as indicated by the brew install:

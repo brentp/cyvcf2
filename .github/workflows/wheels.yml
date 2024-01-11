@@ -32,6 +32,7 @@ jobs:
         python-version: [pp310, cp37, cp38, cp39, cp310, cp311, cp312]
         exclude:
           # pp310, cp37, cp38 on musllinux is not support
+          # cp39, cp310 on musllinux_aarch64, wheel building may hangup, ignore it
           - buildplat: [ubuntu-22.04, musllinux_x86_64]
             python-version: cp37
           - buildplat: [ubuntu-22.04, musllinux_x86_64]
@@ -42,6 +43,10 @@ jobs:
             python-version: cp37
           - buildplat: [ubuntu-22.04, musllinux_aarch64]
             python-version: cp38
+          - buildplat: [ubuntu-22.04, musllinux_aarch64]
+            python-version: cp39
+          - buildplat: [ubuntu-22.04, musllinux_aarch64]
+            python-version: cp310
           - buildplat: [ubuntu-22.04, musllinux_aarch64]
             python-version: pp310
 

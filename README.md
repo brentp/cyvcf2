@@ -70,9 +70,23 @@ for v in vcf('11:435345-556565'):
 Installation
 ============
 
-## pip (assuming you have htslib < 1.10 installed)
+## pip with bundled htslib
 ```
 pip install cyvcf2
+```
+
+## pip with system htslib
+
+Assuming you have already built and installed htslib version 1.12 or higher.
+```
+CYVCF2_HTSLIB_MODE=EXTERNAL pip install --no-binary cyvcf2 cyvcf2
+```
+
+## windows (experimental, only test on MSYS2)
+
+Assuming you have already built and installed htslib.
+```
+SETUPTOOLS_USE_DISTUTILS=stdlib pip install cyvcf2
 ```
 
 ## github (building htslib and cyvcf2 from source)

@@ -1296,7 +1296,7 @@ def test_genotypes():
     [0, 0, 1, 1],
     [1, 1, 0, 0],
     [1, 1, 0, 0],
-    ] 
+    ]
 
     strict_exp_num = [x[:] for x in non_strict_exp_num]
     strict_exp_num[1] = [0, 0, 2, 0] # both unknown
@@ -1336,3 +1336,31 @@ def test_issue17_no_gt():
     with pytest.raises(Exception):
         for v in vcf:
             v.num_called  # Used to give segmentation fault
+
+
+@pytest.mark.parametrize("path", [
+    "test.vcf.gz",
+    "test-multiallelic-homozygous-alt.vcf.gz",
+    "test-strict-gt-option-flag.vcf.gz",
+    ])
+def test_num_records_indexed(path):
+    vcf = VCF(os.path.join(HERE, path))
+    assert len(list(vcf)) == vcf.num_records
+
+@pytest.mark.parametrize("path", [
+    "test-genotypes.vcf",
+    ])
+def test_num_records_no_index(path):
+    vcf = VCF(os.path.join(HERE, path))
+    with pytest.raises(ValueError, match="must be indexed"):
+        vcf.num_records
+
+def test_num_records_different_index():
+    b = VCF('{}/test.snpeff.bcf'.format(HERE))
+    with pytest.raises(Exception, match="hts_idx_get_stat"):
+        b.num_records
+    assert len(list(b)) == 10
+
+    b.set_index("{}/test-diff.csi".format(HERE))
+    print(b.num_records)
+    # Not sure why this is giving an error - is it an old file?

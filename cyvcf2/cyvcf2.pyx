@@ -670,6 +670,41 @@ cdef class VCF(HTSFile):
             stdlib.free(cnames)
             return self._seqnames
 
+    cdef _num_records(self):
+        cdef uint64_t total, records, v;
+        cdef int ret, tid, nseq;
+        cdef hts_idx_t *idx = NULL;
+
+        if self.hidx == NULL and self.idx == NULL:
+            # Try to open an index
+            if self.fname.decode(ENC).endswith(('.bcf', '.bcf.gz')):
+                self.hidx = bcf_index_load(self.fname)
+            else:
+                self.idx = tbx_index_load(to_bytes(self.fname))
+        if self.hidx != NULL:
+            idx = self.hidx
+            assert self.idx == NULL
+        if self.idx != NULL:
+            idx = self.idx.idx
+            assert self.hidx == NULL
+
+        if idx == NULL:
+            raise ValueError("File must be indexed to compute num_records")
+
+        nseq = hts_idx_nseq(idx)
+        total = 0;
+        for tid in range(nseq):
+            ret = hts_idx_get_stat(idx, tid, &records, &v);
+            if ret < 0:
+                raise Exception("Error in `htslib::hts_idx_get_stat` ret: %d" % (ret))
+            total += records
+        return total
+
+    property num_records:
+        "Number of records in the file derived from the index"
+        def __get__(self):
+            return self._num_records()
+
     def plot_relatedness(self, riter):
         import pandas as pd
         from matplotlib import pyplot as plt

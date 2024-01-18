@@ -1,4 +1,4 @@
-from libc.stdint cimport int64_t, int32_t, uint32_t, int8_t, int16_t, uint8_t
+from libc.stdint cimport int64_t, uint64_t, int32_t, uint32_t, int8_t, int16_t, uint8_t
 import numpy as np
 cimport numpy as np
 np.import_array()
@@ -70,6 +70,9 @@ cdef extern from "htslib/hts.h":
 
     hts_idx_t *bcf_index_load(char *fn)
     hts_idx_t *hts_idx_load2(const char *fn, const char *fnidx);
+    int hts_idx_nseq(const hts_idx_t *idx);
+    int hts_idx_get_stat(const hts_idx_t* idx, int tid, uint64_t* mapped,
+            uint64_t* unmapped);
 
     #int hts_itr_next(BGZF *fp, hts_itr_t *iter, void *r, void *data);
     void hts_itr_destroy(hts_itr_t *iter);
@@ -78,7 +81,7 @@ cdef extern from "htslib/hts.h":
 cdef extern from "htslib/tbx.h":
 
     ctypedef struct tbx_t:
-        pass
+        hts_idx_t *idx;
 
     tbx_t *tbx_index_load(const char *fn);
     tbx_t *tbx_index_load2(const char *fn, const char *fnidx);

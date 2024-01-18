@@ -4,10 +4,9 @@
 
 int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt, int HOM_ALT, int UNKNOWN) {
     int j = 0, i, k;
-    int missing= 0, found=0;
+    int missing= 0;
     for (i = 0; i < ploidy * num_samples; i += ploidy){
         missing = 0;
-    found = 0;
         for (k = 0; k < ploidy; k++) {
             if bcf_gt_is_missing(gts[i+k])  {
                 missing += 1;

@@ -652,7 +652,7 @@ cdef class VCF(HTSFile):
         "list of chromosomes in the VCF"
         def __get__(self):
             if len(self._seqnames) > 0: return self._seqnames
-            cdef char **cnames
+            cdef const char **cnames
             cdef int i, n = 0
             cnames = bcf_hdr_seqnames(self.hdr, &n)
             if n == 0 and self.fname.decode(ENC).endswith(('.bcf', '.bcf.gz')):

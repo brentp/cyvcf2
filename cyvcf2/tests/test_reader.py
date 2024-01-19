@@ -1345,6 +1345,7 @@ def test_issue17_no_gt():
     "test-strict-gt-option-flag.vcf.gz",
     "multi-contig.vcf.gz",
     "multi-contig.bcf",
+    "test.snpeff.bcf",
     ])
 def test_num_records_indexed(path):
     vcf = VCF(os.path.join(HERE, path))
@@ -1392,6 +1393,15 @@ def test_num_records_set_index_multiple_times():
         vcf.set_index(tbi_index)
         assert n == vcf.num_records
 
+def test_num_records_set_wrong_index():
+    path = os.path.join(HERE, "multi-contig.vcf.gz")
+    index = os.path.join(HERE, "test.vcf.gz.tbi")
+    vcf = VCF(path)
+    vcf.set_index(index)
+    # We compute the number of records from the index, and don't report an
+    # error
+    assert vcf.num_records == 115
+    assert vcf.num_records != len(list(vcf))
 
 @pytest.mark.parametrize("path", [
     "test-genotypes.vcf",
@@ -1400,13 +1410,3 @@ def test_num_records_no_index(path):
     vcf = VCF(os.path.join(HERE, path))
     with pytest.raises(ValueError, match="must be indexed"):
         vcf.num_records
-
-def test_num_records_incompatible_index():
-    b = VCF('{}/test.snpeff.bcf'.format(HERE))
-    with pytest.raises(Exception, match="hts_idx_get_stat"):
-        b.num_records
-    assert len(list(b)) == 10
-
-    b.set_index("{}/test-diff.csi".format(HERE))
-    print(b.num_records)
-    # Not sure why this is giving an error - is it an old file?

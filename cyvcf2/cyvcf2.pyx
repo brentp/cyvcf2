@@ -656,6 +656,16 @@ cdef class VCF(HTSFile):
             stdlib.free(sls)
             return self._seqlens
 
+    cdef _open_index(self):
+        """
+        Try to open an index, if not open already.
+        """
+        if self.hidx == NULL and self.idx == NULL:
+            if self.fname.decode(ENC).endswith(('.bcf', '.bcf.gz')):
+                self.hidx = bcf_index_load(self.fname)
+            else:
+                self.idx = tbx_index_load(to_bytes(self.fname))
+
     property seqnames:
         "list of chromosomes in the VCF"
         def __get__(self):
@@ -663,17 +673,12 @@ cdef class VCF(HTSFile):
             cdef const char **cnames
             cdef int i, n = 0
             cnames = bcf_hdr_seqnames(self.hdr, &n)
-            if n == 0 and self.fname.decode(ENC).endswith(('.bcf', '.bcf.gz')):
-                if self.hidx == NULL:
-                    self.hidx = bcf_index_load(self.fname)
+            if n == 0:
+                self._open_index()
                 if self.hidx != NULL:
                     cnames = bcf_index_seqnames(self.hidx, self.hdr, &n)
-            elif n == 0:
-                if self.idx == NULL:
-                    self.idx = tbx_index_load(to_bytes(self.fname))
                 if self.idx !=NULL:
                     cnames = tbx_seqnames(self.idx, &n)
-
             self._seqnames = [cnames[i].decode() for i in range(n)]
             stdlib.free(cnames)
             return self._seqnames
@@ -683,13 +688,7 @@ cdef class VCF(HTSFile):
         cdef int ret, tid, nseq;
         cdef hts_idx_t *idx = NULL;
 
-        if self.hidx == NULL and self.idx == NULL:
-            # Try to open an index
-            if self.fname.decode(ENC).endswith(('.bcf', '.bcf.gz')):
-                self.hidx = bcf_index_load(self.fname)
-            else:
-                self.idx = tbx_index_load(to_bytes(self.fname))
-
+        self._open_index()
         if self.hidx != NULL:
             idx = self.hidx
             assert self.idx == NULL

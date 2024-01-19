@@ -1,3 +1,8 @@
+# v0.30.27
+
++ support num_records using index stats (#295 from @jeromekelleher)
++ don't remove htslib/config.status (#296)
+
 # v0.30.25
 + bump to get new release for CI/wheel fixes. thanks to @graphenn (#286) and @oyvinev (#297)
 

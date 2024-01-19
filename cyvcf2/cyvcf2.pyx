@@ -698,19 +698,29 @@ cdef class VCF(HTSFile):
             assert self.hidx == NULL
 
         if idx == NULL:
-            raise ValueError("File must be indexed to compute num_records")
+            raise ValueError(
+                "File must be indexed to compute num_records (tip: use bcftools index)")
 
         nseq = hts_idx_nseq(idx)
         total = 0;
         for tid in range(nseq):
-            ret = hts_idx_get_stat(idx, tid, &records, &v);
-            if ret < 0:
-                raise Exception("Error in `htslib::hts_idx_get_stat` ret: %d" % (ret))
+            # NOTE: the return value here doesn't seem to indicate an error
+            # condition, and correct values are computed when it returns < 0.
+            # bcftools index -n doesn't strictly check the output.
+            hts_idx_get_stat(idx, tid, &records, &v);
             total += records
         return total
 
     property num_records:
-        "Number of records in the file derived from the index"
+        """
+        The number of VCF records in the file, computed from the index.
+        If the file is not indexed (or an index has not been set using 
+        ``set_index``) a ValueError is raised.
+        
+        Note that incorrect values may be returned if a mismatched 
+        index file (i.e., the index for a different VCF file) is used.
+        This is not detected as an error condition.
+        """
         def __get__(self):
             return self._num_records()
 

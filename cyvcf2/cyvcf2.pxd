@@ -79,9 +79,14 @@ cdef extern from "htslib/hts.h":
     void hts_idx_destroy(hts_idx_t *idx);
 
 cdef extern from "htslib/tbx.h":
+    ctypedef struct tbx_conf_t:
+        pass
 
+    # Expose details of tbx_t so that we can access the idx field
     ctypedef struct tbx_t:
-        hts_idx_t *idx;
+        tbx_conf_t conf
+        hts_idx_t *idx
+        void *dict
 
     tbx_t *tbx_index_load(const char *fn);
     tbx_t *tbx_index_load2(const char *fn, const char *fnidx);

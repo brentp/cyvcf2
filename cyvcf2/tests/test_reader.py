@@ -1342,10 +1342,56 @@ def test_issue17_no_gt():
     "test.vcf.gz",
     "test-multiallelic-homozygous-alt.vcf.gz",
     "test-strict-gt-option-flag.vcf.gz",
+    "test-strict-gt-option-flag.vcf.gz",
+    "multi-contig.vcf.gz",
+    "multi-contig.bcf",
     ])
 def test_num_records_indexed(path):
     vcf = VCF(os.path.join(HERE, path))
-    assert len(list(vcf)) == vcf.num_records
+    n = len(list(vcf))
+    assert n == vcf.num_records
+    vcf = VCF(os.path.join(HERE, path))
+    assert n == vcf.num_records
+
+@pytest.mark.parametrize("suffix", ["csi", "tbi"])
+def test_num_records_indexed_csi_tabix(suffix):
+    path = "multi-contig.vcf.gz"
+    index_file = os.path.join(HERE, "multi-contig.vcf.gz.{}".format(suffix))
+    vcf = VCF(os.path.join(HERE, path))
+    n = len(list(vcf))
+    # Explicitly set the index
+    vcf.set_index(index_file)
+    assert n == vcf.num_records
+    vcf = VCF(os.path.join(HERE, path))
+    vcf.set_index(index_file)
+    assert n == vcf.num_records
+
+def test_num_records_set_index_multiple_times():
+    path = os.path.join(HERE, "multi-contig.vcf.gz")
+    csi_index = path + ".csi"
+    tbi_index = path + ".tbi"
+    vcf = VCF(path)
+    n = len(list(vcf))
+    assert n == vcf.num_records
+    vcf.set_index(csi_index)
+    assert n == vcf.num_records
+
+    vcf = VCF(path)
+    assert n == vcf.num_records
+    vcf.set_index(tbi_index)
+    assert n == vcf.num_records
+
+    vcf = VCF(path)
+    vcf.set_index(csi_index)
+    assert n == vcf.num_records
+
+    vcf = VCF(path)
+    for _ in range(10):
+        vcf.set_index(csi_index)
+        assert n == vcf.num_records
+        vcf.set_index(tbi_index)
+        assert n == vcf.num_records
+
 
 @pytest.mark.parametrize("path", [
     "test-genotypes.vcf",
@@ -1355,7 +1401,7 @@ def test_num_records_no_index(path):
     with pytest.raises(ValueError, match="must be indexed"):
         vcf.num_records
 
-def test_num_records_different_index():
+def test_num_records_incompatible_index():
     b = VCF('{}/test.snpeff.bcf'.format(HERE))
     with pytest.raises(Exception, match="hts_idx_get_stat"):
         b.num_records

@@ -405,6 +405,14 @@ cdef class VCF(HTSFile):
             raise Exception("unable to update to header")
 
     def set_index(self, index_path=""):
+        # Clear any existing indexes
+        if self.idx != NULL:
+            tbx_destroy(self.idx)
+            self.idx = NULL
+        if self.hidx != NULL:
+            hts_idx_destroy(self.hidx)
+            self.hidx = NULL
+
         if index_path.endswith(".tbi"):
             self.idx = tbx_index_load2(to_bytes(self.fname), to_bytes(index_path))
             if self.idx != NULL:
@@ -681,6 +689,7 @@ cdef class VCF(HTSFile):
                 self.hidx = bcf_index_load(self.fname)
             else:
                 self.idx = tbx_index_load(to_bytes(self.fname))
+
         if self.hidx != NULL:
             idx = self.hidx
             assert self.idx == NULL

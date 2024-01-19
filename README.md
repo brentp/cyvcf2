@@ -94,6 +94,8 @@ SETUPTOOLS_USE_DISTUTILS=stdlib pip install cyvcf2
 ```
 git clone --recursive https://github.com/brentp/cyvcf2
 pip install -r requirements.txt
+# sometimes it can be required to remove old files:
+# python setup.py clean_ext
 CYVCF2_HTSLIB_MODE=BUILTIN CYTHONIZE=1 python setup.py install
 # or to use a system htslib.so
 CYVCF2_HTSLIB_MODE=EXTERNAL python setup.py install

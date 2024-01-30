@@ -94,15 +94,16 @@ jobs:
             CYTHONIZE=1
           CIBW_TEST_COMMAND: "{project}/ci/test"
           # macOS build arm64 on x86_64 with cross-compiler, not support test
-          CIBW_TEST_SKIP: "macosx_arm64"
+          CIBW_TEST_SKIP: "*-macosx_arm64"
 
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
       - name: Setup tmate session
         if: ${{ always() && github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled == 'true' }}
         uses: mxschmitt/action-tmate@v3
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: artifact-${{ matrix.python-version }}-${{ matrix.buildplat[1] }}
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -124,8 +125,9 @@ jobs:
       - name: Build sdist
         run: CYTHONIZE=1 python setup.py sdist
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: artifact-sdist
           path: dist/*.tar.gz
 
   upload_pypi:
@@ -134,9 +136,10 @@ jobs:
     # upload to PyPI on every tag starting with 'v'
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: artifact
+          pattern: artifact-*
+          merge-multiple: true
           path: dist
 
       - uses: pypa/gh-action-pypi-publish@release/v1

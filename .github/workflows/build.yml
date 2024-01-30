@@ -207,7 +207,7 @@ jobs:
 
       - name: Upload sdist tarball
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sdist
           path: dist/cyvcf2-*.tar.gz

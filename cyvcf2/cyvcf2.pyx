@@ -1202,12 +1202,12 @@ cdef class Variant(object):
     def __repr__(self):
         return "Variant(%s:%d %s/%s)" % (self.CHROM, self.POS, self.REF, ",".join(self.ALT))
 
-    def __str__(self):
+    def __str__(self, encoding='utf-8'):
         cdef kstring_t s
         s.s, s.l, s.m = NULL, 0, 0
         vcf_format(self.vcf.hdr, self.b, &s)
         try:
-            return s.s[:s.l].decode()
+            return s.s[:s.l].decode(encoding)
         finally:
             stdlib.free(s.s)
 

@@ -28,7 +28,7 @@ jobs:
           - [ubuntu-22.04, manylinux_aarch64]
           - [ubuntu-22.04, musllinux_aarch64]
           - [macos-12, macosx_x86_64]
-          - [macos-12, macosx_arm64]
+          - [macos-14, macosx_arm64]
         python-version: [pp310, cp37, cp38, cp39, cp310, cp311, cp312]
         exclude:
           # pp310, cp37, cp38 on musllinux is not support
@@ -49,10 +49,13 @@ jobs:
             python-version: cp310
           - buildplat: [ubuntu-22.04, musllinux_aarch64]
             python-version: pp310
-          # cp37, pp310 on macos arm64 is not supported
-          - buildplat: [macos-12, macosx_arm64]
+          # cp37 on macos arm64 is not supported
+          - buildplat: [macos-14, macosx_arm64]
             python-version: cp37
-          - buildplat: [macos-12, macosx_arm64]
+          # cp38 pp310 on macos arm64 have some problem
+          - buildplat: [macos-14, macosx_arm64]
+            python-version: cp38
+          - buildplat: [macos-14, macosx_arm64]
             python-version: pp310
 
     steps:
@@ -65,7 +68,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.4
+        uses: pypa/cibuildwheel@v2.18.1
         with:
           package-dir: .
           output-dir: wheelhouse
@@ -85,16 +88,15 @@ jobs:
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: 'LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib64" && auditwheel repair -w {dest_dir} {wheel}'
 
           # macos
-          CIBW_ARCHS_MACOS: auto64 arm64
+          CIBW_ARCHS_MACOS: auto64
           CIBW_BEFORE_BUILD_MACOS: "{project}/ci/osx-deps"
-
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+ 
           # build
           CIBW_ENVIRONMENT: >-
             CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate"
             CYTHONIZE=1
           CIBW_TEST_COMMAND: "{project}/ci/test"
-          # macOS build arm64 on x86_64 with cross-compiler, not support test
-          CIBW_TEST_SKIP: "*-macosx_arm64"
 
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
       - name: Setup tmate session

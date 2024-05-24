@@ -27,7 +27,7 @@ alpine)
 centos)
     yum install -y bzip2-devel xz-devel libcurl-devel openssl-devel
 
-    LIBDEFLATE_VERSION=1.19
+    LIBDEFLATE_VERSION=1.20
     curl -L -o libdeflate-v"$LIBDEFLATE_VERSION".tar.gz https://github.com/ebiggers/libdeflate/archive/refs/tags/v"$LIBDEFLATE_VERSION".tar.gz
     tar xzf libdeflate-v"$LIBDEFLATE_VERSION".tar.gz
     cd libdeflate-"$LIBDEFLATE_VERSION"

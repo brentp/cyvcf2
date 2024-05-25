@@ -198,8 +198,10 @@ jobs:
         working-directory: dist
 
       - name: Install test prerequisites
+        # pytest 8.2.0~8.2.1 changed the behaivour of --import-mode, can't ignore local cyvcf2 folder.
+        # So we need to pin it before it breaks again.
         run: |
-          pip install pytest pytest-cov
+          pip install pytest==8.1.2 pytest-cov
 
       - name: Test
         run: |

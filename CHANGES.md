@@ -1,3 +1,6 @@
+# v0.31.0
++ fix OSX ARM wheels (#305, #306 thanks @graphenn for fix)
+
 # v0.30.27
 
 + support num_records using index stats (#295 from @jeromekelleher)

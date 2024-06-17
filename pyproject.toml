@@ -1,8 +1,8 @@
 [build-system]
 requires = [
-    "setuptools",
-    "wheel",
-    "cython>=0.23.3",
-    'oldest-supported-numpy; os_name != "nt"',
-    'numpy; os_name == "nt"'
+  "setuptools",
+  "wheel",
+  "cython>=0.23.3",
+  'oldest-supported-numpy; os_name != "nt" and python_version < "3.9"',
+  'numpy>=2.0.0; os_name == "nt" and python_version >= "3.9"',
 ]

@@ -111,11 +111,13 @@ jobs:
           pytest --cov cyvcf2 --cov-report term-missing
 
       - name: Test with oldest numpy that we support
+        if: contains(fromJson('["3.7", "3.8", "3.9"]'), matrix.python-version)
         run: |
           pip install --force-reinstall --no-cache-dir 'numpy==1.21.0'
           pytest --cov cyvcf2 --cov-report term-missing
 
       - name: Test with newest available numpy
+        if: ${{ matrix.python-version }} != "3.7" && ${{ matrix.python-version }} != "3.8"
         run: |
           pip install -U numpy
           pytest --cov cyvcf2 --cov-report term-missing
@@ -174,11 +176,6 @@ jobs:
         run: |
           pytest --cov cyvcf2 --cov-report term-missing
 
-      - name: Test with oldest numpy that we support
-        run: |
-          pip install --force-reinstall --no-cache-dir 'numpy==1.21.0'
-          pytest --cov cyvcf2 --cov-report term-missing
-
       - name: Test with newest available numpy
         run: |
           pip install -U numpy
@@ -225,11 +222,6 @@ jobs:
 
       - name: Test
         run: |
-          pytest --import-mode importlib --cov cyvcf2 --cov-report term-missing
-
-      - name: Test with oldest numpy that we support
-        run: |
-          pip install --force-reinstall --no-cache-dir 'numpy==1.21.0'
           pytest --import-mode importlib --cov cyvcf2 --cov-report term-missing
 
       - name: Test with newest available numpy

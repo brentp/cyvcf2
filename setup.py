@@ -290,7 +290,7 @@ setup(
         ],
     ),
     python_requires=">=3.7",
-    install_requires=["numpy", "coloredlogs", "click"],
+    install_requires=["numpy>=1.21.0", "coloredlogs", "click"],
     include_package_data=True,
     zip_safe=False,
     cmdclass={

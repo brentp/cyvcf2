@@ -115,6 +115,11 @@ jobs:
           pip install --force-reinstall --no-cache-dir 'numpy==1.21.0'
           pytest --cov cyvcf2 --cov-report term-missing
 
+      - name: Test with newest available numpy
+        run: |
+          pip install -U numpy
+          pytest --cov cyvcf2 --cov-report term-missing
+
   windows_build:
     name: Run tests on Python windows-2022 MSYS2 UCRT64
     runs-on: windows-2022
@@ -174,6 +179,11 @@ jobs:
           pip install --force-reinstall --no-cache-dir 'numpy==1.21.0'
           pytest --cov cyvcf2 --cov-report term-missing
 
+      - name: Test with newest available numpy
+        run: |
+          pip install -U numpy
+          pytest --cov cyvcf2 --cov-report term-missing
+
   sdist:
     runs-on: ubuntu-22.04
     strategy:
@@ -220,6 +230,11 @@ jobs:
       - name: Test with oldest numpy that we support
         run: |
           pip install --force-reinstall --no-cache-dir 'numpy==1.21.0'
+          pytest --import-mode importlib --cov cyvcf2 --cov-report term-missing
+
+      - name: Test with newest available numpy
+        run: |
+          pip install -U numpy
           pytest --import-mode importlib --cov cyvcf2 --cov-report term-missing
 
       - name: Upload sdist tarball

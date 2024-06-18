@@ -118,7 +118,6 @@ jobs:
           pytest --cov cyvcf2 --cov-report term-missing
 
       - name: Test with newest available numpy
-        if: ${{ matrix.python-version }} != "3.7" && ${{ matrix.python-version }} != "3.8"
         run: |
           pip install -U numpy
           pytest --cov cyvcf2 --cov-report term-missing

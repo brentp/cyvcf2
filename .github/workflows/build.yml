@@ -110,6 +110,7 @@ jobs:
         run: |
           pytest --cov cyvcf2 --cov-report term-missing
 
+      # make sure to keep this numpy version in sync with setup.py
       - name: Test with oldest numpy that we support
         if: contains(fromJson('["3.7"]'), matrix.python-version)
         run: |

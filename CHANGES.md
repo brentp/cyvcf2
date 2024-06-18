@@ -1,3 +1,6 @@
+# v0.31.1
++ build fix for numpy 2.0.0 (#307, #308 thanks @aryarm for fixing build)
+
 # v0.31.0
 + fix OSX ARM wheels (#305, #306 thanks @graphenn for fix)
 

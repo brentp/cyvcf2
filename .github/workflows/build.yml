@@ -113,7 +113,7 @@ jobs:
       - name: Test with oldest numpy that we support
         if: contains(fromJson('["3.7", "3.8", "3.9"]'), matrix.python-version)
         run: |
-          pip install --force-reinstall --no-cache-dir 'numpy==1.21.0'
+          pip install --force-reinstall --no-cache-dir 'numpy==1.20.3'
           pytest --cov cyvcf2 --cov-report term-missing
 
       - name: Test with newest available numpy

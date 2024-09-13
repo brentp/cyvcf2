@@ -293,6 +293,12 @@ cdef class VCF(HTSFile):
         if threads is not None:
             self.set_threads(threads)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, tb):
+        self.close()
+
     def set_threads(self, int n):
         v = hts_set_threads(self.hts, n)
         if v < 0:
@@ -2413,6 +2419,12 @@ cdef class Writer(VCF):
         self.hdr = bcf_hdr_dup(tmpl.hdr)
         bcf_hdr_sync(self.hdr)
         self.header_written = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, tb):
+        self.close()
 
     @staticmethod
     def _infer_file_mode(fname, mode=None):

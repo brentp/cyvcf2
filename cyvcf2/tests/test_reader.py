@@ -1410,3 +1410,9 @@ def test_num_records_no_index(path):
     vcf = VCF(os.path.join(HERE, path))
     with pytest.raises(ValueError, match="must be indexed"):
         vcf.num_records
+
+def test_reader_context_manager():
+    with VCF(VCF_PATH) as vcf:
+        pass
+    with pytest.raises(Exception, match="attempt to iterate over closed"):
+        next(vcf)

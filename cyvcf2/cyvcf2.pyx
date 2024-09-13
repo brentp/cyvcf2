@@ -2420,12 +2420,6 @@ cdef class Writer(VCF):
         bcf_hdr_sync(self.hdr)
         self.header_written = False
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, tb):
-        self.close()
-
     @staticmethod
     def _infer_file_mode(fname, mode=None):
         if mode is not None:

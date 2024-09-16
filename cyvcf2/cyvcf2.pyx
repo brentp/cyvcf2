@@ -293,6 +293,12 @@ cdef class VCF(HTSFile):
         if threads is not None:
             self.set_threads(threads)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, tb):
+        self.close()
+
     def set_threads(self, int n):
         v = hts_set_threads(self.hts, n)
         if v < 0:

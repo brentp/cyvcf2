@@ -403,7 +403,7 @@ cdef class VCF(HTSFile):
         description: str
              description of added line.
         """
-        ret = bcf_hdr_append(self.hdr, "##INFO=<ID={id},Number={number},Type={type},Description=\"{description}\">".format(id=id, type=type, number=number, description=description))
+        ret = bcf_hdr_append(self.hdr, "##INFO=<ID={id},Number={number},Type={type},Description=\"{description}\">".format(id=id, type=type, number=number, description=description).encode())
         if ret != 0:
             raise Exception("unable to update to header: %d", ret)
         ret = bcf_hdr_sync(self.hdr)

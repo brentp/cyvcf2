@@ -57,6 +57,9 @@ jobs:
             python-version: cp38
           - buildplat: [macos-14, macosx_arm64]
             python-version: pp310
+          # note supported yet. can remove this later
+          - buildplat: [macos-14, macosx_arm64]
+            python-version: cp313
 
     steps:
       - uses: actions/checkout@v4

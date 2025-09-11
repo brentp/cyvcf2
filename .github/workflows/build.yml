@@ -53,22 +53,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, macos-12]
+        os: [ubuntu-22.04, macos-13]
         python-version:
           ["pypy3.10", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
         exclude:
           # Run only the latest versions on macOS and windows
-          - os: macos-12
+          - os: macos-13
             python-version: "pypy3.10"
-          - os: macos-12
+          - os: macos-13
             python-version: "3.7"
-          - os: macos-12
+          - os: macos-13
             python-version: "3.8"
-          - os: macos-12
+          - os: macos-13
             python-version: "3.9"
-          - os: macos-12
+          - os: macos-13
             python-version: "3.10"
-          - os: macos-12
+          - os: macos-13
             python-version: "3.11"
 
     steps:

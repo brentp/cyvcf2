@@ -74,6 +74,7 @@ jobs:
         env:
           # select
           CIBW_BUILD: ${{ matrix.python-version }}-${{ matrix.buildplat[1] }}
+          CIBW_ENABLE: pypy
           CIBW_PRERELEASE_PYTHONS: 1
 
           # linux

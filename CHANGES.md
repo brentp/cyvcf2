@@ -1,3 +1,6 @@
+# v0.31.2
++ build fix for OSX (thanks @benjeffery #319)
+
 # v0.31.1
 + build fix for numpy 2.0.0 (#307, #308 thanks @aryarm for fixing build)
 

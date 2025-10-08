@@ -2,24 +2,33 @@
 
 set -euo pipefail
 
-# same with python
-export MACOSX_DEPLOYMENT_TARGET=10.9
+export MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-10.9}
+ARCHS="arm64;x86_64"
+COMMON_CMAKE_ARGS=(
+  -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}"
+  -DCMAKE_OSX_ARCHITECTURES="${ARCHS}"
+  -DCMAKE_BUILD_TYPE=Release
+)
 
 brew install automake libdeflate
 brew unlink xz
 
-# build liblzma and libdelfate for deployment target 10.9
+# build liblzma and libdeflate for deployment target
 
 XZ_VERSION=5.4.6
-curl -L -o xz-$XZ_VERSION.tar.gz "https://github.com/tukaani-project/xz/releases/download/v$XZ_VERSION/xz-$XZ_VERSION.tar.gz"
-tar -xf xz-$XZ_VERSION.tar.gz
-cd xz-$XZ_VERSION
-cmake -B build && cmake --build build
-cd ./build && sudo make install
+curl -L -o "xz-${XZ_VERSION}.tar.gz" "https://github.com/tukaani-project/xz/releases/download/v${XZ_VERSION}/xz-${XZ_VERSION}.tar.gz"
+tar -xf "xz-${XZ_VERSION}.tar.gz"
+pushd "xz-${XZ_VERSION}" >/dev/null
+cmake -S . -B build "${COMMON_CMAKE_ARGS[@]}"
+cmake --build build --config Release --parallel
+sudo cmake --install build --config Release
+popd >/dev/null
 
 LIBDEFLATE_VERSION=1.20
-curl -L -o libdeflate-v"$LIBDEFLATE_VERSION".tar.gz https://github.com/ebiggers/libdeflate/archive/refs/tags/v"$LIBDEFLATE_VERSION".tar.gz
-tar xzf libdeflate-v"$LIBDEFLATE_VERSION".tar.gz
-cd libdeflate-"$LIBDEFLATE_VERSION"
-cmake -B build && cmake --build build
-cd ./build && sudo make install
+curl -L -o "libdeflate-v${LIBDEFLATE_VERSION}.tar.gz" "https://github.com/ebiggers/libdeflate/archive/refs/tags/v${LIBDEFLATE_VERSION}.tar.gz"
+tar -xf "libdeflate-v${LIBDEFLATE_VERSION}.tar.gz"
+pushd "libdeflate-${LIBDEFLATE_VERSION}" >/dev/null
+cmake -S . -B build "${COMMON_CMAKE_ARGS[@]}"
+cmake --build build --config Release --parallel
+sudo cmake --install build --config Release
+popd >/dev/null

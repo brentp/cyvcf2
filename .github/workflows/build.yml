@@ -55,7 +55,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04, macos-13]
         python-version:
-          ["pypy3.10", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+          ["pypy3.10", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
         exclude:
           # Run only the latest versions on macOS and windows
           - os: macos-13
@@ -187,7 +187,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: ["3.13"]
+        python-version: ["3.14"]
 
     steps:
       - uses: actions/checkout@v4

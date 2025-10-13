@@ -1,3 +1,6 @@
+# v0.31.4
++ add python 3.14 wheels (thanks @benjeffery #321)
+
 # v0.31.2
 + build fix for OSX (thanks @benjeffery #319)
 

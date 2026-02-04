@@ -3,7 +3,7 @@ import numpy as np
 cimport numpy as np
 np.import_array()
 
-cdef extern from "string.h":  
+cdef extern from "string.h":
     void* memcpy(void* dest, const void* src, size_t n)
 
 cdef extern from "relatedness.h":
@@ -49,7 +49,7 @@ cdef extern from "htslib/hts.h":
 
     ctypedef struct htsFormat:
         htsExactFormat format
-    
+
     ctypedef struct htsFile:
         ufp fp
         htsFormat format
@@ -259,6 +259,7 @@ cdef extern from "htslib/vcf.h":
     void bcf_hrec_destroy(bcf_hrec_t *)
     bcf_hrec_t *bcf_hdr_id2hrec(const bcf_hdr_t *hdr, int type, int idx, int rid);
     int bcf_hdr_add_hrec(bcf_hdr_t *hdr, bcf_hrec_t *hrec);
+    void bcf_hdr_remove(bcf_hdr_t *hdr, int type, const char *key);
 
     int hts_close(htsFile *fp);
 

@@ -584,6 +584,28 @@ cdef class VCF(HTSFile):
         #bcf_hrec_destroy(b)
         return d
 
+    cpdef remove_header(self, key, order=[BCF_HL_INFO, BCF_HL_FMT, BCF_HL_FLT]):
+        """Remove a header record from the VCF by ID.
+
+        Parameters
+        ----------
+        key: str
+            ID to pull from the header.
+        """
+        key = to_bytes(key)
+        cdef bcf_hrec_t *b
+
+        for typ in order:
+            b = bcf_hdr_get_hrec(self.hdr, typ, b"ID", key, NULL)
+            if b != NULL:
+                break
+
+        if b == NULL:
+            raise KeyError(key)
+
+        bcf_hdr_remove(<bcf_hdr_t*>self.hdr, typ, <const char*>key)
+        bcf_hdr_sync(<bcf_hdr_t*>self.hdr)
+
     def __getitem__(self, key):
         return self.get_header_type(key)
 
@@ -719,10 +741,10 @@ cdef class VCF(HTSFile):
     property num_records:
         """
         The number of VCF records in the file, computed from the index.
-        If the file is not indexed (or an index has not been set using 
+        If the file is not indexed (or an index has not been set using
         ``set_index``) a ValueError is raised.
-        
-        Note that incorrect values may be returned if a mismatched 
+
+        Note that incorrect values may be returned if a mismatched
         index file (i.e., the index for a different VCF file) is used.
         This is not detected as an error condition.
         """
@@ -1815,7 +1837,7 @@ cdef class Variant(object):
             alt_freq[aU] = 0
             alt_freq[tU] = -1
 
-            # compute the alt_freq when not unknown and no div0 error 
+            # compute the alt_freq when not unknown and no div0 error
             clean = ~tU & ~aU & ~t0
             alt_freq[clean] = (a[clean] / t[clean])
 
@@ -2352,7 +2374,7 @@ cdef inline Variant newVariant(bcf1_t *b, VCF vcf):
     v.vcf = vcf
     v.POS = v.b.pos + 1
     cdef INFO i = INFO.__new__(INFO)
-    i.b = b 
+    i.b = b
     i.hdr = vcf.hdr
     v.INFO = i
     return v
@@ -2481,7 +2503,7 @@ cdef class Writer(VCF):
         if var.b.errcode == BCF_ERR_CTG_UNDEF:
             self.add_to_header("##contig=<ID=%s>" % var.CHROM)
             var.b.errcode = 0
-        
+
         ks_free(&s)
         return var
 

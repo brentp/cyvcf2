@@ -649,6 +649,18 @@ def test_header_stuff():
     assert seen_infos == 73, seen_infos
 
 
+def test_bcf_hdr_remove():
+    v = VCF(VCF_PATH)
+    v.add_info_to_header({'ID': 'TESTINFO', 'Description': 'Test INFO field',
+        'Type': 'String', 'Number': '1'})
+
+    assert v.get_header_type("TESTINFO")
+
+    v.remove_header('TESTINFO')
+    with pytest.raises(KeyError):
+        v.get_header_type('TESTINFO')
+
+
 def test_bcf():
     vcf = VCF('{}/test.snpeff.bcf'.format(HERE))
     l = sum(1 for _ in vcf)

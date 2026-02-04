@@ -650,7 +650,6 @@ def test_header_stuff():
 
 
 def test_bcf_hdr_remove():
-    """Test that remove_header works to remove INFO and FORMAT fields from header"""
     v = VCF(VCF_PATH)
     v.add_info_to_header({'ID': 'TESTINFO', 'Description': 'Test INFO field',
         'Type': 'String', 'Number': '1'})

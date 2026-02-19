@@ -38,6 +38,9 @@ cdef extern from "htslib/hts.h":
 
     int hts_set_threads(htsFile *fp, int n);
 
+    cdef enum:
+        HTS_IDX_START
+
 
     cdef union ufp:
         hFILE *hfile;
@@ -101,6 +104,7 @@ cdef extern from "htslib/vcf.h":
         pass
 
     int bcf_itr_next(htsFile *, hts_itr_t* iter, bcf1_t*)
+    hts_itr_t *bcf_itr_queryi(hts_idx_t *, int tid, int64_t beg, int64_t end)
     hts_itr_t *bcf_itr_querys(hts_idx_t *, void *, char *);
 
 

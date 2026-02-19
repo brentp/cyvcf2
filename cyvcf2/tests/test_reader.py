@@ -592,6 +592,25 @@ def test_empty_call():
         pass
     assert i == 115, i
 
+def test_call_restarts_each_time():
+    vcf = VCF(VCF_PATH)
+    first = sum(1 for _ in vcf())
+    second = sum(1 for _ in vcf())
+    assert first == 115, first
+    assert second == 115, second
+
+def test_region_query_does_not_advance_empty_call():
+    vcf = VCF(VCF_PATH)
+    chr1_count = sum(1 for _ in vcf("1"))
+    full_count = sum(1 for _ in vcf())
+    assert chr1_count > 0, chr1_count
+    assert full_count == 115, full_count
+
+def test_empty_call_without_index_is_empty():
+    # test.snpeff.vcf is not indexed.
+    vcf = VCF(VCF_PATH2)
+    assert sum(1 for _ in vcf()) == 0
+
 
 
 def test_haploid():
@@ -666,9 +685,9 @@ def test_bcf():
     l = sum(1 for _ in vcf)
     assert l == 10, l
 
-    # NOTE: this is 0 becuase we don't SEEK.
+    # __call__ should return an iterator from the beginning each time.
     l = sum(1 for _ in vcf())
-    assert l == 0, l
+    assert l == 10, l
 
 
     viter = vcf("1:69260-69438")

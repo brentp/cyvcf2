@@ -468,9 +468,65 @@ cdef class VCF(HTSFile):
         Returns
         -------
         An Iterator over the requested region.
+
+        Notes
+        -----
+        If `region` is empty, cyvcf2 uses `HTS_IDX_START` to iterate from the
+        start of the index. This mode requires an index; without an index, the
+        iterator is empty.
         """
+        cdef hts_itr_t *itr
+        cdef kstring_t s
+        cdef bcf1_t *b
+        cdef int slen = 1, ret = 0
+        cdef bytes bregion
+        cdef char *cregion
+
         if not region:
-            yield from self
+            self._open_index()
+            if self.hidx == NULL and self.idx == NULL:
+                return
+
+            if self.hidx != NULL:
+                itr = bcf_itr_queryi(self.hidx, HTS_IDX_START, 0, 0)
+                if itr == NULL:
+                    return
+                try:
+                    while True:
+                        b = bcf_init()
+                        ret = bcf_itr_next(self.hts, itr, b)
+                        if ret < 0:
+                            bcf_destroy(b)
+                            break
+                        ret = bcf_subset_format(self.hdr, b)
+                        assert ret == 0, ("could not subset variant", self.fname, region)
+                        yield newVariant(b, self)
+                finally:
+                    hts_itr_destroy(itr)
+                return
+
+            itr = tbx_itr_queryi(self.idx, HTS_IDX_START, 0, 0)
+            if itr == NULL:
+                # no iterator was created, so there is nothing to destroy
+                return
+            s.s, s.l, s.m = NULL, 0, 0
+            try:
+                while 1:
+                    with nogil:
+                        slen = tbx_itr_next(self.hts, self.idx, itr, &s)
+                        if slen > 0:
+                            b = bcf_init()
+                            ret = vcf_parse(&s, self.hdr, b)
+                    if slen <= 0:
+                        break
+                    if ret > 0:
+                        bcf_destroy(b)
+                        # s.s and itr are released by the finally block
+                        raise Exception("error parsing")
+                    yield newVariant(b, self)
+            finally:
+                stdlib.free(s.s)
+                hts_itr_destroy(itr)
             return
 
         if self.fname.decode(ENC).endswith(('.bcf', '.bcf.gz')):
@@ -481,12 +537,8 @@ cdef class VCF(HTSFile):
             self.idx = tbx_index_load(to_bytes(self.fname))
             assert self.idx != NULL, "error loading tabix index for %s" % self.fname
 
-        cdef hts_itr_t *itr
-        cdef kstring_t s
-        cdef bcf1_t *b
-        cdef int slen = 1, ret = 0
-        cdef bytes bregion = to_bytes(region)
-        cdef char *cregion = bregion
+        bregion = to_bytes(region)
+        cregion = bregion
 
         with nogil:
             itr = tbx_itr_querys(self.idx, cregion)
@@ -495,6 +547,7 @@ cdef class VCF(HTSFile):
             warnings.warn("no intervals found for %s at %s" % (self.fname, region))
             return
 
+        s.s, s.l, s.m = NULL, 0, 0
         try:
             while 1:
                 with nogil:
@@ -506,8 +559,7 @@ cdef class VCF(HTSFile):
                     break
                 if ret > 0:
                     bcf_destroy(b)
-                    stdlib.free(s.s)
-                    hts_itr_destroy(itr)
+                    # s.s and itr are released by the finally block
                     raise Exception("error parsing")
                 yield newVariant(b, self)
         finally:

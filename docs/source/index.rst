@@ -52,6 +52,11 @@ See the :ref:`api` for detailed documentation, but the most common usage is summ
         if v.INFO["AF"] > 0.1: continue
         print(str(v))
 
+    # to query "all records" via __call__:
+    # this uses the index (HTS_IDX_START), so an index is required.
+    # if no index is available, this yields zero records.
+    all_vars = list(vcf())
+
         # single sample of 0|1 in vcf becomes [[0, 1, True]]
         # 2 samples of 0/0 and 1|1 would be [[0, 0, False], [1, 1, True]]
         print v.genotypes 
@@ -153,4 +158,3 @@ Pysam also `has a cython wrapper to htslib <https://github.com/pysam-developers/
 
    docstrings
    writing
-

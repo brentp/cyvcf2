@@ -1,3 +1,7 @@
+# v0.32.0
++ make repeated `vcf()` calls restart from the beginning and isolate region
+  queries from the main iterator state. *NOTE* this can be backwards incompatible for those using vcf() to iterate without an index.
+
 # v0.31.5
 + allow removing a header line (thanks @fxwiegand #323)
 

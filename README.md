@@ -65,6 +65,11 @@ vcf = VCF('some.vcf.gz')
 for v in vcf('11:435345-556565'):
     if v.INFO["AF"] > 0.1: continue
     print(str(v))
+
+# to query "all records" via __call__:
+# this uses the index (HTS_IDX_START), so an index is required.
+# if no index is available, this yields zero records.
+all_vars = list(vcf())
 ```
 
 Installation

@@ -1,3 +1,6 @@
+# v0.31.5
++ allow removing a header line (thanks @fxwiegand #323)
+
 # v0.31.4
 + add python 3.14 wheels (thanks @benjeffery #321)
 

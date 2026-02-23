@@ -290,8 +290,13 @@ setup(
         ],
     ),
     python_requires=">=3.7",
-    # make sure to keep this numpy version in sync with build.yml
-    install_requires=["numpy>=1.16.0", "coloredlogs", "click"],
+    # make sure to keep this numpy floor in sync with build.yml
+    install_requires=[
+        "numpy>=1.16.0; python_version < \"3.9\"",
+        "numpy>=2.0.0; python_version >= \"3.9\"",
+        "coloredlogs",
+        "click",
+    ],
     include_package_data=True,
     zip_safe=False,
     cmdclass={

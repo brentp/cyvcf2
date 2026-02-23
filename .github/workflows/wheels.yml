@@ -14,11 +14,36 @@ on:
         required: false
         default: false
   schedule:
-    # run weekly on a Monday
+    # run monthly on the 1st
     - cron: "0 0 1 * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CIBW_ENABLE: pypy
+  CIBW_PRERELEASE_PYTHONS: 1
+  CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+  # manylinux2014 can't build on aarch64
+  CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+  CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_2
+  CIBW_MUSLLINUX_AARCH64_IMAGE: musllinux_1_2
+  CIBW_ARCHS_LINUX: auto64 aarch64
+  CIBW_BEFORE_BUILD_LINUX: "{project}/ci/linux-deps"
+  CIBW_REPAIR_WHEEL_COMMAND_LINUX: 'LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib64" && auditwheel repair -w {dest_dir} {wheel}'
+  CIBW_ARCHS_MACOS: auto64
+  CIBW_BEFORE_BUILD_MACOS: "{project}/ci/osx-deps"
+  CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+  CIBW_ENVIRONMENT: >-
+    CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate"
+    CYTHONIZE=1
+  CIBW_TEST_COMMAND: "{project}/ci/test"
 
 jobs:
   build_wheels:
+    # Full wheel matrix for releases, schedule, and manual runs.
+    if: github.event_name != 'push' || github.ref != 'refs/heads/main'
     name: Build wheels for  ${{ matrix.python-version }}-${{ matrix.buildplat[1] }}
     runs-on: ${{ matrix.buildplat[0] }}
     strategy:
@@ -28,7 +53,7 @@ jobs:
           - [ubuntu-22.04, musllinux_x86_64]
           - [ubuntu-22.04, manylinux_aarch64]
           - [ubuntu-22.04, musllinux_aarch64]
-          - [macos-13, macosx_x86_64]
+          - [macos-15-intel, macosx_x86_64]
           - [macos-14, macosx_arm64]
         python-version: [pp310, cp39, cp310, cp311, cp312, cp313, cp314]
         exclude:
@@ -50,7 +75,7 @@ jobs:
           submodules: recursive
 
       - name: Set up QEMU
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && contains(matrix.buildplat[1], 'aarch64')
         uses: docker/setup-qemu-action@v3
 
       - name: Build wheels
@@ -60,31 +85,7 @@ jobs:
           output-dir: wheelhouse
           config-file: "{package}/pyproject.toml"
         env:
-          # select
           CIBW_BUILD: ${{ matrix.python-version }}-${{ matrix.buildplat[1] }}
-          CIBW_ENABLE: pypy
-          CIBW_PRERELEASE_PYTHONS: 1
-
-          # linux
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          # manylinux2014 can't build on aarch64
-          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
-          CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_2
-          CIBW_MUSLLINUX_AARCH64_IMAGE: musllinux_1_2
-          CIBW_ARCHS_LINUX: auto64 aarch64
-          CIBW_BEFORE_BUILD_LINUX: "{project}/ci/linux-deps"
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: 'LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib64" && auditwheel repair -w {dest_dir} {wheel}'
-
-          # macos
-          CIBW_ARCHS_MACOS: auto64
-          CIBW_BEFORE_BUILD_MACOS: "{project}/ci/osx-deps"
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
- 
-          # build
-          CIBW_ENVIRONMENT: >-
-            CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate"
-            CYTHONIZE=1
-          CIBW_TEST_COMMAND: "{project}/ci/test"
 
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
       - name: Setup tmate session
@@ -94,6 +95,54 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: artifact-${{ matrix.python-version }}-${{ matrix.buildplat[1] }}
+          path: ./wheelhouse/*.whl
+
+  build_wheels_smoke:
+    # Smaller matrix on main to keep CI cost controlled.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Build wheels smoke for ${{ matrix.python-version }}-${{ matrix.buildplat[1] }}
+    runs-on: ${{ matrix.buildplat[0] }}
+    strategy:
+      matrix:
+        include:
+          - buildplat: [ubuntu-22.04, manylinux_x86_64]
+            python-version: cp39
+          - buildplat: [ubuntu-22.04, manylinux_x86_64]
+            python-version: cp314
+          - buildplat: [ubuntu-22.04, manylinux_x86_64]
+            python-version: pp310
+          - buildplat: [ubuntu-22.04, musllinux_x86_64]
+            python-version: cp314
+          - buildplat: [ubuntu-22.04, manylinux_aarch64]
+            python-version: cp314
+          - buildplat: [ubuntu-22.04, musllinux_aarch64]
+            python-version: cp314
+          - buildplat: [macos-15-intel, macosx_x86_64]
+            python-version: cp314
+          - buildplat: [macos-14, macosx_arm64]
+            python-version: cp314
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up QEMU
+        if: runner.os == 'Linux' && contains(matrix.buildplat[1], 'aarch64')
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.1.4
+        with:
+          package-dir: .
+          output-dir: wheelhouse
+          config-file: "{package}/pyproject.toml"
+        env:
+          CIBW_BUILD: ${{ matrix.python-version }}-${{ matrix.buildplat[1] }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifact-smoke-${{ matrix.python-version }}-${{ matrix.buildplat[1] }}
           path: ./wheelhouse/*.whl
 
   build_sdist:

@@ -1,6 +1,14 @@
 name: Build
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   docker-build:
@@ -53,21 +61,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, macos-13]
+        os: [ubuntu-22.04, macos-14]
         python-version:
           ["pypy3.10", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
         exclude:
           # Run only the latest versions on macOS and windows
-          - os: macos-13
+          - os: macos-14
             python-version: "pypy3.10"
-          - os: macos-13
+          - os: macos-14
             python-version: "3.9"
-          - os: macos-13
+          - os: macos-14
             python-version: "3.10"
-          - os: macos-13
+          - os: macos-14
             python-version: "3.11"
-          - os: macos-12
-            python-version: "3.12"
 
     steps:
       - uses: actions/checkout@v4
@@ -81,9 +87,21 @@ jobs:
       - name: Set macOS env
         if: runner.os == 'macOS'
         run: |
-          # building options
-          echo "MACOSX_DEPLOYMENT_TARGET=10.9" >> "$GITHUB_ENV"
-          echo "ARCHFLAGS=-arch x86_64" >> "$GITHUB_ENV"
+          BREW_PREFIX="$(brew --prefix)"
+          LIBDEFLATE_PREFIX="${BREW_PREFIX}/opt/libdeflate"
+
+          # Homebrew on arm64 installs under /opt/homebrew, which is not in default compiler search paths.
+          echo "CPPFLAGS=-I${BREW_PREFIX}/include -I${LIBDEFLATE_PREFIX}/include ${CPPFLAGS:-}" >> "$GITHUB_ENV"
+          echo "LDFLAGS=-L${BREW_PREFIX}/lib -L${LIBDEFLATE_PREFIX}/lib ${LDFLAGS:-}" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=${LIBDEFLATE_PREFIX}/lib/pkgconfig:${BREW_PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}" >> "$GITHUB_ENV"
+
+          # arm64 requires a newer deployment target than x86_64.
+          if [ "${{ runner.arch }}" = "X64" ]; then
+            echo "MACOSX_DEPLOYMENT_TARGET=10.9" >> "$GITHUB_ENV"
+            echo "ARCHFLAGS=-arch x86_64" >> "$GITHUB_ENV"
+          else
+            echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> "$GITHUB_ENV"
+          fi
 
       - name: Install Linux build prerequisites
         if: runner.os == 'Linux'
@@ -95,7 +113,7 @@ jobs:
       - name: Install macOS build prerequisites
         if: runner.os == 'macOS'
         run: |
-          brew install automake libdeflate
+          brew install automake libdeflate pkg-config
 
       - name: Install
         run: |
@@ -112,10 +130,11 @@ jobs:
       - name: Test with oldest numpy that we support
         if: contains(fromJson('["3.9"]'), matrix.python-version)
         run: |
-          pip install --force-reinstall --no-cache-dir 'numpy==1.16.0'
+          pip install --force-reinstall --no-cache-dir 'numpy==2.0.0'
           pytest --cov cyvcf2 --cov-report term-missing
 
       - name: Test with newest available numpy
+        if: matrix.os == 'ubuntu-22.04' && matrix.python-version == '3.14'
         run: |
           pip install -U numpy
           pytest --cov cyvcf2 --cov-report term-missing

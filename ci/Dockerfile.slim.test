@@ -8,9 +8,11 @@ RUN apt-get update && apt-get install --no-install-recommends -y autoconf automa
     make git libc6-dev zlib1g-dev libssl-dev liblzma-dev libbz2-dev libdeflate-dev && \
     rm -rf /var/lib/apt/lists/*
 
-COPY . .
+COPY requirements.txt .
 
 RUN pip install -r requirements.txt && pip install pytest pytest-cov
+
+COPY . .
 
 # build cyvcf2
 RUN CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate" \

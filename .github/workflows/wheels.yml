@@ -74,6 +74,17 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache wheel build downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/cibuildwheel
+          key: ${{ runner.os }}-${{ matrix.buildplat[1] }}-cibw-${{ hashFiles('pyproject.toml', 'requirements.txt', 'ci/linux-deps', 'ci/osx-deps') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.buildplat[1] }}-cibw-
+            ${{ runner.os }}-cibw-
+
       - name: Set up QEMU
         if: runner.os == 'Linux' && contains(matrix.buildplat[1], 'aarch64')
         uses: docker/setup-qemu-action@v3
@@ -127,6 +138,17 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache wheel build downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/cibuildwheel
+          key: ${{ runner.os }}-${{ matrix.buildplat[1] }}-cibw-${{ hashFiles('pyproject.toml', 'requirements.txt', 'ci/linux-deps', 'ci/osx-deps') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.buildplat[1] }}-cibw-
+            ${{ runner.os }}-cibw-
+
       - name: Set up QEMU
         if: runner.os == 'Linux' && contains(matrix.buildplat[1], 'aarch64')
         uses: docker/setup-qemu-action@v3
@@ -156,6 +178,8 @@ jobs:
         name: Install Python
         with:
           python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: |

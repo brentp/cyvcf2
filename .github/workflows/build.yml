@@ -36,6 +36,7 @@ jobs:
         with:
           submodules: recursive
       - name: Set up QEMU
+        if: matrix.platform == 'linux/arm64'
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -49,12 +50,14 @@ jobs:
           tags: cyvcf2:${{ matrix.python_tag_type }}-test
           push: false
           load: true
+          cache-from: type=gha,scope=docker-test-${{ matrix.python_tag_type }}
+          cache-to: type=gha,mode=max,scope=docker-test-${{ matrix.python_tag_type }}
           build-args: |
             PYTHON_VERSION=${{ matrix.python_tag_type }}
 
       - name: Docker Run Tests
         run: |
-          docker run --rm --platform ${{ matrix.platform }} cyvcf2:${{ matrix.python_tag_type }}-test pytest --cov cyvcf2 --cov-report term-missing
+          docker run --rm --platform ${{ matrix.platform }} cyvcf2:${{ matrix.python_tag_type }}-test pytest -q
 
   build:
     name: Run tests on Python ${{ matrix.python-version }} ${{ matrix.os }}

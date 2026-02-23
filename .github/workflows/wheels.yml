@@ -44,7 +44,7 @@ jobs:
   build_wheels:
     # Full wheel matrix for releases, schedule, and manual runs.
     if: github.event_name != 'push' || github.ref != 'refs/heads/main'
-    name: Build wheels for  ${{ matrix.python-version }}-${{ matrix.buildplat[1] }}
+    name: Build wheels (full matrix)
     runs-on: ${{ matrix.buildplat[0] }}
     strategy:
       matrix:
@@ -60,6 +60,8 @@ jobs:
           # pp310, cp38 on musllinux is not support
           # cp39, cp310 on musllinux_aarch64, wheel building may hangup, ignore it
           # drop 37 so we can use newer cibuildwheel
+          - buildplat: [ubuntu-22.04, manylinux_aarch64]
+            python-version: pp310
           - buildplat: [ubuntu-22.04, musllinux_x86_64]
             python-version: pp310
           - buildplat: [ubuntu-22.04, musllinux_aarch64]
@@ -111,7 +113,7 @@ jobs:
   build_wheels_smoke:
     # Smaller matrix on main to keep CI cost controlled.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    name: Build wheels smoke for ${{ matrix.python-version }}-${{ matrix.buildplat[1] }}
+    name: Build wheels (smoke matrix)
     runs-on: ${{ matrix.buildplat[0] }}
     strategy:
       matrix:

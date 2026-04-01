@@ -53,20 +53,19 @@ def _init_logging_from_env():
 
     s = stdlib.getenv("CYVCF2_HTSLIB_LOG_LEVEL")
     if s is NULL:
-        set_htslib_log_level(HTSLIB_DEFAULT)
         return
 
+    py_s = s.decode()
     try:
-        level = int(s)
+        level = int(py_s)
         if level < 0:
-            warnings.warn(f"CYVCF2_HTSLIB_LOG_LEVEL={s!r} is not a positive integer; using htslib default")
+            warnings.warn(f"CYVCF2_HTSLIB_LOG_LEVEL={py_s!r} is not a non-negative integer; using htslib default")
             level = HTSLIB_DEFAULT
     except (ValueError, TypeError):
-        warnings.warn(f"CYVCF2_HTSLIB_LOG_LEVEL={s!r} is not a valid integer; using htslib default")
+        warnings.warn(f"CYVCF2_HTSLIB_LOG_LEVEL={py_s!r} is not a valid integer; using htslib default")
         level = HTSLIB_DEFAULT
 
     set_htslib_log_level(level)
-
 
 _init_logging_from_env()
 

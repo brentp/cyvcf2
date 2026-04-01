@@ -30,6 +30,46 @@ from cython cimport view
 
 from cpython.version cimport PY_MAJOR_VERSION
 
+def set_htslib_log_level(int level):
+    """
+    Set htslib log level. 
+
+    Parameters:
+    level (int): The desired log level. Per htslib's documentation (https://www.htslib.org/doc/samtools.html), the following values are supported:
+        - 0 or 1: Suppress some error messages.
+        - 2: Reduce warning messages.
+        - 3: Default level (HTS_LOG_WARNING).
+        - >3: Increase verbosity with additional warnings and logging messages.
+    """
+    hts_set_log_level(level)
+
+
+def _init_logging_from_env():
+    """
+    If a valid CYVCF2_HTSLIB_LOG_LEVEL environment variable exists, use it to set htslib log level. 
+    Otherwise use the htslib default: 3 (HTS_LOG_WARNING).
+    """
+    HTSLIB_DEFAULT = 3
+
+    s = stdlib.getenv("CYVCF2_HTSLIB_LOG_LEVEL")
+    if s is NULL:
+        return
+
+    py_s = s.decode()
+    try:
+        level = int(py_s)
+        if level < 0:
+            warnings.warn(f"CYVCF2_HTSLIB_LOG_LEVEL={py_s!r} is not a non-negative integer; using htslib default")
+            level = HTSLIB_DEFAULT
+    except (ValueError, TypeError):
+        warnings.warn(f"CYVCF2_HTSLIB_LOG_LEVEL={py_s!r} is not a valid integer; using htslib default")
+        level = HTSLIB_DEFAULT
+
+    set_htslib_log_level(level)
+
+_init_logging_from_env()
+
+
 # overcome lack of __file__ in cython
 import inspect
 if not hasattr(sys.modules[__name__], '__file__'):

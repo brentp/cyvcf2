@@ -120,10 +120,10 @@ jobs:
 
       - name: Install
         run: |
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
+          python -m pip install --upgrade pip
+          python -m pip install pytest pytest-cov
           CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate" \
-            CYTHONIZE=1 python setup.py build_ext -i
+            python -m pip install -v -e .
 
       - name: Test
         run: |
@@ -188,9 +188,9 @@ jobs:
 
       - name: Install
         run: |
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
-          CYTHONIZE=1 python setup.py build_ext -i
+          python -m pip install --upgrade pip
+          python -m pip install pytest pytest-cov
+          python -m pip install -v -e .
 
       - name: Test
         run: |
@@ -218,10 +218,10 @@ jobs:
 
       - name: Install sdist prerequisites
         run: |
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip build
 
       - name: Create source distribution
-        run: CYTHONIZE=1 python setup.py sdist
+        run: python -m build --sdist
 
       - name: Install Linux build prerequisites
         if: runner.os == 'Linux'
@@ -231,7 +231,7 @@ jobs:
             libbz2-dev libdeflate-dev
 
       - name: Build (via sdist tarball)
-        run: pip install --verbose --no-deps --no-binary='cyvcf2' cyvcf2-*.tar.gz
+        run: python -m pip install --verbose --no-binary='cyvcf2' cyvcf2-*.tar.gz
         working-directory: dist
 
       - name: Install test prerequisites

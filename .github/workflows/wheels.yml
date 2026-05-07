@@ -37,7 +37,6 @@ env:
   CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
   CIBW_ENVIRONMENT: >-
     CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate"
-    CYTHONIZE=1
   CIBW_TEST_COMMAND: "{project}/ci/test"
 
 jobs:
@@ -185,10 +184,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip build
 
       - name: Build sdist
-        run: CYTHONIZE=1 python setup.py sdist
+        run: python -m build --sdist
 
       - uses: actions/upload-artifact@v4
         with:

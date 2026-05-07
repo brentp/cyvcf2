@@ -17,14 +17,11 @@ if sys.version_info.major == 2 and sys.version_info.minor != 7:
     )
     sys.exit(1)
 
-import numpy as np
-
-
 def get_version():
-    """Get the version info from the mpld3 package without importing it"""
+    """Get the version info from the package without importing it."""
     import ast
 
-    with open(os.path.join("cyvcf2", "__init__.py"), "r") as init_file:
+    with open(os.path.join("cyvcf2", "_version.py"), "r") as init_file:
         module = ast.parse(init_file.read())
 
     version = (
@@ -36,6 +33,19 @@ def get_version():
         return next(version)
     except StopIteration:
         raise ValueError("version could not be located")
+
+
+def get_numpy_include():
+    try:
+        import numpy as np
+    except ImportError:
+        sys.stderr.write(
+            "Cannot find NumPy. Build cyvcf2 with a PEP 517 frontend like pip "
+            "or install the build requirements first.\n"
+        )
+        sys.exit(1)
+
+    return np.get_include()
 
 
 def no_cythonize(extensions, **_ignore):
@@ -106,6 +116,12 @@ def pre_sdist():
 
 
 class cyvcf2_build_ext(build_ext):
+    def finalize_options(self):
+        super().finalize_options()
+        numpy_include = get_numpy_include()
+        for extension in self.extensions:
+            extension.include_dirs.append(numpy_include)
+
     def run(self):
         print("# cyvcf2: htslib mode is {}".format(CYVCF2_HTSLIB_MODE))
         if CYVCF2_HTSLIB_MODE == "BUILTIN" or not check_libhts():
@@ -250,13 +266,14 @@ extensions = [
             "-Wno-unused-result",
             "-Wno-discarded-qualifiers",
         ],
-        include_dirs=["cyvcf2", np.get_include()] + htslib_include_dirs,
+        include_dirs=["cyvcf2"] + htslib_include_dirs,
         library_dirs=htslib_library_dirs,
     )
 ]
 
 
-CYTHONIZE = bool(int(os.getenv("CYTHONIZE", 0)))
+cyvcf2_c_path = os.path.join("cyvcf2", "cyvcf2.c")
+CYTHONIZE = bool(int(os.getenv("CYTHONIZE", int(not os.path.exists(cyvcf2_c_path)))))
 if CYTHONIZE:
     try:
         from Cython.Build import cythonize
@@ -273,32 +290,8 @@ else:
 
 
 setup(
-    name="cyvcf2",
-    description="fast vcf parsing with cython + htslib",
-    long_description_content_type="text/markdown",
-    url="https://github.com/brentp/cyvcf2/",
-    long_description=open("README.md").read(),
-    license="MIT",
-    author="Brent Pedersen",
-    author_email="bpederse@gmail.com",
     version=get_version(),
     ext_modules=extensions,
-    packages=["cyvcf2"],
-    entry_points=dict(
-        console_scripts=[
-            "cyvcf2 = cyvcf2.__main__:cli",
-        ],
-    ),
-    python_requires=">=3.7",
-    # make sure to keep this numpy floor in sync with build.yml
-    install_requires=[
-        "numpy>=1.16.0; python_version < \"3.9\"",
-        "numpy>=2.0.0; python_version >= \"3.9\"",
-        "coloredlogs",
-        "click",
-    ],
-    include_package_data=True,
-    zip_safe=False,
     cmdclass={
         "clean_ext": clean_ext,
         "build_ext": cyvcf2_build_ext,

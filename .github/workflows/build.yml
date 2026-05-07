@@ -188,16 +188,20 @@ jobs:
 
       - name: Install
         run: |
+          python -m venv .venv
+          . .venv/bin/activate
           python -m pip install --upgrade pip
           python -m pip install pytest pytest-cov
           python -m pip install -v -e .
 
       - name: Test
         run: |
+          . .venv/bin/activate
           pytest --cov cyvcf2 --cov-report term-missing
 
       - name: Test with newest available numpy
         run: |
+          . .venv/bin/activate
           pip install -U numpy
           pytest --cov cyvcf2 --cov-report term-missing
 

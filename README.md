@@ -11,7 +11,7 @@ The latest documentation for cyvcf2 can be found here:
 If you use cyvcf2, please cite the [paper](https://academic.oup.com/bioinformatics/article/2971439/cyvcf2)
 
 
-Fast python **(2 and 3)** parsing of VCF and BCF including region-queries.
+Fast Python **(3.7+)** parsing of VCF and BCF including region-queries.
 
 
 [![Build](https://github.com/brentp/cyvcf2/actions/workflows/build.yml/badge.svg)](https://github.com/brentp/cyvcf2/actions/workflows/build.yml)

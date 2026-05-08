@@ -11,7 +11,7 @@ The latest documentation for cyvcf2 can be found here:
 If you use cyvcf2, please cite the [paper](https://academic.oup.com/bioinformatics/article/2971439/cyvcf2)
 
 
-Fast python **(2 and 3)** parsing of VCF and BCF including region-queries.
+Fast Python **(3.8+)** parsing of VCF and BCF including region-queries.
 
 
 [![Build](https://github.com/brentp/cyvcf2/actions/workflows/build.yml/badge.svg)](https://github.com/brentp/cyvcf2/actions/workflows/build.yml)
@@ -75,16 +75,22 @@ all_vars = list(vcf())
 Installation
 ============
 
-## pip with bundled htslib
+## pip or uv with bundled htslib
+
+If a binary wheel is available for your platform, pip and uv will install it
+without building from source.
+
 ```
 pip install cyvcf2
+uv pip install cyvcf2
 ```
 
-## pip with system htslib
+## pip or uv with system htslib
 
 Assuming you have already built and installed htslib version 1.12 or higher.
 ```
 CYVCF2_HTSLIB_MODE=EXTERNAL pip install --no-binary cyvcf2 cyvcf2
+CYVCF2_HTSLIB_MODE=EXTERNAL uv pip install --no-binary cyvcf2 cyvcf2
 ```
 
 ## windows (experimental, only tested on MSYS2)
@@ -100,14 +106,23 @@ CYVCF2_HTSLIB_MODE=EXTERNAL pip install cyvcf2
 git clone --recursive https://github.com/brentp/cyvcf2
 cd cyvcf2
 CYVCF2_HTSLIB_MODE=BUILTIN python -m pip install .
+CYVCF2_HTSLIB_MODE=BUILTIN uv pip install .
 # or to use a system htslib.so
 CYVCF2_HTSLIB_MODE=EXTERNAL python -m pip install .
+CYVCF2_HTSLIB_MODE=EXTERNAL uv pip install .
 ```
 
 Source builds use scikit-build-core and CMake. Python build dependencies such
 as Cython, NumPy, CMake, and Ninja are installed by PEP 517 build isolation, but
 you still need a C compiler plus the htslib native dependencies for your
 platform.
+
+To build source distributions and wheels locally:
+
+```
+python -m build
+uv build
+```
 
 On **OSX**, using brew, you may have to set the following as indicated by the brew install:
 
@@ -127,6 +142,7 @@ Install `pytest`, then tests can be run with:
 
 ```
 pytest
+uv run --with pytest pytest
 ```
 
 CLI

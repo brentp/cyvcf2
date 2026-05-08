@@ -4,7 +4,7 @@ FROM python:${PYTHON_VERSION}
 
 WORKDIR /workspace
 
-RUN apk add --no-cache build-base autoconf automake git xz-dev curl-dev libdeflate-dev bzip2-dev
+RUN apk add --no-cache build-base autoconf automake cmake ninja git xz-dev curl-dev libdeflate-dev bzip2-dev
 
 RUN pip install pytest pytest-cov
 

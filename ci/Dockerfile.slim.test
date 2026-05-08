@@ -4,8 +4,8 @@ FROM python:${PYTHON_VERSION}
 
 WORKDIR /workspace
 
-RUN apt-get update && apt-get install --no-install-recommends -y autoconf automake gcc libcurl4-openssl-dev \
-    make git libc6-dev zlib1g-dev libssl-dev liblzma-dev libbz2-dev libdeflate-dev && \
+RUN apt-get update && apt-get install --no-install-recommends -y autoconf automake cmake gcc libcurl4-openssl-dev \
+    make ninja-build git libc6-dev zlib1g-dev libssl-dev liblzma-dev libbz2-dev libdeflate-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip install pytest pytest-cov

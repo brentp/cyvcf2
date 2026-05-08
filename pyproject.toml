@@ -1,21 +1,20 @@
 [build-system]
 requires = [
-  "setuptools>=64",
-  "wheel",
+  "scikit-build-core>=0.11",
   'cython>=0.23.3,<3; python_version < "3.9"',
   'cython>=3; python_version >= "3.9"',
   'oldest-supported-numpy; os_name != "nt" and python_version < "3.9"',
   'numpy; os_name == "nt" and python_version < "3.9"',
   'numpy>=2.0.0; python_version >= "3.9"',
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "cyvcf2"
 dynamic = ["version"]
 description = "fast vcf parsing with cython + htslib"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = { text = "MIT" }
 authors = [
   { name = "Brent Pedersen", email = "bpederse@gmail.com" },
@@ -34,13 +33,36 @@ Documentation = "https://brentp.github.io/cyvcf2/"
 [project.scripts]
 cyvcf2 = "cyvcf2.__main__:cli"
 
-[tool.setuptools]
-packages = ["cyvcf2"]
-include-package-data = true
-zip-safe = false
+[tool.scikit-build]
+wheel.packages = ["cyvcf2"]
+wheel.exclude = [
+  "cyvcf2/tests/**",
+  "cyvcf2/*.c",
+  "cyvcf2/*.h",
+  "cyvcf2/*.pxd",
+  "cyvcf2/*.pyx",
+]
+sdist.cmake = true
+sdist.include = [
+  "CMakeLists.txt",
+  "htslib/htscodecs/htscodecs/version.h",
+]
+sdist.exclude = [
+  "cyvcf2/tests/**",
+  "htslib/config.status",
+  "htslib/config.mk",
+  "htslib/htscodecs.mk",
+  "htslib/*.o",
+  "htslib/**/*.o",
+  "htslib/*.a",
+  "htslib/*.so",
+  "htslib/*.dylib",
+  "htslib/*.dll",
+]
 
-[tool.setuptools.dynamic]
-version = { attr = "cyvcf2._version.__version__" }
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "cyvcf2/_version.py"
 
 [tool.pytest.ini_options]
 testpaths = ["cyvcf2/tests"]

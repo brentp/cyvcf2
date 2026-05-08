@@ -14,14 +14,14 @@ echo "manylinux image woking on $ID"
 # Install cyvcf2 development files.
 case "$ID" in
 almalinux)
-    dnf install -y bzip2-devel xz-devel libcurl-devel openssl-devel openblas-devel epel-release
+    dnf install -y bzip2-devel cmake ninja-build xz-devel libcurl-devel openssl-devel openblas-devel epel-release
 
     # packages at epel
     dnf install -y libdeflate-devel
     ;;
 
 alpine)
-    apk add --no-cache xz-dev curl-dev libdeflate-dev
+    apk add --no-cache cmake ninja xz-dev curl-dev libdeflate-dev
     ;;
 
 centos)

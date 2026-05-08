@@ -110,13 +110,13 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libcurl4-openssl-dev zlib1g-dev libssl-dev liblzma-dev \
-            libbz2-dev libdeflate-dev
+          sudo apt-get install -y --no-install-recommends cmake ninja-build libcurl4-openssl-dev zlib1g-dev \
+            libssl-dev liblzma-dev libbz2-dev libdeflate-dev
 
       - name: Install macOS build prerequisites
         if: runner.os == 'macOS'
         run: |
-          brew install automake libdeflate pkg-config
+          brew install automake cmake libdeflate ninja pkg-config
 
       - name: Install
         run: |
@@ -129,7 +129,7 @@ jobs:
         run: |
           pytest --cov cyvcf2 --cov-report term-missing
 
-      # make sure to keep this numpy version in sync with setup.py
+      # make sure to keep this numpy version in sync with pyproject.toml
       - name: Test with oldest numpy that we support
         if: contains(fromJson('["3.9"]'), matrix.python-version)
         run: |
@@ -165,6 +165,7 @@ jobs:
             mingw-w64-ucrt-x86_64-libdeflate
             mingw-w64-ucrt-x86_64-xz
             mingw-w64-ucrt-x86_64-curl
+            mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-zlib
             mingw-w64-ucrt-x86_64-bzip2
             mingw-w64-ucrt-x86_64-tools-git

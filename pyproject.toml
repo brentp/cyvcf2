@@ -49,6 +49,9 @@ sdist.include = [
 ]
 sdist.exclude = [
   "cyvcf2/tests/**",
+  "htslib/test/**",
+  "htslib/htscodecs/tests/**",
+  "htslib/htscodecs/javascript/**",
   "htslib/config.status",
   "htslib/config.mk",
   "htslib/htscodecs.mk",

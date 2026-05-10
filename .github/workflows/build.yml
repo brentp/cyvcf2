@@ -207,8 +207,12 @@ jobs:
           pytest --cov cyvcf2 --cov-report term-missing
 
   conda_external_htslib:
-    name: Conda external htslib
+    name: Conda external htslib ${{ matrix.htslib-version }}
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        htslib-version: ["1.21", "1.22.1", "1.23.1"]
 
     steps:
       - uses: actions/checkout@v4
@@ -227,12 +231,12 @@ jobs:
           create-args: >-
             python=3.12
             pip
-            scikit-build-core
-            cmake
+            scikit-build-core>=0.11
+            cmake>=3.20
             ninja
-            cython
-            numpy
-            htslib
+            cython>=3
+            numpy>=2.0.0
+            htslib=${{ matrix.htslib-version }}
             pkg-config
             setuptools
             wheel

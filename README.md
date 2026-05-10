@@ -117,6 +117,25 @@ as Cython, NumPy, CMake, and Ninja are installed by PEP 517 build isolation, but
 you still need a C compiler plus the htslib native dependencies for your
 platform.
 
+Most users can leave `CYVCF2_CYTHONIZE` unset. It is mainly for developers
+building from a Git checkout who need to control when CMake regenerates
+`cyvcf2.c` from `cyvcf2/cyvcf2.pyx`:
+
+- `AUTO` (the default) uses an existing `cyvcf2/cyvcf2.c` when present and runs
+  Cython only when the file is missing.
+- `ON` regenerates the C file after edits to `cyvcf2.pyx` or `cyvcf2.pxd`, or
+  when testing Cython-generated output.
+- `OFF` requires an existing C file.
+
+For example:
+
+```
+CYVCF2_CYTHONIZE=ON python -m pip install .
+python -m pip install . --config-settings=cmake.define.CYVCF2_CYTHONIZE=ON
+```
+
+The legacy `CYTHONIZE=1` environment variable is still accepted.
+
 To build source distributions and wheels locally:
 
 ```

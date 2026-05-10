@@ -206,6 +206,63 @@ jobs:
           pip install -U numpy
           pytest --cov cyvcf2 --cov-report term-missing
 
+  conda_external_htslib:
+    name: Conda external htslib
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up micromamba
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: cyvcf2-conda-external
+          condarc: |
+            channels:
+              - conda-forge
+              - bioconda
+            channel_priority: strict
+          create-args: >-
+            python=3.12
+            pip
+            scikit-build-core
+            cmake
+            ninja
+            cython
+            numpy
+            htslib
+            pkg-config
+            setuptools
+            wheel
+
+      - name: Install against conda htslib
+        shell: micromamba-shell {0}
+        run: |
+          export CYVCF2_HTSLIB_MODE=EXTERNAL
+          export CMAKE_PREFIX_PATH="${CONDA_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
+          export PKG_CONFIG_PATH="${CONDA_PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+
+          python -m pip install . --no-deps --no-build-isolation -v > conda-external-build.log 2>&1
+          cat conda-external-build.log
+          if grep -E "building bundled( shared)? htslib" conda-external-build.log; then
+            echo "Expected external htslib, but build used bundled htslib"
+            exit 1
+          fi
+
+      - name: Verify external htslib linkage
+        shell: micromamba-shell {0}
+        run: |
+          extension="$(cd "${RUNNER_TEMP}" && python -c 'import cyvcf2.cyvcf2 as module; print(module.__file__)')"
+          echo "Extension path: ${extension}"
+
+          cd "${RUNNER_TEMP}"
+          python -c 'from cyvcf2 import VCF; print(VCF)'
+
+          ldd "${extension}" | tee "${GITHUB_WORKSPACE}/conda-external-linkage.txt"
+          grep -E "libhts\.so" "${GITHUB_WORKSPACE}/conda-external-linkage.txt"
+
   sdist:
     runs-on: ubuntu-22.04
     strategy:

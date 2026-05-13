@@ -53,6 +53,7 @@ def _init_logging_from_env():
 
     s = stdlib.getenv("CYVCF2_HTSLIB_LOG_LEVEL")
     if s is NULL:
+        set_htslib_log_level(HTSLIB_DEFAULT)
         return
 
     py_s = s.decode()

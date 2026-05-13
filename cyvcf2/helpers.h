@@ -1,4 +1,5 @@
 #include <htslib/vcf.h>
+#include <htslib/hts_log.h>
 #include <htslib/khash.h>
 
 int as_gts(int *gts, int num_samples, int ploidy, int strict_gt, int HOM_ALT, int UNKNOWN);

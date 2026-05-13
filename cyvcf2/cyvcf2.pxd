@@ -3,6 +3,9 @@ import numpy as np
 cimport numpy as np
 np.import_array()
 
+cdef extern from "htslib/hts_log.h":
+    void hts_set_log_level(int val)
+
 cdef extern from "string.h":
     void* memcpy(void* dest, const void* src, size_t n)
 

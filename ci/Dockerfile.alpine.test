@@ -4,14 +4,12 @@ FROM python:${PYTHON_VERSION}
 
 WORKDIR /workspace
 
-RUN apk add --no-cache build-base autoconf automake git xz-dev curl-dev libdeflate-dev bzip2-dev
+RUN apk add --no-cache build-base autoconf automake cmake ninja git xz-dev curl-dev libdeflate-dev bzip2-dev
 
-COPY requirements.txt .
-
-RUN pip install -r requirements.txt && pip install pytest pytest-cov
+RUN pip install pytest pytest-cov
 
 COPY . .
 
 # build cyvcf2
 RUN CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate" \
-    CYTHONIZE=1 python setup.py build_ext -i
+    python -m pip install -v -e .

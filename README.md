@@ -11,7 +11,7 @@ The latest documentation for cyvcf2 can be found here:
 If you use cyvcf2, please cite the [paper](https://academic.oup.com/bioinformatics/article/2971439/cyvcf2)
 
 
-Fast python **(2 and 3)** parsing of VCF and BCF including region-queries.
+Fast Python **(3.8+)** parsing of VCF and BCF including region-queries.
 
 
 [![Build](https://github.com/brentp/cyvcf2/actions/workflows/build.yml/badge.svg)](https://github.com/brentp/cyvcf2/actions/workflows/build.yml)
@@ -75,35 +75,72 @@ all_vars = list(vcf())
 Installation
 ============
 
-## pip with bundled htslib
+## pip or uv with bundled htslib
+
+If a binary wheel is available for your platform, pip and uv will install it
+without building from source.
+
 ```
 pip install cyvcf2
+uv pip install cyvcf2
 ```
 
-## pip with system htslib
+## pip or uv with system htslib
 
 Assuming you have already built and installed htslib version 1.12 or higher.
 ```
 CYVCF2_HTSLIB_MODE=EXTERNAL pip install --no-binary cyvcf2 cyvcf2
+CYVCF2_HTSLIB_MODE=EXTERNAL uv pip install --no-binary cyvcf2 cyvcf2
 ```
 
-## windows (experimental, only test on MSYS2)
+## windows (experimental, only tested on MSYS2)
 
 Assuming you have already built and installed htslib.
 ```
-SETUPTOOLS_USE_DISTUTILS=stdlib pip install cyvcf2
+CYVCF2_HTSLIB_MODE=EXTERNAL pip install cyvcf2
 ```
 
 ## github (building htslib and cyvcf2 from source)
 
 ```
 git clone --recursive https://github.com/brentp/cyvcf2
-pip install -r requirements.txt
-# sometimes it can be required to remove old files:
-# python setup.py clean_ext
-CYVCF2_HTSLIB_MODE=BUILTIN CYTHONIZE=1 python setup.py install
+cd cyvcf2
+CYVCF2_HTSLIB_MODE=BUILTIN python -m pip install .
+CYVCF2_HTSLIB_MODE=BUILTIN uv pip install .
 # or to use a system htslib.so
-CYVCF2_HTSLIB_MODE=EXTERNAL python setup.py install
+CYVCF2_HTSLIB_MODE=EXTERNAL python -m pip install .
+CYVCF2_HTSLIB_MODE=EXTERNAL uv pip install .
+```
+
+Source builds use scikit-build-core and CMake. Python build dependencies such
+as Cython, NumPy, CMake, and Ninja are installed by PEP 517 build isolation, but
+you still need a C compiler plus the htslib native dependencies for your
+platform.
+
+Most users can leave `CYVCF2_CYTHONIZE` unset. It is mainly for developers
+building from a Git checkout who need to control when CMake regenerates
+`cyvcf2.c` from `cyvcf2/cyvcf2.pyx`:
+
+- `AUTO` (the default) uses an existing `cyvcf2/cyvcf2.c` when present and runs
+  Cython only when the file is missing.
+- `ON` regenerates the C file after edits to `cyvcf2.pyx` or `cyvcf2.pxd`, or
+  when testing Cython-generated output.
+- `OFF` requires an existing C file.
+
+For example:
+
+```
+CYVCF2_CYTHONIZE=ON python -m pip install .
+python -m pip install . --config-settings=cmake.define.CYVCF2_CYTHONIZE=ON
+```
+
+The legacy `CYTHONIZE=1` environment variable is still accepted.
+
+To build source distributions and wheels locally:
+
+```
+python -m build
+uv build
 ```
 
 On **OSX**, using brew, you may have to set the following as indicated by the brew install:
@@ -124,6 +161,7 @@ Install `pytest`, then tests can be run with:
 
 ```
 pytest
+uv run --with pytest pytest
 ```
 
 CLI

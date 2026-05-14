@@ -110,26 +110,26 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libcurl4-openssl-dev zlib1g-dev libssl-dev liblzma-dev \
-            libbz2-dev libdeflate-dev
+          sudo apt-get install -y --no-install-recommends cmake ninja-build libcurl4-openssl-dev zlib1g-dev \
+            libssl-dev liblzma-dev libbz2-dev libdeflate-dev
 
       - name: Install macOS build prerequisites
         if: runner.os == 'macOS'
         run: |
-          brew install automake libdeflate pkg-config
+          brew install automake cmake libdeflate ninja pkg-config
 
       - name: Install
         run: |
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
+          python -m pip install --upgrade pip
+          python -m pip install pytest pytest-cov
           CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate" \
-            CYTHONIZE=1 python setup.py build_ext -i
+            python -m pip install -v -e .
 
       - name: Test
         run: |
           pytest --cov cyvcf2 --cov-report term-missing
 
-      # make sure to keep this numpy version in sync with setup.py
+      # make sure to keep this numpy version in sync with pyproject.toml
       - name: Test with oldest numpy that we support
         if: contains(fromJson('["3.9"]'), matrix.python-version)
         run: |
@@ -165,6 +165,7 @@ jobs:
             mingw-w64-ucrt-x86_64-libdeflate
             mingw-w64-ucrt-x86_64-xz
             mingw-w64-ucrt-x86_64-curl
+            mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-zlib
             mingw-w64-ucrt-x86_64-bzip2
             mingw-w64-ucrt-x86_64-tools-git
@@ -188,18 +189,83 @@ jobs:
 
       - name: Install
         run: |
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
-          CYTHONIZE=1 python setup.py build_ext -i
+          python -m venv .venv
+          . .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install pytest pytest-cov
+          python -m pip install -v -e .
 
       - name: Test
         run: |
+          . .venv/bin/activate
           pytest --cov cyvcf2 --cov-report term-missing
 
       - name: Test with newest available numpy
         run: |
+          . .venv/bin/activate
           pip install -U numpy
           pytest --cov cyvcf2 --cov-report term-missing
+
+  conda_external_htslib:
+    name: Conda external htslib ${{ matrix.htslib-version }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        htslib-version: ["1.21", "1.22.1", "1.23.1"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up micromamba
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: cyvcf2-conda-external
+          condarc: |
+            channels:
+              - conda-forge
+              - bioconda
+            channel_priority: strict
+          create-args: >-
+            python=3.12
+            pip
+            scikit-build-core>=0.11
+            cmake>=3.20
+            ninja
+            cython>=3
+            numpy>=2.0.0
+            htslib=${{ matrix.htslib-version }}
+            pkg-config
+            setuptools
+            wheel
+
+      - name: Install against conda htslib
+        shell: micromamba-shell {0}
+        run: |
+          export CYVCF2_HTSLIB_MODE=EXTERNAL
+          export CMAKE_PREFIX_PATH="${CONDA_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
+          export PKG_CONFIG_PATH="${CONDA_PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+
+          python -m pip install . --no-deps --no-build-isolation -v > conda-external-build.log 2>&1
+          cat conda-external-build.log
+          if grep -E "building bundled( shared)? htslib" conda-external-build.log; then
+            echo "Expected external htslib, but build used bundled htslib"
+            exit 1
+          fi
+
+      - name: Verify external htslib linkage
+        shell: micromamba-shell {0}
+        run: |
+          extension="$(cd "${RUNNER_TEMP}" && python -c 'import cyvcf2.cyvcf2 as module; print(module.__file__)')"
+          echo "Extension path: ${extension}"
+
+          cd "${RUNNER_TEMP}"
+          python -c 'from cyvcf2 import VCF; print(VCF)'
+
+          ldd "${extension}" | tee "${GITHUB_WORKSPACE}/conda-external-linkage.txt"
+          grep -E "libhts\.so" "${GITHUB_WORKSPACE}/conda-external-linkage.txt"
 
   sdist:
     runs-on: ubuntu-22.04
@@ -218,10 +284,10 @@ jobs:
 
       - name: Install sdist prerequisites
         run: |
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip build
 
       - name: Create source distribution
-        run: CYTHONIZE=1 python setup.py sdist
+        run: python -m build --sdist
 
       - name: Install Linux build prerequisites
         if: runner.os == 'Linux'
@@ -231,7 +297,7 @@ jobs:
             libbz2-dev libdeflate-dev
 
       - name: Build (via sdist tarball)
-        run: pip install --verbose --no-deps --no-binary='cyvcf2' cyvcf2-*.tar.gz
+        run: python -m pip install --verbose --no-binary='cyvcf2' cyvcf2-*.tar.gz
         working-directory: dist
 
       - name: Install test prerequisites

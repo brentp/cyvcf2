@@ -10,7 +10,7 @@ COMMON_CMAKE_ARGS=(
   -DCMAKE_BUILD_TYPE=Release
 )
 
-brew install automake libdeflate
+brew install automake cmake libdeflate ninja
 brew unlink xz
 
 # build liblzma and libdeflate for deployment target

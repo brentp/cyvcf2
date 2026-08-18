@@ -215,6 +215,19 @@ def test_phases():
     v = next(vcf)
     assert not any(v.gt_phases)
 
+def test_phased_missing_gt_bases():
+    # issue #331: gt_bases dropped phasing when the first allele was missing,
+    # rendering "/" (and "./.") for phased genotypes such as .|. and .|0.
+    vcf = VCF(os.path.join(HERE, "issue_331.vcf"))
+
+    v = next(vcf)  # snp_phased: 0|. 1|. .|. .|0 .|1
+    assert list(v.gt_bases) == ['A|.', 'G|.', '.|.', '.|A', '.|G'], v.gt_bases
+    assert list(v.gt_phases) == [True] * 5, v.gt_phases
+
+    v = next(vcf)  # snp_unphased: 0/. 1/. ./. ./0 ./1
+    assert list(v.gt_bases) == ['A/.', 'G/.', './.', './A', './G'], v.gt_bases
+    assert list(v.gt_phases) == [False] * 5, v.gt_phases
+
 def test_bad_init():
     with pytest.raises(Exception):
         VCF("XXXXX")

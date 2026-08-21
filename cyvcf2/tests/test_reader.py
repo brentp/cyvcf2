@@ -14,7 +14,7 @@ import warnings
 import numpy as np
 import pytest
 
-from ..cyvcf2 import VCF, Variant, Writer
+from ..cyvcf2 import VCF, Variant, Writer, BCF_ERROR_FLAGS, describe_errcode
 
 
 HERE = os.path.dirname(__file__)
@@ -28,6 +28,40 @@ try:
     basestring
 except NameError:
     basestring = (str, bytes)
+
+def test_errcode_is_exposed():
+    """Variant.errcode surfaces the htslib error flags for a record.
+
+    htslib's vcf.h says of this field that it "must be checked before
+    calling bcf_write()"; before this was exposed there was no way to do
+    that from Python. Records in a well-formed file should all be clean.
+    """
+    vcf = VCF(VCF_PATH)
+    for i, v in enumerate(vcf):
+        assert isinstance(v.errcode, int)
+        assert v.errcode == 0, (i, v.errcode, describe_errcode(v.errcode))
+        if i > 50:
+            break
+
+
+def test_describe_errcode():
+    assert describe_errcode(0) == "no error"
+
+    # every documented flag maps to its own description
+    for flag, msg in BCF_ERROR_FLAGS.items():
+        assert describe_errcode(flag) == msg
+
+    # errcode is a bit field, so combinations report every flag set
+    flags = sorted(BCF_ERROR_FLAGS)
+    combined = flags[0] | flags[1]
+    described = describe_errcode(combined)
+    assert BCF_ERROR_FLAGS[flags[0]] in described
+    assert BCF_ERROR_FLAGS[flags[1]] in described
+
+    # bits htslib may add later are reported rather than silently dropped
+    unknown = 1 << 20
+    assert "unrecognized flag %d" % unknown == describe_errcode(unknown)
+
 
 def test_init():
     # string

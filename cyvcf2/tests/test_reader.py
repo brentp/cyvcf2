@@ -285,6 +285,21 @@ def test_writer_from_string():
     w.write_record(v)
     w.close()
 
+def test_variant_from_string_malformed():
+    # vcf_parse() returns 0 on success and a negative value on failure, so a
+    # malformed line must raise rather than return a partially-filled record.
+    # Reading REF or ID off such a record segfaults.
+    header = """##fileformat=VCFv4.1
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##contig=<ID=chr1,length=249250621,assembly=hg19>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	samplea
+"""
+
+    w = Writer.from_string(tempfile.mktemp(suffix=".vcf"), header)
+    with pytest.raises(Exception, match="error parsing"):
+        w.variant_from_string("chr1\tNOTANUMBER\t.\tA\tC\t40\tPASS\t.\tGT\t0/0")
+    w.close()
+
 def test_isa():
     vcf = VCF(os.path.join(HERE, "test.isa.vcf"))
     for i, v in enumerate(vcf):

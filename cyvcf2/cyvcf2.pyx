@@ -560,10 +560,10 @@ cdef class VCF(HTSFile):
                             ret = vcf_parse(&s, self.hdr, b)
                     if slen <= 0:
                         break
-                    if ret > 0:
+                    if ret != 0:
                         bcf_destroy(b)
                         # s.s and itr are released by the finally block
-                        raise Exception("error parsing")
+                        raise Exception("error parsing: vcf_parse returned %d" % ret)
                     yield newVariant(b, self)
             finally:
                 stdlib.free(s.s)
@@ -598,10 +598,10 @@ cdef class VCF(HTSFile):
                             ret = vcf_parse(&s, self.hdr, b)
                 if slen <= 0:
                     break
-                if ret > 0:
+                if ret != 0:
                     bcf_destroy(b)
                     # s.s and itr are released by the finally block
-                    raise Exception("error parsing")
+                    raise Exception("error parsing: vcf_parse returned %d" % ret)
                 yield newVariant(b, self)
         finally:
             stdlib.free(s.s)
@@ -2587,10 +2587,10 @@ cdef class Writer(VCF):
         s.m = len(variant_string) + 1
 
         ret = vcf_parse(&s, self.hdr, b)
-        if ret > 0:
+        if ret != 0:
             bcf_destroy(b)
             ks_free(&s)
-            raise Exception("error parsing:" + variant_string + " return value:" + ret)
+            raise Exception("error parsing: %s (vcf_parse returned %d)" % (variant_string, ret))
 
         var = newVariant(b, self)
         if var.b.errcode == BCF_ERR_CTG_UNDEF:

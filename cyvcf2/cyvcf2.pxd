@@ -118,6 +118,12 @@ cdef extern from "htslib/vcf.h":
     cdef extern uint32_t bcf_float_missing;
 
     cdef extern const int BCF_ERR_CTG_UNDEF;
+    cdef extern const int BCF_ERR_TAG_UNDEF;
+    cdef extern const int BCF_ERR_NCOLS;
+    cdef extern const int BCF_ERR_LIMITS;
+    cdef extern const int BCF_ERR_CHAR;
+    cdef extern const int BCF_ERR_CTG_INVALID;
+    cdef extern const int BCF_ERR_TAG_INVALID;
 
 
     cdef extern const int BCF_BT_NULL;

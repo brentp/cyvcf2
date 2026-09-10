@@ -295,7 +295,9 @@ def test_variant_from_string_malformed():
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	samplea
 """
 
-    w = Writer.from_string(tempfile.mktemp(suffix=".vcf"), header)
+    output_path = tempfile.mktemp(suffix=".vcf")
+    atexit.register(os.unlink, output_path)
+    w = Writer.from_string(output_path, header)
     with pytest.raises(Exception, match="error parsing"):
         w.variant_from_string("chr1\tNOTANUMBER\t.\tA\tC\t40\tPASS\t.\tGT\t0/0")
     w.close()

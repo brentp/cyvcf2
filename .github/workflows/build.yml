@@ -248,6 +248,9 @@ jobs:
           export CMAKE_PREFIX_PATH="${CONDA_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
           export PKG_CONFIG_PATH="${CONDA_PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
 
+          # Fail if an external build picks up bundled headers ahead of conda headers.
+          printf '#error "External builds must not use bundled htslib headers"\n' > htslib/htslib/hts.h
+
           python -m pip install . --no-deps --no-build-isolation -v > conda-external-build.log 2>&1
           cat conda-external-build.log
           if grep -E "building bundled( shared)? htslib" conda-external-build.log; then
@@ -264,8 +267,41 @@ jobs:
           cd "${RUNNER_TEMP}"
           python -c 'from cyvcf2 import VCF; print(VCF)'
 
-          ldd "${extension}" | tee "${GITHUB_WORKSPACE}/conda-external-linkage.txt"
-          grep -E "libhts\.so" "${GITHUB_WORKSPACE}/conda-external-linkage.txt"
+          # Standalone ldd does not use the conda Python interpreter's library search paths.
+          LD_LIBRARY_PATH="${CONDA_PREFIX}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" \
+            ldd "${extension}" | tee "${GITHUB_WORKSPACE}/conda-external-linkage.txt"
+          grep -E "libhts\.so" "${GITHUB_WORKSPACE}/conda-external-linkage.txt" | grep -F "${CONDA_PREFIX}/lib/"
+
+  downstream_uv:
+    name: Install a source distribution as a uv dependency
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install native and Python build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake zlib1g-dev libbz2-dev liblzma-dev libcurl4-openssl-dev libssl-dev
+          python -m pip install build uv
+      - name: Build source distribution
+        run: python -m build --sdist
+      - name: Install as a downstream dependency
+        run: |
+          mkdir -p "${RUNNER_TEMP}/downstream"
+          SDIST="$(realpath dist/cyvcf2-*.tar.gz)" python - <<'PY'
+          import os
+          from pathlib import Path
+          project = Path(os.environ["RUNNER_TEMP"]) / "downstream" / "pyproject.toml"
+          project.write_text('[project]\nname = "cyvcf2-downstream-test"\nversion = "0.0.1"\nrequires-python = ">=3.12"\n'
+                             f'dependencies = ["cyvcf2 @ {Path(os.environ["SDIST"]).as_uri()}"]\n')
+          PY
+          cd "${RUNNER_TEMP}/downstream"
+          uv sync
+          uv run python -c 'from cyvcf2 import VCF; print(VCF)'
 
   sdist:
     runs-on: ubuntu-22.04

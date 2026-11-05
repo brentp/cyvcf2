@@ -1275,6 +1275,39 @@ cdef inline Genotypes newGenotypes(int32_t *raw, int ploidy, int n_samples):
     gs.n_samples = n_samples
     return gs
 
+#: Mapping of htslib ``BCF_ERR_*`` bit flags to a short description.
+#: A record's :attr:`Variant.errcode` is a bitwise OR of these values.
+BCF_ERROR_FLAGS = {
+    BCF_ERR_CTG_UNDEF: "contig not defined in the header",
+    BCF_ERR_TAG_UNDEF: "INFO/FORMAT tag not defined in the header",
+    BCF_ERR_NCOLS: "wrong number of columns",
+    BCF_ERR_LIMITS: "value exceeds a format limit",
+    BCF_ERR_CHAR: "invalid character",
+    BCF_ERR_CTG_INVALID: "invalid contig",
+    BCF_ERR_TAG_INVALID: "invalid tag",
+}
+
+
+def describe_errcode(errcode):
+    """Return a readable description of a :attr:`Variant.errcode` value.
+
+    >>> describe_errcode(0)
+    'no error'
+    """
+    if errcode == 0:
+        return "no error"
+    known = 0
+    parts = []
+    for flag in sorted(BCF_ERROR_FLAGS):
+        known |= flag
+        if errcode & flag:
+            parts.append(BCF_ERROR_FLAGS[flag])
+    leftover = errcode & ~known
+    if leftover:
+        parts.append("unrecognized flag %d" % leftover)
+    return "; ".join(parts)
+
+
 cdef class Variant(object):
     """
     Variant represents a single VCF Record.
@@ -2216,6 +2249,17 @@ cdef class Variant(object):
             cdef int n = self.b.d.n_flt
             return [from_bytes(bcf_hdr_int2id(self.vcf.hdr, BCF_DT_ID, self.b.d.flt[i])) for i in range(n)]
 
+    property errcode:
+        """htslib error flags for this record; 0 when the record is clean.
+
+        The value is a bitwise OR of the ``BCF_ERR_*`` flags listed in
+        :data:`BCF_ERROR_FLAGS`. htslib's ``vcf.h`` notes that this field
+        "must be checked before calling bcf_write()". Use
+        :func:`describe_errcode` for a readable form.
+        """
+        def __get__(self):
+            return self.b.errcode
+
     property QUAL:
         "the float value of QUAL from the VCF field."
         def __get__(self):
@@ -2617,7 +2661,8 @@ cdef class Writer(VCF):
                 raise Exception("error adding contig %d to header" % var.b.rid)
             bcf_hdr_sync(self.hdr)
         elif var.b.errcode != 0:
-            raise Exception("variant to be written has errorcode: %d" % var.b.errcode)
+            raise Exception("variant to be written has errorcode %d (%s)" % (
+                var.b.errcode, describe_errcode(var.b.errcode)))
         return bcf_write(self.hts, self.hdr, var.b)
 
     def close(Writer self):

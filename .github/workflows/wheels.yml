@@ -23,8 +23,8 @@ concurrency:
 
 env:
   CIBW_ENABLE: pypy
-  CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-  # manylinux2014 can't build on aarch64
+  # Match NumPy's newer manylinux baseline for current Python versions.
+  CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
   CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
   CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_2
   CIBW_MUSLLINUX_AARCH64_IMAGE: musllinux_1_2

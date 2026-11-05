@@ -85,6 +85,14 @@ pip install cyvcf2
 uv pip install cyvcf2
 ```
 
+## conda
+
+Install from Bioconda with conda-forge first and strict channel priority:
+
+```
+conda install -c conda-forge -c bioconda --strict-channel-priority cyvcf2
+```
+
 ## pip or uv with system htslib
 
 Assuming you have already built and installed htslib version 1.12 or higher.
@@ -116,6 +124,16 @@ Source builds use scikit-build-core and CMake. Python build dependencies such
 as Cython, NumPy, CMake, and Ninja are installed by PEP 517 build isolation, but
 you still need a C compiler plus the htslib native dependencies for your
 platform.
+
+If a bundled source build fails because of libcurl, install its development
+libraries or disable libcurl-based URL support for that build:
+
+```
+CYVCF2_HTSLIB_CONFIGURE_OPTIONS="--disable-libcurl" uv pip install --no-binary cyvcf2 cyvcf2
+```
+
+This disables HTTPS/S3/GCS support; published wheels enable it. Configure options
+only affect fresh bundled htslib builds, not wheels or external htslib.
 
 Most users can leave `CYVCF2_CYTHONIZE` unset. It is mainly for developers
 building from a Git checkout who need to control when CMake regenerates

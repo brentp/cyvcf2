@@ -160,7 +160,7 @@ function(cyvcf2_read_htslib_static_libs OUTPUT)
   endif()
 endfunction()
 
-set(CYVCF2_HTSLIB_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/htslib" "${CMAKE_CURRENT_SOURCE_DIR}/htslib/htslib")
+set(CYVCF2_HTSLIB_INCLUDE_DIRS "")
 set(CYVCF2_HTSLIB_LIBRARIES "")
 set(CYVCF2_HTSLIB_TARGET "")
 
@@ -170,6 +170,7 @@ if(CYVCF2_HTSLIB_MODE STREQUAL "BUILTIN")
   endif()
 
   message(STATUS "cyvcf2: building bundled htslib")
+  set(CYVCF2_HTSLIB_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/htslib" "${CMAKE_CURRENT_SOURCE_DIR}/htslib/htslib")
   cyvcf2_build_htslib(TRUE)
   cyvcf2_read_htslib_static_libs(CYVCF2_HTSLIB_STATIC_LIBS)
 
@@ -212,18 +213,7 @@ else()
   endif()
 
   if(NOT HTSLIB_PC_FOUND AND (NOT HTSLIB_INCLUDE_DIR OR NOT HTSLIB_LIBRARY))
-    if(WIN32)
-      message(FATAL_ERROR "Could not find external htslib; install htslib first")
-    endif()
-
-    message(STATUS "cyvcf2: external htslib not found; building bundled shared htslib")
-    cyvcf2_build_htslib(FALSE)
-    set(HTSLIB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/htslib")
-    find_library(HTSLIB_LIBRARY NAMES hts PATHS "${CMAKE_CURRENT_SOURCE_DIR}/htslib" NO_DEFAULT_PATH)
-  endif()
-
-  if(NOT HTSLIB_PC_FOUND AND NOT HTSLIB_LIBRARY)
-    message(FATAL_ERROR "Could not locate htslib library")
+    message(FATAL_ERROR "Could not find external htslib headers and library; install htslib and set CMAKE_PREFIX_PATH or PKG_CONFIG_PATH to its installation")
   endif()
 
   if(NOT HTSLIB_PC_FOUND)

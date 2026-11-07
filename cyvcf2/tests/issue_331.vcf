@@ -1,0 +1,7 @@
+##fileformat=VCFv4.3
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##contig=<ID=chr1,length=10000000>
+##contig=<ID=chr2,length=10000000>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind_1	ind_2	ind_3	ind_4	ind_5
+chr1	1	snp_phased	A	G	.	PASS	.	GT	0|.	1|.	.|.	.|0	.|1
+chr2	1	snp_unphased	A	G	.	PASS	.	GT	0/.	1/.	./.	./0	./1

@@ -1374,6 +1374,10 @@ cdef class Variant(object):
                 j += 1
                 if n == 2:
                     if (gt_types[j] == unknown) and (not self.vcf.strict_gt):
+                        # issue #331: a fully-missing diploid genotype (e.g. .|.) is
+                        # UNKNOWN; emit the phase-aware separator instead of the "./."
+                        # default so a phased .|. renders as .|. rather than ./.
+                        bases[j] = "." + lookup[phased[j]] + "."
                         continue
                     else:
                         a = self._gt_idxs[i]
@@ -1713,7 +1717,14 @@ cdef class Variant(object):
                         else:
                             self._gt_idxs[k] = a
 
-                    self._gt_phased[j] = self._gt_types[i] > 0 and <int>bcf_gt_is_phased(self._gt_types[i+1])
+                    # issue #331: _gt_types still holds the raw htslib encoding here
+                    # (as_gts runs below). A missing first allele encodes to 0, so the
+                    # old "_gt_types[i] > 0" gate wrongly dropped phasing whenever the
+                    # first allele was missing. The phase bit lives on the second allele,
+                    # so mirror the `genotypes` property and read it directly. `nper > 1`
+                    # preserves haploid (no phasing) and guards the i+1 access; the
+                    # vector_end check handles mixed-ploidy records padded to nper.
+                    self._gt_phased[j] = nper > 1 and self._gt_types[i+1] != bcf_int32_vector_end and <int>bcf_gt_is_phased(self._gt_types[i+1])
                     j += 1
 
                 if self.vcf.gts012:

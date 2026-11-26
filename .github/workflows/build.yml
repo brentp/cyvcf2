@@ -243,26 +243,6 @@ jobs:
             setuptools
             wheel
 
-      - name: Test external fallback with incomplete pkg-config metadata
-        shell: micromamba-shell {0}
-        run: |
-          set -euo pipefail
-          export CYVCF2_HTSLIB_MODE=EXTERNAL
-          export CMAKE_PREFIX_PATH="${CONDA_PREFIX}"
-          mkdir -p "${RUNNER_TEMP}/incomplete-pkgconfig"
-          cp "${CONDA_PREFIX}/lib/pkgconfig/htslib.pc" "${RUNNER_TEMP}/incomplete-pkgconfig/"
-          export PKG_CONFIG_PATH="${RUNNER_TEMP}/incomplete-pkgconfig"
-          export PKG_CONFIG_LIBDIR="${RUNNER_TEMP}/incomplete-pkgconfig"
-          if pkg-config --exists htslib; then
-            echo "Expected htslib's pkg-config dependencies to be unavailable"
-            exit 1
-          fi
-          cmake -S . -B "${RUNNER_TEMP}/external-fallback" \
-            -DSKBUILD_PROJECT_NAME=cyvcf2 \
-            -DPython_EXECUTABLE="$(command -v python)" \
-            -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=FALSE
-          cmake --build "${RUNNER_TEMP}/external-fallback" --verbose
-
       - name: Install against conda htslib
         shell: micromamba-shell {0}
         run: |

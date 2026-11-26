@@ -194,29 +194,6 @@ else()
     else()
       pkg_check_modules(HTSLIB_PC QUIET IMPORTED_TARGET htslib)
     endif()
-
-    if(HTSLIB_PC_FOUND)
-      pkg_get_variable(HTSLIB_PC_FILE_DIR htslib pcfiledir)
-      set(_cyvcf2_pkg_config_dirs "${HTSLIB_PC_FILE_DIR}")
-      if(NOT DEFINED PKG_CONFIG_USE_CMAKE_PREFIX_PATH OR PKG_CONFIG_USE_CMAKE_PREFIX_PATH)
-        file(TO_CMAKE_PATH "$ENV{CMAKE_PREFIX_PATH}" _cyvcf2_env_prefixes)
-        foreach(_prefix IN LISTS CMAKE_PREFIX_PATH _cyvcf2_env_prefixes)
-          list(APPEND _cyvcf2_pkg_config_dirs "${_prefix}/lib/pkgconfig" "${_prefix}/share/pkgconfig")
-        endforeach()
-      endif()
-      file(TO_CMAKE_PATH "$ENV{PKG_CONFIG_PATH}" _cyvcf2_env_pkg_config_path)
-      list(APPEND _cyvcf2_pkg_config_dirs ${_cyvcf2_env_pkg_config_path})
-      cmake_path(CONVERT "${_cyvcf2_pkg_config_dirs}" TO_NATIVE_PATH_LIST _cyvcf2_pkg_config_path)
-      execute_process(
-        COMMAND "${CMAKE_COMMAND}" -E env "PKG_CONFIG_PATH=${_cyvcf2_pkg_config_path}"
-                "${PKG_CONFIG_EXECUTABLE}" ${PKG_CONFIG_ARGN} --exists htslib
-        RESULT_VARIABLE _cyvcf2_pkg_config_result
-      )
-      if(NOT _cyvcf2_pkg_config_result EQUAL 0)
-        message(STATUS "cyvcf2: htslib pkg-config dependencies are unavailable; searching for headers and library directly")
-        set(HTSLIB_PC_FOUND FALSE)
-      endif()
-    endif()
   endif()
 
   if(HTSLIB_PC_FOUND)

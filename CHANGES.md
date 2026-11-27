@@ -1,3 +1,6 @@
+# v0.35.1
++ fix haploid genotype phasing (#339 thanks @jpfeuffer)
+
 # v0.34.0
 + drop support for end-of-life Python 3.8 (minimum is now 3.9)
 + add PyPI trove classifiers (Python 3.9–3.14)

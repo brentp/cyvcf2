@@ -24,7 +24,7 @@ int as_gts(int32_t *gts, int num_samples, int ploidy, int strict_gt, int HOM_ALT
             int a = bcf_gt_allele(gts[i]);
             if (a == 0) {
                    gts[j++] = 0;
-            } else if (a == 1) {
+            } else if (a > 0) {
                 gts[j++] = HOM_ALT;
             } else {
                 gts[j++] = UNKNOWN;

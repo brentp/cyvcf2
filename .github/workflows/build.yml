@@ -64,18 +64,18 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, macos-14]
+        os: [ubuntu-22.04, macos-15]
         python-version:
           ["pypy3.10", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
         exclude:
           # Run only the latest versions on macOS and windows
-          - os: macos-14
+          - os: macos-15
             python-version: "pypy3.10"
-          - os: macos-14
+          - os: macos-15
             python-version: "3.9"
-          - os: macos-14
+          - os: macos-15
             python-version: "3.10"
-          - os: macos-14
+          - os: macos-15
             python-version: "3.11"
 
     steps:
@@ -237,6 +237,8 @@ jobs:
             cython>=3
             numpy>=2.0.0
             htslib=${{ matrix.htslib-version }}
+            zlib
+            liblzma-devel
             pkg-config
             setuptools
             wheel
@@ -244,6 +246,7 @@ jobs:
       - name: Install against conda htslib
         shell: micromamba-shell {0}
         run: |
+          set -euo pipefail
           export CYVCF2_HTSLIB_MODE=EXTERNAL
           export CMAKE_PREFIX_PATH="${CONDA_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
           export PKG_CONFIG_PATH="${CONDA_PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
@@ -251,8 +254,8 @@ jobs:
           # Fail if an external build picks up bundled headers ahead of conda headers.
           printf '#error "External builds must not use bundled htslib headers"\n' > htslib/htslib/hts.h
 
-          python -m pip install . --no-deps --no-build-isolation -v > conda-external-build.log 2>&1
-          cat conda-external-build.log
+          pkg-config --exists htslib
+          python -m pip install . --no-deps --no-build-isolation -v 2>&1 | tee conda-external-build.log
           if grep -E "building bundled( shared)? htslib" conda-external-build.log; then
             echo "Expected external htslib, but build used bundled htslib"
             exit 1
@@ -261,6 +264,7 @@ jobs:
       - name: Verify external htslib linkage
         shell: micromamba-shell {0}
         run: |
+          set -euo pipefail
           extension="$(cd "${RUNNER_TEMP}" && python -c 'import cyvcf2.cyvcf2 as module; print(module.__file__)')"
           echo "Extension path: ${extension}"
 

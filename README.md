@@ -125,6 +125,11 @@ as Cython, NumPy, CMake, and Ninja are installed by PEP 517 build isolation, but
 you still need a C compiler plus the htslib native dependencies for your
 platform.
 
+For external htslib, set `CMAKE_PREFIX_PATH` to its installation prefix if it
+is not in a standard location. `pkg-config` also needs the development metadata
+for htslib and its dependencies (for example, conda's `zlib` and
+`liblzma-devel` packages).
+
 If a bundled source build fails because of libcurl, install its development
 libraries or disable libcurl-based URL support for that build:
 

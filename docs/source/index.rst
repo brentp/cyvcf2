@@ -145,6 +145,11 @@ Install `pytest`, then tests can be run with:
 Known Limitations
 =================
 * `cyvcf2` currently does not support reading VCFs encoded with UTF-8 with non-ASCII characters in the contents of string-typed FORMAT fields.
+* Genotype-level phasing flags cannot fully represent partially phased
+  polyploid calls. For example, ``0|1/2`` reports ``True`` and ``0/1|2``
+  reports ``False`` because the flag follows the separator before the second
+  allele, not every separator in the call. See :ref:`genotype-phasing` for
+  the affected accessors and how to inspect individual allele phase bits.
 
 For limitations on writing VCFs, see :ref:`here <Limitations with writing>`
 

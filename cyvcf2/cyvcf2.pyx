@@ -1199,6 +1199,22 @@ cdef class Allele(object):
         if self.value < 0: return "."
         return str(self.value) + ("|" if self.phased else "/")
 
+cdef np.ndarray _gls_to_pls(gls):
+    """Convert log10-scaled GL values to integer phred-scaled PL values.
+
+    Missing and vector-end GLs (``bcf_float_missing``/``bcf_float_vector_end``,
+    both NaN) and values too large for int32 become INT32_MAX, matching what
+    the PL path returns for missing values. Casting NaN or out-of-range floats
+    to int32 directly is undefined (0 on arm64, INT32_MIN on x86-64).
+    """
+    cdef int32_t imax = np.iinfo(np.int32).max
+    pls = (-10 * gls).round()
+    bad = ~(pls < imax)
+    pls[bad] = 0
+    out = pls.astype(np.int32)
+    out[bad] = imax
+    return out
+
 cdef inline Allele newAllele(int32_t *raw, int i):
     cdef Allele a = Allele.__new__(Allele)
     a._raw = raw
@@ -1756,11 +1772,7 @@ cdef class Variant(object):
                     nret = bcf_get_format_float(self.vcf.hdr, self.b, "GL", &self._gt_gls, &ndst)
                     if nret < 0:
                         return []
-                    else:
-                        for i in range(nret):
-                            if self._gt_gls[i] <= -2147483646:
-                                # this gets translated on conversion to PL
-                                self._gt_gls[i] = imax / -10.0
+                    # missing/vector-end GLs are translated to imax by _gls_to_pls
                 else:
                     for i in range(nret):
                         if self._gt_pls[i] < 0:
@@ -1776,8 +1788,7 @@ cdef class Variant(object):
             else:
                 gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32,
                         self._gt_gls)[::self._gt_nper]
-                gls = (-10 * gls).round().astype(np.int32)
-                return gls
+                return _gls_to_pls(gls)
 
     property gt_phred_ll_het:
         """get the PL of het for each sample as a numpy array."""
@@ -1802,8 +1813,7 @@ cdef class Variant(object):
                             self._gt_gls)[1::self._gt_nper]
                 else:
                     gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32, self._gt_gls)
-                gls = (-10 * gls).round().astype(np.int32)
-                return gls
+                return _gls_to_pls(gls)
 
     property gt_phred_ll_homalt:
         """get the PL of hom_alt for each sample as a numpy array."""
@@ -1826,8 +1836,7 @@ cdef class Variant(object):
                 else:
                     gls = np.PyArray_SimpleNewFromData(1, shape, np.NPY_FLOAT32,
                             self._gt_gls)
-                gls = (-10 * gls).round().astype(np.int32)
-                return gls
+                return _gls_to_pls(gls)
 
     property gt_ref_depths:
         """get the count of reference reads for a diploid sample as a numpy array."""

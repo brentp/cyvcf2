@@ -140,6 +140,39 @@ def test_pls():
     assert v.gt_phred_ll_het[1] == imax, v.gt_phred_ll_het[1]
     assert v.gt_phred_ll_homalt[1] == imax, v.gt_phred_ll_homalt[1]
 
+
+def test_gls_missing_match_pls(tmp_path):
+    # GL-only files (e.g. freebayes) go through the GL -> PL conversion.
+    # Missing and vector-end GL values must give INT32_MAX, as for PL, not
+    # whatever a NaN -> int32 cast produces (0 on arm64, INT32_MIN on x86-64).
+    header = (
+        "##fileformat=VCFv4.2\n"
+        "##contig=<ID=1,length=1000>\n"
+        '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n'
+        '##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihoods">\n'
+        '##FORMAT=<ID=PL,Number=G,Type=Integer,Description="Phred-scaled genotype likelihoods">\n'
+        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tS1\tS2\tS3\tS4\n"
+    )
+    path = tmp_path / "gl.vcf"
+    path.write_text(
+        header
+        + "1\t100\t.\tA\tC\t50\tPASS\t.\tGT:GL\t0/1:-5.0,0,-3.0\t./.:.\t0/0:0,.,-2.5\t1:-4.0,0\n"
+        + "1\t200\t.\tA\tC\t50\tPASS\t.\tGT:PL\t0/1:50,0,30\t./.:.\t0/0:0,.,25\t1:40,0\n"
+    )
+    imax = np.iinfo(np.int32).max
+    gl, pl = list(VCF(str(path)))
+    assert gl.FORMAT == ["GT", "GL"] and pl.FORMAT == ["GT", "PL"]
+
+    expected_homref = [50, imax, 0, 40]
+    expected_het = [0, imax, imax, 0]
+    expected_homalt = [30, imax, 25, imax]
+    for v in (gl, pl):
+        assert v.gt_phred_ll_homref.tolist() == expected_homref
+        assert v.gt_phred_ll_het.tolist() == expected_het
+        assert v.gt_phred_ll_homalt.tolist() == expected_homalt
+        assert v.gt_phred_ll_homref.dtype == np.int32
+
+
 def test_gt_alt_freqs():
     vcf = VCF(VCF_ALTFREQ_PATH)
 
